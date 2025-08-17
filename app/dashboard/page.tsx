@@ -1,19 +1,11 @@
 "use client"
-
-import { useState, useCallback, useMemo } from "react"
+import React, { useState, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   ArrowLeft, Camera, Mic, Eye, Clock, Edit3, Share2, Copy, 
   Loader2, Sparkles, Zap, TrendingUp, BarChart3, Hash, 
-  ImageIcon, Video, FileText, Plus, Minus, Crown 
+  ImageIcon, Video, FileText, Plus, Minus, Crown, CheckCircle, AlertCircle
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import Sidebar from "@/components/Sidebar"
-import ScheduleModal from "@/components/ScheduleModal"
-import ProfileDropdown from "@/components/ProfileDropdown"
 
 // Types and Interfaces
 interface GeneratedPost {
@@ -34,13 +26,6 @@ interface PlanLimit {
   name: string
 }
 
-interface Template {
-  title: string
-  desc: string
-  emoji: string
-  prompt: string
-}
-
 interface MediaType {
   icon: typeof ImageIcon
   label: string
@@ -49,48 +34,491 @@ interface MediaType {
   borderColor: string
 }
 
+interface AuthState {
+  isAuthenticated: boolean
+  isLoading: boolean
+  profile: { firstName: string; lastName: string } | null
+  accessToken: string | null
+}
+
+interface PostData {
+  content: string
+  tone?: PostTone
+  length?: PostLength
+}
+
+interface PostResult {
+  success: boolean
+  postId?: string
+  error?: string
+}
+
+interface ToneOption {
+  value: PostTone
+  label: string
+}
+
+interface LengthOption {
+  value: PostLength
+  label: string
+}
+
+// Real LinkedIn integration components
+const useLinkedInAuth = () => {
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    isLoading: false,
+    profile: null,
+    accessToken: null
+  })
+
+  const authenticate = () => {
+    setAuthState(prev => ({ ...prev, isLoading: true }))
+    
+    // LinkedIn OAuth 2.0 Authorization URL
+    const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID || 'YOUR_LINKEDIN_CLIENT_ID'
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback')
+    const scope = encodeURIComponent('profile openid email w_member_social')
+    const state = Math.random().toString(36).substring(7) // Generate random state for security
+    
+    // Store state in localStorage for validation
+    localStorage.setItem('linkedin_oauth_state', state)
+    
+    const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`
+    
+    // Open LinkedIn authorization in a popup window
+    const popup = window.open(authUrl, 'linkedin-auth', 'width=500,height=600,scrollbars=yes,resizable=yes')
+    
+    // Listen for the popup to close or receive a message
+    const checkClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkClosed)
+        setAuthState(prev => ({ ...prev, isLoading: false }))
+      }
+    }, 1000)
+    
+    // Listen for messages from the popup (authorization code)
+    const messageListener = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      
+      if (event.data.type === 'LINKEDIN_AUTH_SUCCESS') {
+        clearInterval(checkClosed)
+        popup?.close()
+        window.removeEventListener('message', messageListener)
+        
+        // Exchange authorization code for access token
+        exchangeCodeForToken(event.data.code, state)
+      } else if (event.data.type === 'LINKEDIN_AUTH_ERROR') {
+        clearInterval(checkClosed)
+        popup?.close()
+        window.removeEventListener('message', messageListener)
+        setAuthState(prev => ({ ...prev, isLoading: false }))
+        console.error('LinkedIn authentication error:', event.data.error)
+      }
+    }
+    
+    window.addEventListener('message', messageListener)
+  }
+  
+  const exchangeCodeForToken = async (code: string, state: string) => {
+    try {
+      // Verify state parameter
+      const storedState = localStorage.getItem('linkedin_oauth_state')
+      if (state !== storedState) {
+        throw new Error('Invalid state parameter')
+      }
+      localStorage.removeItem('linkedin_oauth_state')
+      
+      // Exchange code for access token via your backend API
+      const response = await fetch('/api/auth/linkedin/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to exchange code for token')
+      }
+      
+      const data = await response.json()
+      
+      // Get user profile information
+      const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`,
+        },
+      })
+      
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch user profile')
+      }
+      
+      const profile = await profileResponse.json()
+      
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        profile: {
+          firstName: profile.given_name,
+          lastName: profile.family_name,
+        },
+        accessToken: data.access_token,
+      })
+      
+      // Store token securely (consider using secure storage)
+      localStorage.setItem('linkedin_access_token', data.access_token)
+      
+    } catch (error) {
+      console.error('Error exchanging code for token:', error)
+      setAuthState(prev => ({ ...prev, isLoading: false }))
+    }
+  }
+  
+  // Check for existing token on component mount
+  React.useEffect(() => {
+    const storedToken = localStorage.getItem('linkedin_access_token')
+    if (storedToken) {
+      // Validate token by fetching user profile
+      fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${storedToken}`,
+        },
+      })
+      .then(response => response.json())
+      .then(profile => {
+        setAuthState({
+          isAuthenticated: true,
+          isLoading: false,
+          profile: {
+            firstName: profile.given_name,
+            lastName: profile.family_name,
+          },
+          accessToken: storedToken,
+        })
+      })
+      .catch(error => {
+        console.error('Invalid stored token:', error)
+        localStorage.removeItem('linkedin_access_token')
+      })
+    }
+  }, [])
+
+  return { ...authState, authenticate }
+}
+
+const useLinkedInPosting = () => {
+  const [isPosting, setIsPosting] = useState(false)
+  
+  const postToLinkedIn = async (postData: PostData): Promise<PostResult> => {
+    setIsPosting(true)
+    
+    try {
+      const token = localStorage.getItem('linkedin_access_token')
+      if (!token) {
+        throw new Error('No access token available')
+      }
+      
+      // First, get the user's LinkedIn person URN
+      const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch user profile')
+      }
+      
+      const profile = await profileResponse.json()
+      const personUrn = `urn:li:person:${profile.sub}`
+      
+      // Create the post using LinkedIn's UGC API
+      const postPayload = {
+        author: personUrn,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: {
+              text: postData.content
+            },
+            shareMediaCategory: 'NONE'
+          }
+        },
+        visibility: {
+          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+        }
+      }
+      
+      const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Restli-Protocol-Version': '2.0.0'
+        },
+        body: JSON.stringify(postPayload)
+      })
+      
+      if (!postResponse.ok) {
+        const errorData = await postResponse.json()
+        throw new Error(errorData.message || 'Failed to post to LinkedIn')
+      }
+      
+      const postResult = await postResponse.json()
+      
+      setIsPosting(false)
+      
+      return { 
+        success: true, 
+        postId: postResult.id 
+      }
+      
+    } catch (error) {
+      setIsPosting(false)
+      console.error('Error posting to LinkedIn:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to post to LinkedIn' 
+      }
+    }
+  }
+
+  return { postToLinkedIn, isPosting }
+}
+
+interface LinkedInAuthButtonProps {
+  onAuthenticated?: () => void
+  className?: string
+}
+
+const LinkedInAuthButton: React.FC<LinkedInAuthButtonProps> = ({ onAuthenticated, className }) => {
+  const { isAuthenticated, isLoading, authenticate, profile } = useLinkedInAuth()
+
+  if (isLoading) {
+    return (
+      <button disabled className={`${className} opacity-50 cursor-not-allowed`}>
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        Checking...
+      </button>
+    )
+  }
+
+  if (isAuthenticated && profile) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-green-400">
+        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+        Connected as {profile.firstName} {profile.lastName}
+      </div>
+    )
+  }
+
+  return (
+    <button onClick={authenticate} className={`${className} bg-[#0077B5] hover:bg-[#004182] text-white px-4 py-2 rounded-lg flex items-center transition-colors`}>
+      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      </svg>
+      Connect LinkedIn
+    </button>
+  )
+}
+
+interface PostToLinkedInButtonProps {
+  content: string
+  onSuccess?: (postId: string) => void
+  onError?: (error: string) => void
+  className?: string
+}
+
+const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({ content, onSuccess, onError, className }) => {
+  const { isAuthenticated, isLoading: authLoading, authenticate } = useLinkedInAuth()
+  const { postToLinkedIn, isPosting } = useLinkedInPosting()
+  const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error' | 'needs_auth'>('idle')
+
+  const handlePost = async () => {
+    console.log("Post button clicked, checking authentication...")
+    
+    // First check if user is authenticated
+    if (!isAuthenticated) {
+      console.log("User not authenticated, showing auth prompt")
+      setPostStatus('needs_auth')
+      return
+    }
+
+    console.log("User authenticated, starting post to LinkedIn...")
+    
+    try {
+      const result = await postToLinkedIn({ content })
+      
+      console.log("Post result:", result)
+
+      if (result.success && result.postId) {
+        setPostStatus('success')
+        onSuccess?.(result.postId)
+        
+        setTimeout(() => {
+          setPostStatus('idle')
+        }, 3000)
+      } else {
+        setPostStatus('error')
+        onError?.(result.error || 'Unknown error occurred')
+        
+        setTimeout(() => {
+          setPostStatus('idle')
+        }, 3000)
+      }
+    } catch (error) {
+      console.error("Error posting to LinkedIn:", error)
+      setPostStatus('error')
+      onError?.('Failed to post')
+      
+      setTimeout(() => {
+        setPostStatus('idle')
+      }, 3000)
+    }
+  }
+
+  const handleAuthenticate = () => {
+    console.log("Authenticating user...")
+    authenticate()
+    setPostStatus('idle')
+  }
+
+  const handleCancelAuth = () => {
+    setPostStatus('idle')
+  }
+
+  if (authLoading) {
+    return (
+      <button disabled className={`${className} opacity-50 cursor-not-allowed`}>
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        Loading...
+      </button>
+    )
+  }
+
+  // Show authentication prompt when needed
+  if (postStatus === 'needs_auth') {
+    return (
+      <div className="space-y-2">
+        <div className="text-xs text-yellow-400 text-center mb-2">
+          Connect LinkedIn to post
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleAuthenticate}
+            className="flex-1 bg-[#0077B5] hover:bg-[#004182] text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+            Connect
+          </button>
+          <button 
+            onClick={handleCancelAuth}
+            className="px-3 py-2 border border-gray-500 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const getButtonContent = () => {
+    if (isPosting) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <span className="hidden sm:inline">Posting...</span>
+          <span className="sm:hidden">Posting...</span>
+        </>
+      )
+    }
+
+    if (postStatus === 'success') {
+      return (
+        <>
+          <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+          <span className="hidden sm:inline">Posted Successfully!</span>
+          <span className="sm:hidden">Posted!</span>
+        </>
+      )
+    }
+
+    // Default state (including error state - button remains as "Post Now")
+    return (
+      <>
+        <Share2 className="w-4 h-4 mr-2" />
+        <span className="hidden sm:inline">Post Now</span>
+        <span className="sm:hidden">Post</span>
+      </>
+    )
+  }
+
+  const getButtonStyles = () => {
+    if (postStatus === 'success') {
+      return "bg-green-500 hover:bg-green-600 text-white"
+    }
+    // Default style for all other states (idle, error, posting)
+    return "bg-green-500 hover:bg-green-600 text-white"
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={handlePost}
+        disabled={isPosting || postStatus === 'success'}
+        className={`${getButtonStyles()} shadow-lg transition-all duration-300 px-4 py-2 rounded-lg flex items-center ${className}`}
+      >
+        {getButtonContent()}
+      </button>
+      
+      {/* Error message display */}
+      {postStatus === 'error' && (
+        <div className="flex items-center gap-1 text-red-400 text-xs">
+          <AlertCircle className="w-3 h-3" />
+          <span>Failed to post to LinkedIn</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Constants
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
   free: { maxPosts: 5, name: "Free Plan" },
   pro: { maxPosts: 50, name: "Pro Plan" },
   enterprise: { maxPosts: 100, name: "Enterprise Plan" },
-} as const
+}
 
-const POST_TEMPLATES: Template[] = [
-  { title: "Lesson Learned", desc: "Share a valuable lesson from experience", emoji: "💡", prompt: "Write a lesson learned post about " },
-  { title: "Industry Insight", desc: "Discuss trends in your field", emoji: "📊", prompt: "Write an industry insight post about " },
-  { title: "Career Advice", desc: "Help others with professional growth", emoji: "🚀", prompt: "Write a career advice post about " },
-  { title: "Behind the Scenes", desc: "Show your work process", emoji: "🎬", prompt: "Write a behind the scenes post about " },
-  { title: "Hot Take", desc: "Share a controversial opinion", emoji: "🔥", prompt: "Write a hot take post about " },
-  { title: "Success Story", desc: "Celebrate achievements", emoji: "🏆", prompt: "Write a success story post about " },
-] as const
-
-const TONE_OPTIONS = [
+const TONE_OPTIONS: ToneOption[] = [
   { value: "professional", label: "🎯 Professional" },
   { value: "friendly", label: "😊 Friendly" },
   { value: "assertive", label: "💪 Assertive" },
   { value: "inspirational", label: "✨ Inspirational" },
   { value: "casual", label: "😎 Casual" },
   { value: "thought-provoking", label: "🤔 Thought-Provoking" },
-] as const
+]
 
-const LENGTH_OPTIONS = [
+const LENGTH_OPTIONS: LengthOption[] = [
   { value: "short", label: "📝 Short (50-100 words)" },
   { value: "medium", label: "📄 Medium (100-200 words)" },
   { value: "long", label: "📚 Long (200+ words)" },
-] as const
+]
 
 const MEDIA_TYPES: MediaType[] = [
   { icon: ImageIcon, label: "Add Image", engagement: "+65% engagement", color: "text-[#0077B5]", borderColor: "border-[#0077B5]" },
   { icon: Video, label: "Add Video", engagement: "+120% engagement", color: "text-purple-400", borderColor: "border-purple-500" },
   { icon: FileText, label: "Add Document", engagement: "+45% engagement", color: "text-green-400", borderColor: "border-green-500" },
-] as const
+]
 
-const MOCK_POSTS = [
+const MOCK_POSTS: string[] = [
   "🚀 Just shipped a game-changing feature that reduces load times by 60%! The journey wasn't easy - 3 weeks of debugging, countless coffee cups, and moments of doubt. But here's what I learned: Every 'impossible' problem has a solution waiting to be discovered. What's the most challenging technical problem you've solved recently? 👇",
   "💡 The best career advice I wish I knew 5 years ago: Your network is your net worth, but authenticity is your currency. Stop trying to impress everyone and start being genuinely helpful. Share knowledge, celebrate others' wins, and ask thoughtful questions. The opportunities will follow naturally.",
   "🎯 Unpopular opinion: Most productivity hacks are just procrastination in disguise. I spent years optimizing my workflow instead of actually working. The real game-changer? Time blocking and saying no to everything that doesn't align with my top 3 priorities. Simple beats complex every time."
-] as const
+]
 
 // Animation variants
 const fadeInUp = {
@@ -129,7 +557,7 @@ const generateMockPost = (index: number, tone: PostTone): GeneratedPost => ({
   id: index + 1,
   content: MOCK_POSTS[index] || MOCK_POSTS[0],
   tone,
-  engagement: (["Very High", "High", "Medium"] as const)[Math.floor(Math.random() * 3)],
+  engagement: (["Very High", "High", "Medium"] as EngagementLevel[])[Math.floor(Math.random() * 3)],
   score: Math.floor(Math.random() * 20) + 80,
 })
 
@@ -138,12 +566,7 @@ const usePostGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationProgress, setGenerationProgress] = useState(0)
 
-  const generatePosts = useCallback(async (
-    input: string,
-    tone: PostTone,
-    postCount: number,
-    postLength: PostLength
-  ): Promise<GeneratedPost[]> => {
+  const generatePosts = useCallback(async (input: string, tone: PostTone, postCount: number, postLength: PostLength): Promise<GeneratedPost[]> => {
     if (!input.trim()) return []
 
     setIsGenerating(true)
@@ -160,32 +583,11 @@ const usePostGeneration = () => {
       })
     }, 200)
 
-    try {
-      // TODO: Replace with actual API call
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: input, tone, count: postCount, length: postLength }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const posts = data.posts?.slice(0, postCount).map((content: string, index: number) => 
-          generateMockPost(index, tone)
-        ) || []
-        
-        setGenerationProgress(100)
-        return posts
-      }
-    } catch (error) {
-      console.error("Error generating posts:", error)
-    } finally {
-      // Fallback to mock data for demo
-      setTimeout(() => {
-        setGenerationProgress(100)
-        clearInterval(progressInterval)
-      }, 1000)
-    }
+    // Simulate API call delay
+    setTimeout(() => {
+      setGenerationProgress(100)
+      clearInterval(progressInterval)
+    }, 1000)
 
     // Return mock data
     return Array.from({ length: postCount }, (_, index) => generateMockPost(index, tone))
@@ -199,35 +601,50 @@ const usePostGeneration = () => {
   return { isGenerating, generationProgress, generatePosts, resetGeneration, setIsGenerating }
 }
 
-// Components
-const Header: React.FC<{
+// Component Interfaces
+interface HeaderProps {
   showBackButton?: boolean
   onBack?: () => void
   onMenuClick?: () => void
-}> = ({ showBackButton, onBack, onMenuClick }) => (
+}
+
+interface PerformanceOverviewProps {
+  posts: GeneratedPost[]
+}
+
+interface PostCardProps {
+  post: GeneratedPost
+  index: number
+  totalPosts: number
+  isExpanded: boolean
+  onToggleExpand: () => void
+  onSchedule: () => void
+  onCopy: () => void
+  onPostSuccess: (postId: string) => void
+  onPostError: (error: string) => void
+}
+
+// Components
+const Header: React.FC<HeaderProps> = ({ showBackButton, onBack, onMenuClick }) => (
   <motion.header
     className="sticky top-0 z-40 flex items-center justify-between p-4 bg-[#2d3748] border-b border-[#374151] backdrop-blur-md shadow-xl"
     {...fadeInUp}
   >
     {showBackButton ? (
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={onBack}
-        className="text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
+        className="flex items-center gap-2 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300 px-3 py-2 rounded-lg"
       >
-        <ArrowLeft className="w-4 h-4 mr-2" />
+        <ArrowLeft className="w-4 h-4" />
         Back to Generator
-      </Button>
+      </button>
     ) : (
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
         onClick={onMenuClick}
-        className="lg:hidden text-gray-400 hover:text-white hover:bg-white/10"
+        className="lg:hidden text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-lg"
       >
         <Sparkles className="w-6 h-6" />
-      </Button>
+      </button>
     )}
     
     <div className="flex items-center gap-2">
@@ -237,11 +654,11 @@ const Header: React.FC<{
       <span className="font-semibold text-[#0077B5] hidden sm:block">LinkedPilot</span>
     </div>
     
-    <ProfileDropdown />
+    <div className="w-8 h-8 bg-gray-600 rounded-full"></div>
   </motion.header>
 )
 
-const PerformanceOverview: React.FC<{ posts: GeneratedPost[] }> = ({ posts }) => {
+const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ posts }) => {
   const stats = useMemo(() => ({
     avgScore: Math.round(posts.reduce((acc, post) => acc + post.score, 0) / posts.length || 0),
     highEngagement: posts.filter(p => p.engagement === "Very High").length,
@@ -278,15 +695,17 @@ const PerformanceOverview: React.FC<{ posts: GeneratedPost[] }> = ({ posts }) =>
   )
 }
 
-const PostCard: React.FC<{
-  post: GeneratedPost
-  index: number
-  totalPosts: number
-  isExpanded: boolean
-  onToggleExpand: () => void
-  onSchedule: () => void
-  onCopy: () => void
-}> = ({ post, index, totalPosts, isExpanded, onToggleExpand, onSchedule, onCopy }) => {
+const PostCard: React.FC<PostCardProps> = ({ 
+  post, 
+  index, 
+  totalPosts, 
+  isExpanded, 
+  onToggleExpand, 
+  onSchedule, 
+  onCopy,
+  onPostSuccess,
+  onPostError
+}) => {
   const shouldShowMore = post.content.length > 200
 
   return (
@@ -360,74 +779,40 @@ const PostCard: React.FC<{
 
       {/* Action Buttons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <Button
-          className="bg-[#0077B5] hover:bg-[#004182] text-white shadow-lg transition-all duration-300 text-sm sm:text-base"
+        <button
+          className="bg-[#0077B5] hover:bg-[#004182] text-white shadow-lg transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
           onClick={onSchedule}
         >
           <Clock className="w-4 h-4 mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Schedule</span>
           <span className="sm:hidden">Schedule</span>
-        </Button>
+        </button>
 
-        <Button
-          variant="outline"
-          className="border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base"
-        >
+        <button className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center">
           <Edit3 className="w-4 h-4 mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Edit</span>
           <span className="sm:hidden">Edit</span>
-        </Button>
+        </button>
 
-        <Button className="bg-green-500 hover:bg-green-600 text-white shadow-lg transition-all duration-300 text-sm sm:text-base">
-          <Share2 className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Post Now</span>
-          <span className="sm:hidden">Post</span>
-        </Button>
+        <PostToLinkedInButton
+          content={post.content}
+          onSuccess={onPostSuccess}
+          onError={onPostError}
+          className="shadow-lg transition-all duration-300 text-sm sm:text-base"
+        />
 
-        <Button
-          variant="outline"
-          className="border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base"
+        <button
+          className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
           onClick={onCopy}
         >
           <Copy className="w-4 h-4 mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Copy</span>
           <span className="sm:hidden">Copy</span>
-        </Button>
+        </button>
       </div>
     </motion.div>
   )
 }
-
-const QuickTemplates: React.FC<{ onTemplateSelect: (prompt: string) => void }> = ({ onTemplateSelect }) => (
-  <motion.div
-    className="bg-[#2d3748] rounded-xl p-4 sm:p-6 border border-[#374151] shadow-xl"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: 0.3 }}
-  >
-    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-      <Sparkles className="w-5 h-5 text-[#0077B5]" />
-      Quick Templates
-    </h3>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {POST_TEMPLATES.map((template, index) => (
-        <button
-          key={index}
-          onClick={() => onTemplateSelect(template.prompt)}
-          className="p-3 sm:p-4 bg-[#1a1d29] rounded-lg border border-[#374151] hover:border-[#0077B5] transition-all duration-300 text-left group hover:scale-105"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{template.emoji}</span>
-            <span className="font-medium text-white group-hover:text-[#0077B5] transition-colors text-sm sm:text-base">
-              {template.title}
-            </span>
-          </div>
-          <p className="text-xs text-gray-400">{template.desc}</p>
-        </button>
-      ))}
-    </div>
-  </motion.div>
-)
 
 // Main Component
 export default function Dashboard() {
@@ -472,6 +857,16 @@ export default function Dashboard() {
     }
   }, [])
 
+  const handlePostSuccess = useCallback((postId: string) => {
+    console.log("Successfully posted to LinkedIn:", postId)
+    // TODO: Add success notification/toast
+  }, [])
+
+  const handlePostError = useCallback((error: string) => {
+    console.error("Failed to post to LinkedIn:", error)
+    // TODO: Add error notification/toast
+  }, [])
+
   const handleSchedulePost = useCallback((post: GeneratedPost) => {
     setSelectedPostForSchedule(post)
     setShowScheduleModal(true)
@@ -487,10 +882,6 @@ export default function Dashboard() {
     setShowResults(false)
     resetGeneration()
   }, [resetGeneration])
-
-  const handleTemplateSelect = useCallback((prompt: string) => {
-    setInput(prompt)
-  }, [])
 
   const handlePostCountInput = useCallback((value: string) => {
     const numValue = parseInt(value) || 1
@@ -531,6 +922,8 @@ export default function Dashboard() {
                 onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
                 onSchedule={() => handleSchedulePost(post)}
                 onCopy={() => handleCopyToClipboard(post.content)}
+                onPostSuccess={handlePostSuccess}
+                onPostError={handlePostError}
               />
             ))}
           </div>
@@ -542,29 +935,15 @@ export default function Dashboard() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <Button
+            <button
               onClick={handleBackToGenerator}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 text-lg shadow-lg rounded-lg transform hover:scale-105 transition-all duration-300"
+              className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 text-lg shadow-lg rounded-lg transform hover:scale-105 transition-all duration-300 flex items-center mx-auto"
             >
               <Plus className="w-5 h-5 mr-2" />
               Generate More Posts
-            </Button>
+            </button>
           </motion.div>
         </div>
-
-        {/* Schedule Modal */}
-        <ScheduleModal
-          isOpen={showScheduleModal}
-          onClose={() => {
-            setShowScheduleModal(false)
-            setSelectedPostForSchedule(null)
-          }}
-          onSchedule={(scheduleData) => {
-            console.log("Scheduled:", scheduleData, "for post:", selectedPostForSchedule)
-            setShowScheduleModal(false)
-            setSelectedPostForSchedule(null)
-          }}
-        />
       </div>
     )
   }
@@ -572,8 +951,6 @@ export default function Dashboard() {
   // Generator View
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
       <div className="flex-1 lg:ml-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
@@ -607,22 +984,17 @@ export default function Dashboard() {
                     <Mic className="w-4 h-4 text-[#0077B5]" />
                     Select Tone
                   </label>
-                  <Select value={tone} onValueChange={(value: PostTone) => setTone(value)}>
-                    <SelectTrigger className="w-full bg-[#1a1d29] border-[#374151] text-white focus:border-[#0077B5] transition-all duration-300 h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#2d3748] border-[#374151]">
-                      {TONE_OPTIONS.map((option) => (
-                        <SelectItem 
-                          key={option.value} 
-                          value={option.value} 
-                          className="text-white hover:bg-[#374151]"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    value={tone} 
+                    onChange={(e) => setTone(e.target.value as PostTone)}
+                    className="w-full bg-[#1a1d29] border border-[#374151] text-white focus:border-[#0077B5] transition-all duration-300 h-11 rounded-lg px-3"
+                  >
+                    {TONE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Post Count Selection */}
@@ -635,34 +1007,30 @@ export default function Dashboard() {
                     )}
                   </label>
                   <div className="flex items-center gap-2 h-11">
-                    <Button
-                      variant="outline"
-                      size="icon"
+                    <button
                       onClick={() => handlePostCountChange(-1)}
                       disabled={postCount <= 1}
-                      className="border-[#374151] text-gray-300 hover:bg-[#374151] bg-transparent disabled:opacity-50 h-11 w-11 flex-shrink-0"
+                      className="border border-[#374151] text-gray-300 hover:bg-[#374151] bg-transparent disabled:opacity-50 h-11 w-11 flex-shrink-0 rounded-lg flex items-center justify-center"
                     >
                       <Minus className="w-4 h-4" />
-                    </Button>
+                    </button>
                     <div className="flex-1 min-w-0">
-                      <Input
+                      <input
                         type="number"
                         min="1"
                         max={currentPlanLimit.maxPosts}
                         value={postCount}
                         onChange={(e) => handlePostCountInput(e.target.value)}
-                        className="text-center bg-[#1a1d29] border-[#374151] text-white focus:border-[#0077B5] h-11"
+                        className="text-center bg-[#1a1d29] border border-[#374151] text-white focus:border-[#0077B5] h-11 w-full rounded-lg"
                       />
                     </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
+                    <button
                       onClick={() => handlePostCountChange(1)}
                       disabled={postCount >= currentPlanLimit.maxPosts}
-                      className="border-[#374151] text-gray-300 hover:bg-[#374151] bg-transparent disabled:opacity-50 h-11 w-11 flex-shrink-0"
+                      className="border border-[#374151] text-gray-300 hover:bg-[#374151] bg-transparent disabled:opacity-50 h-11 w-11 flex-shrink-0 rounded-lg flex items-center justify-center"
                     >
                       <Plus className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     Max {currentPlanLimit.maxPosts} posts ({currentPlanLimit.name})
@@ -677,7 +1045,7 @@ export default function Dashboard() {
                   <Sparkles className="w-4 h-4 text-[#0077B5]" />
                   Your Post Idea
                 </label>
-                <Textarea
+                <textarea
                   placeholder={`Describe your post idea in detail... 
 
 Examples:
@@ -688,7 +1056,7 @@ Examples:
 • Tell a story about overcoming challenges`}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="min-h-[160px] sm:min-h-[200px] bg-[#1a1d29] border-[#374151] text-white placeholder-gray-400 focus:border-[#0077B5] resize-none text-base sm:text-lg leading-relaxed shadow-lg transition-all duration-300"
+                  className="min-h-[160px] sm:min-h-[200px] bg-[#1a1d29] border border-[#374151] text-white placeholder-gray-400 focus:border-[#0077B5] resize-none text-base sm:text-lg leading-relaxed shadow-lg transition-all duration-300 w-full rounded-lg p-4"
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-gray-500">
                   {input.length}/500 characters
@@ -717,22 +1085,17 @@ Examples:
                       <FileText className="w-4 h-4 text-[#0077B5]" />
                       Post Length
                     </label>
-                    <Select value={postLength} onValueChange={(value: PostLength) => setPostLength(value)}>
-                      <SelectTrigger className="w-full bg-[#1a1d29] border-[#374151] text-white focus:border-[#0077B5] transition-all duration-300 h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#2d3748] border-[#374151]">
-                        {LENGTH_OPTIONS.map((option) => (
-                          <SelectItem 
-                            key={option.value} 
-                            value={option.value} 
-                            className="text-white hover:bg-[#374151]"
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select 
+                      value={postLength} 
+                      onChange={(e) => setPostLength(e.target.value as PostLength)}
+                      className="w-full bg-[#1a1d29] border border-[#374151] text-white focus:border-[#0077B5] transition-all duration-300 h-11 rounded-lg px-3"
+                    >
+                      {LENGTH_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Credits and Generate Button Row */}
@@ -742,10 +1105,10 @@ Examples:
                       <div className="text-xs text-gray-500">{currentPlanLimit.name}</div>
                     </div>
                     <div className="order-1 sm:order-2 w-full sm:w-auto">
-                      <Button
+                      <button
                         onClick={handleGeneratePosts}
                         disabled={!input.trim() || isGenerating}
-                        className="w-full px-6 py-3 bg-[#0077B5] hover:bg-[#004182] rounded-full disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform hover:scale-105 transition-all duration-300 text-base font-medium text-white"
+                        className="w-full px-6 py-3 bg-[#0077B5] hover:bg-[#004182] rounded-full disabled:opacity-50 disabled:cursor-not-allowed shadow-xl transform hover:scale-105 transition-all duration-300 text-base font-medium text-white flex items-center justify-center"
                       >
                         {isGenerating ? (
                           <>
@@ -762,14 +1125,12 @@ Examples:
                             <span className="sm:hidden">Generate {postCount}</span>
                           </>
                         )}
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            <QuickTemplates onTemplateSelect={handleTemplateSelect} />
           </motion.div>
 
           {/* Loading State */}
