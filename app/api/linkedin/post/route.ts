@@ -1,68 +1,87 @@
-// app/api/linkedin/post/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { accessToken, content, visibility = 'PUBLIC' } = body
+    const { content, userId } = await request.json();
 
-    if (!accessToken || !content) {
-      return NextResponse.json({ error: 'Access token and content are required' }, { status: 400 })
+    if (!content) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No content provided' 
+      }, { status: 400 });
     }
 
-    // First, get the user's profile ID
-    const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
+    // Get stored access token (from cookies or database)
+    const cookieStore = cookies();
+    const access_token = cookieStore.get('linkedin_access_token')?.value;
+    const linkedin_user_id = cookieStore.get('linkedin_user_id')?.value;
 
-    if (!profileResponse.ok) {
-      return NextResponse.json({ error: 'Invalid access token' }, { status: 401 })
+    if (!access_token || !linkedin_user_id) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'LinkedIn not connected. Please reconnect your account.' 
+      }, { status: 401 });
     }
 
-    const profile = await profileResponse.json()
-
-    // Create the post
-    const postData = {
-      author: `urn:li:person:${profile.id}`,
+    // Create LinkedIn post with selected content
+    const postContent = {
+      author: `urn:li:person:${linkedin_user_id}`,
       lifecycleState: 'PUBLISHED',
       specificContent: {
         'com.linkedin.ugc.ShareContent': {
           shareCommentary: {
-            text: content
+            text: content // Use the selected content from dashboard
           },
           shareMediaCategory: 'NONE'
         }
       },
       visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': visibility
+        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
       }
-    }
+    };
 
     const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${access_token}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0'
       },
-      body: JSON.stringify(postData)
-    })
+      body: JSON.stringify(postContent)
+    });
 
-    if (postResponse.ok) {
-      const result = await postResponse.json()
-      return NextResponse.json({ success: true, postId: result.id })
-    } else {
-      const error = await postResponse.text()
-      console.error('LinkedIn posting error:', error)
+    if (!postResponse.ok) {
+      const errorText = await postResponse.text();
+      console.error('LinkedIn post failed:', postResponse.status, errorText);
+      
+      // Check if token expired
+      if (postResponse.status === 401) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'LinkedIn token expired. Please reconnect your account.' 
+        }, { status: 401 });
+      }
+      
       return NextResponse.json({ 
-        error: 'Failed to create post on LinkedIn' 
-      }, { status: postResponse.status })
+        success: false, 
+        error: 'Failed to post to LinkedIn' 
+      }, { status: 400 });
     }
+
+    const postResult = await postResponse.json();
+    
+    return NextResponse.json({
+      success: true,
+      postId: postResult.id,
+      message: 'Successfully posted to LinkedIn!'
+    });
+
   } catch (error) {
-    console.error('Server error:', error)
-    return NextResponse.json({ error: 'Server error occurred' }, { status: 500 })
+    console.error('LinkedIn post error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, { status: 500 });
   }
 }

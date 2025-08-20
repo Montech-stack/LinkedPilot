@@ -96,7 +96,7 @@ export const useLinkedInAuth = () => {
 
   const authenticate = useCallback(() => {
     const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID
-    const redirectUri = encodeURIComponent(window.location.origin + '/api/linkedin/callback')
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback')
     console.log("Generated redirect_uri:", decodeURIComponent(redirectUri)) // Log for debugging
     const scope = encodeURIComponent('r_liteprofile r_emailaddress w_member_social')
     const state = Math.random().toString(36).substring(7)

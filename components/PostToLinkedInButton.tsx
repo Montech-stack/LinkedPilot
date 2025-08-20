@@ -1,5 +1,5 @@
 // components/PostToLinkedInButton.tsx
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Share2, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { useLinkedInAuth } from '../hooks/useLinkedInAuth'
@@ -22,32 +22,47 @@ const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({
   const { isAuthenticated, isLoading: authLoading } = useLinkedInAuth()
   const { postToLinkedIn, isPosting } = useLinkedInPosting()
   const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [pendingPost, setPendingPost] = useState(false)
+  const lastContentRef = useRef<string | null>(null)
 
   const handlePost = async () => {
     if (!isAuthenticated) {
-      return // This shouldn't happen if the component is rendered correctly
+      setPendingPost(true)
+      lastContentRef.current = content
+      return
     }
+    setPendingPost(false)
+    lastContentRef.current = null
 
     const result = await postToLinkedIn({ content })
 
     if (result.success && result.postId) {
       setPostStatus('success')
       onSuccess?.(result.postId)
-      
-      // Reset status after 3 seconds
-      setTimeout(() => {
-        setPostStatus('idle')
-      }, 3000)
+      setTimeout(() => setPostStatus('idle'), 3000)
     } else {
       setPostStatus('error')
       onError?.(result.error || 'Unknown error occurred')
-      
-      // Reset status after 3 seconds
-      setTimeout(() => {
-        setPostStatus('idle')
-      }, 3000)
+      setTimeout(() => setPostStatus('idle'), 3000)
     }
   }
+
+  // Listen for LinkedIn auth popup success and retry post if needed
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === 'linkedin-auth-success') {
+        // Wait a moment for cookies to be set
+        setTimeout(async () => {
+          // Optionally, re-check auth status here if your hook doesn't auto-update
+          if (pendingPost && lastContentRef.current) {
+            await handlePost()
+          }
+        }, 500)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [pendingPost])
 
   if (authLoading) {
     return (

@@ -71,62 +71,15 @@ export async function POST(request: NextRequest) {
 
     const profile: LinkedInProfile = await profileResponse.json();
 
-    // Make a post to LinkedIn immediately after authentication
-    const timestamp = new Date().toLocaleString();
-    const randomEmoji = ['🚀', '✨', '🎉', '💫', '🌟', '⚡', '🔥'][Math.floor(Math.random() * 7)];
-    
-    const postContent = {
-      author: `urn:li:person:${profile.sub}`,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: {
-            text: `${randomEmoji} Just successfully connected my LinkedIn account to my automation app at ${timestamp}! Excited to share more updates and insights. #LinkedInAPI #Development #Automation #TechInnovation`
-          },
-          shareMediaCategory: 'NONE'
-        }
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-      }
-    };
+    // TODO: Store in database for persistence
+    // await saveUserToken(profile.sub, access_token, expires_in, profile);
 
-    let postSuccess = false;
-    let postId = null;
-
-    try {
-      const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json',
-          'X-Restli-Protocol-Version': '2.0.0'
-        },
-        body: JSON.stringify(postContent)
-      });
-
-      if (postResponse.ok) {
-        const postResult = await postResponse.json();
-        postSuccess = true;
-        postId = postResult.id;
-        console.log('LinkedIn post created successfully:', postId);
-      } else {
-        const errorText = await postResponse.text();
-        console.error('LinkedIn post failed:', postResponse.status, errorText);
-      }
-    } catch (postError) {
-      console.error('Error making LinkedIn post:', postError);
-    }
-
-    // Return success with user data and post status
     return NextResponse.json({
       success: true,
       accessToken: access_token,
       expiresIn: expires_in,
       profile: profile,
-      postSuccess: postSuccess,
-      postId: postId,
-      message: postSuccess ? 'Authentication successful and post created!' : 'Authentication successful, but post failed'
+      message: 'LinkedIn connected successfully! You can now post from your dashboard.'
     });
 
   } catch (error) {

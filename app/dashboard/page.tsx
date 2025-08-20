@@ -144,31 +144,16 @@ const useLinkedInAuth = () => {
       
       const data = await response.json()
       
-      // Get user profile information
-      const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${data.access_token}`,
-        },
-      })
-      
-      if (!profileResponse.ok) {
-        throw new Error('Failed to fetch user profile')
-      }
-      
-      const profile = await profileResponse.json()
-      
+      // Get user profile information from your backend (not directly from LinkedIn)
       setAuthState({
         isAuthenticated: true,
         isLoading: false,
-        profile: {
-          firstName: profile.given_name,
-          lastName: profile.family_name,
+        profile: data.profile || {
+          firstName: 'User',
+          lastName: 'Name',
         },
-        accessToken: data.access_token,
+        accessToken: null, // Don't store token in frontend
       })
-      
-      // Store token securely (consider using secure storage)
-      localStorage.setItem('linkedin_access_token', data.access_token)
       
     } catch (error) {
       console.error('Error exchanging code for token:', error)
@@ -176,38 +161,30 @@ const useLinkedInAuth = () => {
     }
   }
   
-  // Check for existing token on component mount
+  // Check authentication status on mount
   React.useEffect(() => {
-    const storedToken = localStorage.getItem('linkedin_access_token')
-    if (storedToken) {
-      // Validate token by fetching user profile
-      fetch('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${storedToken}`,
-        },
-      })
+    // Check if user is authenticated by calling your backend
+    fetch('/api/linkedin/status')
       .then(response => response.json())
-      .then(profile => {
-        setAuthState({
-          isAuthenticated: true,
-          isLoading: false,
-          profile: {
-            firstName: profile.given_name,
-            lastName: profile.family_name,
-          },
-          accessToken: storedToken,
-        })
+      .then(data => {
+        if (data.isAuthenticated) {
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            profile: data.profile || { firstName: 'User', lastName: 'Name' },
+            accessToken: null,
+          })
+        }
       })
       .catch(error => {
-        console.error('Invalid stored token:', error)
-        localStorage.removeItem('linkedin_access_token')
+        console.log('Not authenticated or error checking status:', error)
       })
-    }
   }, [])
 
   return { ...authState, authenticate }
 }
 
+// Updated LinkedIn posting hook that uses backend API
 const useLinkedInPosting = () => {
   const [isPosting, setIsPosting] = useState(false)
   
@@ -215,64 +192,33 @@ const useLinkedInPosting = () => {
     setIsPosting(true)
     
     try {
-      const token = localStorage.getItem('linkedin_access_token')
-      if (!token) {
-        throw new Error('No access token available')
-      }
+      console.log('Sending content to backend:', postData.content)
       
-      // First, get the user's LinkedIn person URN
-      const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (!profileResponse.ok) {
-        throw new Error('Failed to fetch user profile')
-      }
-      
-      const profile = await profileResponse.json()
-      const personUrn = `urn:li:person:${profile.sub}`
-      
-      // Create the post using LinkedIn's UGC API
-      const postPayload = {
-        author: personUrn,
-        lifecycleState: 'PUBLISHED',
-        specificContent: {
-          'com.linkedin.ugc.ShareContent': {
-            shareCommentary: {
-              text: postData.content
-            },
-            shareMediaCategory: 'NONE'
-          }
-        },
-        visibility: {
-          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-        }
-      }
-      
-      const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      // Call YOUR backend API instead of LinkedIn directly
+      const response = await fetch('/api/linkedin/post', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'X-Restli-Protocol-Version': '2.0.0'
         },
-        body: JSON.stringify(postPayload)
+        body: JSON.stringify({
+          content: postData.content, // This will now reach your backend
+        }),
       })
       
-      if (!postResponse.ok) {
-        const errorData = await postResponse.json()
-        throw new Error(errorData.message || 'Failed to post to LinkedIn')
-      }
-      
-      const postResult = await postResponse.json()
+      const result = await response.json()
       
       setIsPosting(false)
       
-      return { 
-        success: true, 
-        postId: postResult.id 
+      if (result.success) {
+        return { 
+          success: true, 
+          postId: result.postId 
+        }
+      } else {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to post to LinkedIn' 
+        }
       }
       
     } catch (error) {
@@ -337,7 +283,8 @@ const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({ content, on
   const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error' | 'needs_auth'>('idle')
 
   const handlePost = async () => {
-    console.log("Post button clicked, checking authentication...")
+    console.log("Post button clicked with content:", content)
+    console.log("Checking authentication...")
     
     // First check if user is authenticated
     if (!isAuthenticated) {
@@ -798,7 +745,7 @@ const PostCard: React.FC<PostCardProps> = ({
           content={post.content}
           onSuccess={onPostSuccess}
           onError={onPostError}
-          className="shadow-lg transition-all duration-300 text-sm sm:text-base"
+          className="text-sm sm:text-base"
         />
 
         <button
