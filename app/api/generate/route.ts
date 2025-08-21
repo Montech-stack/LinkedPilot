@@ -1,9 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import OpenAI from "openai"
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,10 +8,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: idea and tone" }, { status: 400 })
     }
 
-    // Ensure count is within reasonable limits
     const postCount = Math.min(Math.max(1, Number.parseInt(count) || 3), 100)
 
-    // Define length parameters
     const lengthParams = {
       short: "50-100 words, concise and punchy",
       medium: "100-200 words, balanced and engaging",
@@ -45,35 +38,46 @@ Make each version distinctly different in approach while maintaining the ${tone}
 
 Return only the ${postCount} posts, separated by "---" between each post.`
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert LinkedIn content creator who specializes in viral posts that drive engagement. You understand psychology, storytelling, and what makes content shareable on professional networks.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: length === "long" ? 3000 : length === "short" ? 1500 : 2000,
-      temperature: 0.8,
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-4",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an expert LinkedIn content creator who specializes in viral posts that drive engagement. You understand psychology, storytelling, and what makes content shareable on professional networks.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: length === "long" ? 3000 : length === "short" ? 1500 : 2000,
+        temperature: 0.8,
+      }),
     })
 
-    const generatedContent = completion.choices[0]?.message?.content
+    if (!response.ok) {
+      throw new Error(`OpenRouter API request failed with status ${response.status}`)
+    }
+
+    const data = await response.json()
+    const generatedContent = data.choices[0]?.message?.content
 
     if (!generatedContent) {
       return NextResponse.json({ error: "Failed to generate content" }, { status: 500 })
     }
 
-    // Split the content into posts
     const posts = generatedContent
       .split("---")
-      .map((post) => post.trim())
-      .filter((post) => post.length > 0)
-      .slice(0, postCount) // Ensure we only get the requested number of posts
+      .map((post: string) => post.trim())
+      .filter((post: string) => post.length > 0)
+      .slice(0, postCount)
 
     return NextResponse.json({
       posts,

@@ -1,472 +1,13 @@
 "use client"
-import React, { useState, useCallback, useMemo } from "react"
+import React, { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  ArrowLeft, Camera, Mic, Eye, Clock, Edit3, Share2, Copy, 
-  Loader2, Sparkles, Zap, TrendingUp, BarChart3, Hash, 
-  ImageIcon, Video, FileText, Plus, Minus, Crown, CheckCircle, AlertCircle
-} from "lucide-react"
-
-// Types and Interfaces
-interface GeneratedPost {
-  id: number
-  content: string
-  tone: PostTone
-  engagement: EngagementLevel
-  score: number
-}
-
-type UserPlan = "free" | "pro" | "enterprise"
-type PostTone = "professional" | "friendly" | "assertive" | "inspirational" | "casual" | "thought-provoking"
-type PostLength = "short" | "medium" | "long"
-type EngagementLevel = "Very High" | "High" | "Medium" | "Low"
-
-interface PlanLimit {
-  maxPosts: number
-  name: string
-}
-
-interface MediaType {
-  icon: typeof ImageIcon
-  label: string
-  engagement: string
-  color: string
-  borderColor: string
-}
-
-interface AuthState {
-  isAuthenticated: boolean
-  isLoading: boolean
-  profile: { firstName: string; lastName: string } | null
-  accessToken: string | null
-}
-
-interface PostData {
-  content: string
-  tone?: PostTone
-  length?: PostLength
-}
-
-interface PostResult {
-  success: boolean
-  postId?: string
-  error?: string
-}
-
-interface ToneOption {
-  value: PostTone
-  label: string
-}
-
-interface LengthOption {
-  value: PostLength
-  label: string
-}
-
-// Real LinkedIn integration components
-const useLinkedInAuth = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    isLoading: false,
-    profile: null,
-    accessToken: null
-  })
-
-  const authenticate = () => {
-    setAuthState(prev => ({ ...prev, isLoading: true }))
-    
-    // LinkedIn OAuth 2.0 Authorization URL
-    const clientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID || 'YOUR_LINKEDIN_CLIENT_ID'
-    const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback')
-    const scope = encodeURIComponent('profile openid email w_member_social')
-    const state = Math.random().toString(36).substring(7) // Generate random state for security
-    
-    // Store state in localStorage for validation
-    localStorage.setItem('linkedin_oauth_state', state)
-    
-    const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`
-    
-    // Open LinkedIn authorization in a popup window
-    const popup = window.open(authUrl, 'linkedin-auth', 'width=500,height=600,scrollbars=yes,resizable=yes')
-    
-    // Listen for the popup to close or receive a message
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed)
-        setAuthState(prev => ({ ...prev, isLoading: false }))
-      }
-    }, 1000)
-    
-    // Listen for messages from the popup (authorization code)
-    const messageListener = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return
-      
-      if (event.data.type === 'LINKEDIN_AUTH_SUCCESS') {
-        clearInterval(checkClosed)
-        popup?.close()
-        window.removeEventListener('message', messageListener)
-        
-        // Exchange authorization code for access token
-        exchangeCodeForToken(event.data.code, state)
-      } else if (event.data.type === 'LINKEDIN_AUTH_ERROR') {
-        clearInterval(checkClosed)
-        popup?.close()
-        window.removeEventListener('message', messageListener)
-        setAuthState(prev => ({ ...prev, isLoading: false }))
-        console.error('LinkedIn authentication error:', event.data.error)
-      }
-    }
-    
-    window.addEventListener('message', messageListener)
-  }
-  
-  const exchangeCodeForToken = async (code: string, state: string) => {
-    try {
-      // Verify state parameter
-      const storedState = localStorage.getItem('linkedin_oauth_state')
-      if (state !== storedState) {
-        throw new Error('Invalid state parameter')
-      }
-      localStorage.removeItem('linkedin_oauth_state')
-      
-      // Exchange code for access token via your backend API
-      const response = await fetch('/api/auth/linkedin/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to exchange code for token')
-      }
-      
-      const data = await response.json()
-      
-      // Get user profile information from your backend (not directly from LinkedIn)
-      setAuthState({
-        isAuthenticated: true,
-        isLoading: false,
-        profile: data.profile || {
-          firstName: 'User',
-          lastName: 'Name',
-        },
-        accessToken: null, // Don't store token in frontend
-      })
-      
-    } catch (error) {
-      console.error('Error exchanging code for token:', error)
-      setAuthState(prev => ({ ...prev, isLoading: false }))
-    }
-  }
-  
-  // Check authentication status on mount
-  React.useEffect(() => {
-    // Check if user is authenticated by calling your backend
-    fetch('/api/linkedin/status')
-      .then(response => response.json())
-      .then(data => {
-        if (data.isAuthenticated) {
-          setAuthState({
-            isAuthenticated: true,
-            isLoading: false,
-            profile: data.profile || { firstName: 'User', lastName: 'Name' },
-            accessToken: null,
-          })
-        }
-      })
-      .catch(error => {
-        console.log('Not authenticated or error checking status:', error)
-      })
-  }, [])
-
-  return { ...authState, authenticate }
-}
-
-// Updated LinkedIn posting hook that uses backend API
-const useLinkedInPosting = () => {
-  const [isPosting, setIsPosting] = useState(false)
-  
-  const postToLinkedIn = async (postData: PostData): Promise<PostResult> => {
-    setIsPosting(true)
-    
-    try {
-      console.log('Sending content to backend:', postData.content)
-      
-      // Call YOUR backend API instead of LinkedIn directly
-      const response = await fetch('/api/linkedin/post', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: postData.content, // This will now reach your backend
-        }),
-      })
-      
-      const result = await response.json()
-      
-      setIsPosting(false)
-      
-      if (result.success) {
-        return { 
-          success: true, 
-          postId: result.postId 
-        }
-      } else {
-        return { 
-          success: false, 
-          error: result.error || 'Failed to post to LinkedIn' 
-        }
-      }
-      
-    } catch (error) {
-      setIsPosting(false)
-      console.error('Error posting to LinkedIn:', error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to post to LinkedIn' 
-      }
-    }
-  }
-
-  return { postToLinkedIn, isPosting }
-}
-
-interface LinkedInAuthButtonProps {
-  onAuthenticated?: () => void
-  className?: string
-}
-
-const LinkedInAuthButton: React.FC<LinkedInAuthButtonProps> = ({ onAuthenticated, className }) => {
-  const { isAuthenticated, isLoading, authenticate, profile } = useLinkedInAuth()
-
-  if (isLoading) {
-    return (
-      <button disabled className={`${className} opacity-50 cursor-not-allowed`}>
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        Checking...
-      </button>
-    )
-  }
-
-  if (isAuthenticated && profile) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-green-400">
-        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-        Connected as {profile.firstName} {profile.lastName}
-      </div>
-    )
-  }
-
-  return (
-    <button onClick={authenticate} className={`${className} bg-[#0077B5] hover:bg-[#004182] text-white px-4 py-2 rounded-lg flex items-center transition-colors`}>
-      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-      </svg>
-      Connect LinkedIn
-    </button>
-  )
-}
-
-interface PostToLinkedInButtonProps {
-  content: string
-  onSuccess?: (postId: string) => void
-  onError?: (error: string) => void
-  className?: string
-}
-
-const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({ content, onSuccess, onError, className }) => {
-  const { isAuthenticated, isLoading: authLoading, authenticate } = useLinkedInAuth()
-  const { postToLinkedIn, isPosting } = useLinkedInPosting()
-  const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error' | 'needs_auth'>('idle')
-
-  const handlePost = async () => {
-    console.log("Post button clicked with content:", content)
-    console.log("Checking authentication...")
-    
-    // First check if user is authenticated
-    if (!isAuthenticated) {
-      console.log("User not authenticated, showing auth prompt")
-      setPostStatus('needs_auth')
-      return
-    }
-
-    console.log("User authenticated, starting post to LinkedIn...")
-    
-    try {
-      const result = await postToLinkedIn({ content })
-      
-      console.log("Post result:", result)
-
-      if (result.success && result.postId) {
-        setPostStatus('success')
-        onSuccess?.(result.postId)
-        
-        setTimeout(() => {
-          setPostStatus('idle')
-        }, 3000)
-      } else {
-        setPostStatus('error')
-        onError?.(result.error || 'Unknown error occurred')
-        
-        setTimeout(() => {
-          setPostStatus('idle')
-        }, 3000)
-      }
-    } catch (error) {
-      console.error("Error posting to LinkedIn:", error)
-      setPostStatus('error')
-      onError?.('Failed to post')
-      
-      setTimeout(() => {
-        setPostStatus('idle')
-      }, 3000)
-    }
-  }
-
-  const handleAuthenticate = () => {
-    console.log("Authenticating user...")
-    authenticate()
-    setPostStatus('idle')
-  }
-
-  const handleCancelAuth = () => {
-    setPostStatus('idle')
-  }
-
-  if (authLoading) {
-    return (
-      <button disabled className={`${className} opacity-50 cursor-not-allowed`}>
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        Loading...
-      </button>
-    )
-  }
-
-  // Show authentication prompt when needed
-  if (postStatus === 'needs_auth') {
-    return (
-      <div className="space-y-2">
-        <div className="text-xs text-yellow-400 text-center mb-2">
-          Connect LinkedIn to post
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={handleAuthenticate}
-            className="flex-1 bg-[#0077B5] hover:bg-[#004182] text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm transition-colors"
-          >
-            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-            </svg>
-            Connect
-          </button>
-          <button 
-            onClick={handleCancelAuth}
-            className="px-3 py-2 border border-gray-500 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const getButtonContent = () => {
-    if (isPosting) {
-      return (
-        <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          <span className="hidden sm:inline">Posting...</span>
-          <span className="sm:hidden">Posting...</span>
-        </>
-      )
-    }
-
-    if (postStatus === 'success') {
-      return (
-        <>
-          <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-          <span className="hidden sm:inline">Posted Successfully!</span>
-          <span className="sm:hidden">Posted!</span>
-        </>
-      )
-    }
-
-    // Default state (including error state - button remains as "Post Now")
-    return (
-      <>
-        <Share2 className="w-4 h-4 mr-2" />
-        <span className="hidden sm:inline">Post Now</span>
-        <span className="sm:hidden">Post</span>
-      </>
-    )
-  }
-
-  const getButtonStyles = () => {
-    if (postStatus === 'success') {
-      return "bg-green-500 hover:bg-green-600 text-white"
-    }
-    // Default style for all other states (idle, error, posting)
-    return "bg-green-500 hover:bg-green-600 text-white"
-  }
-
-  return (
-    <div className="space-y-2">
-      <button
-        onClick={handlePost}
-        disabled={isPosting || postStatus === 'success'}
-        className={`${getButtonStyles()} shadow-lg transition-all duration-300 px-4 py-2 rounded-lg flex items-center ${className}`}
-      >
-        {getButtonContent()}
-      </button>
-      
-      {/* Error message display */}
-      {postStatus === 'error' && (
-        <div className="flex items-center gap-1 text-red-400 text-xs">
-          <AlertCircle className="w-3 h-3" />
-          <span>Failed to post to LinkedIn</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Constants
-const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
-  free: { maxPosts: 5, name: "Free Plan" },
-  pro: { maxPosts: 50, name: "Pro Plan" },
-  enterprise: { maxPosts: 100, name: "Enterprise Plan" },
-}
-
-const TONE_OPTIONS: ToneOption[] = [
-  { value: "professional", label: "🎯 Professional" },
-  { value: "friendly", label: "😊 Friendly" },
-  { value: "assertive", label: "💪 Assertive" },
-  { value: "inspirational", label: "✨ Inspirational" },
-  { value: "casual", label: "😎 Casual" },
-  { value: "thought-provoking", label: "🤔 Thought-Provoking" },
-]
-
-const LENGTH_OPTIONS: LengthOption[] = [
-  { value: "short", label: "📝 Short (50-100 words)" },
-  { value: "medium", label: "📄 Medium (100-200 words)" },
-  { value: "long", label: "📚 Long (200+ words)" },
-]
-
-const MEDIA_TYPES: MediaType[] = [
-  { icon: ImageIcon, label: "Add Image", engagement: "+65% engagement", color: "text-[#0077B5]", borderColor: "border-[#0077B5]" },
-  { icon: Video, label: "Add Video", engagement: "+120% engagement", color: "text-purple-400", borderColor: "border-purple-500" },
-  { icon: FileText, label: "Add Document", engagement: "+45% engagement", color: "text-green-400", borderColor: "border-green-500" },
-]
-
-const MOCK_POSTS: string[] = [
-  "🚀 Just shipped a game-changing feature that reduces load times by 60%! The journey wasn't easy - 3 weeks of debugging, countless coffee cups, and moments of doubt. But here's what I learned: Every 'impossible' problem has a solution waiting to be discovered. What's the most challenging technical problem you've solved recently? 👇",
-  "💡 The best career advice I wish I knew 5 years ago: Your network is your net worth, but authenticity is your currency. Stop trying to impress everyone and start being genuinely helpful. Share knowledge, celebrate others' wins, and ask thoughtful questions. The opportunities will follow naturally.",
-  "🎯 Unpopular opinion: Most productivity hacks are just procrastination in disguise. I spent years optimizing my workflow instead of actually working. The real game-changer? Time blocking and saying no to everything that doesn't align with my top 3 priorities. Simple beats complex every time."
-]
-
+import Header from "@/components/Header"
+import PerformanceOverview from "@/components/PerformanceOverview"
+import PostCard from "@/components/PostCard"
+import { usePostGeneration } from "@/hooks/usePostGeneration"
+import { GeneratedPost, PostTone, PostLength, UserPlan } from "@/types"
+import { PLAN_LIMITS, TONE_OPTIONS, LENGTH_OPTIONS } from "@/utils/constants"
+import { Plus, Minus, Loader2, Zap, FileText, Mic, Hash, Camera, Crown, Sparkles } from "lucide-react"
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -474,294 +15,6 @@ const fadeInUp = {
   exit: { opacity: 0, y: -20 }
 }
 
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-}
-
-// Utility functions
-const getEngagementColor = (engagement: EngagementLevel): string => {
-  const colorMap: Record<EngagementLevel, string> = {
-    "Very High": "text-green-400 bg-green-400/10 border-green-400/20",
-    "High": "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    "Medium": "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-    "Low": "text-gray-400 bg-gray-400/10 border-gray-400/20",
-  }
-  return colorMap[engagement] || colorMap.Low
-}
-
-const getScoreColor = (score: number): string => {
-  if (score >= 90) return "text-green-400"
-  if (score >= 80) return "text-blue-400"
-  if (score >= 70) return "text-yellow-400"
-  return "text-gray-400"
-}
-
-const generateMockPost = (index: number, tone: PostTone): GeneratedPost => ({
-  id: index + 1,
-  content: MOCK_POSTS[index] || MOCK_POSTS[0],
-  tone,
-  engagement: (["Very High", "High", "Medium"] as EngagementLevel[])[Math.floor(Math.random() * 3)],
-  score: Math.floor(Math.random() * 20) + 80,
-})
-
-// Custom hooks
-const usePostGeneration = () => {
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generationProgress, setGenerationProgress] = useState(0)
-
-  const generatePosts = useCallback(async (input: string, tone: PostTone, postCount: number, postLength: PostLength): Promise<GeneratedPost[]> => {
-    if (!input.trim()) return []
-
-    setIsGenerating(true)
-    setGenerationProgress(0)
-
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setGenerationProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval)
-          return 90
-        }
-        return prev + 10
-      })
-    }, 200)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      setGenerationProgress(100)
-      clearInterval(progressInterval)
-    }, 1000)
-
-    // Return mock data
-    return Array.from({ length: postCount }, (_, index) => generateMockPost(index, tone))
-  }, [])
-
-  const resetGeneration = useCallback(() => {
-    setIsGenerating(false)
-    setGenerationProgress(0)
-  }, [])
-
-  return { isGenerating, generationProgress, generatePosts, resetGeneration, setIsGenerating }
-}
-
-// Component Interfaces
-interface HeaderProps {
-  showBackButton?: boolean
-  onBack?: () => void
-  onMenuClick?: () => void
-}
-
-interface PerformanceOverviewProps {
-  posts: GeneratedPost[]
-}
-
-interface PostCardProps {
-  post: GeneratedPost
-  index: number
-  totalPosts: number
-  isExpanded: boolean
-  onToggleExpand: () => void
-  onSchedule: () => void
-  onCopy: () => void
-  onPostSuccess: (postId: string) => void
-  onPostError: (error: string) => void
-}
-
-// Components
-const Header: React.FC<HeaderProps> = ({ showBackButton, onBack, onMenuClick }) => (
-  <motion.header
-    className="sticky top-0 z-40 flex items-center justify-between p-4 bg-[#2d3748] border-b border-[#374151] backdrop-blur-md shadow-xl"
-    {...fadeInUp}
-  >
-    {showBackButton ? (
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300 px-3 py-2 rounded-lg"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Generator
-      </button>
-    ) : (
-      <button
-        onClick={onMenuClick}
-        className="lg:hidden text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-lg"
-      >
-        <Sparkles className="w-6 h-6" />
-      </button>
-    )}
-    
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 bg-[#0077B5] rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg">
-        LP
-      </div>
-      <span className="font-semibold text-[#0077B5] hidden sm:block">LinkedPilot</span>
-    </div>
-    
-    <div className="w-8 h-8 bg-gray-600 rounded-full"></div>
-  </motion.header>
-)
-
-const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ posts }) => {
-  const stats = useMemo(() => ({
-    avgScore: Math.round(posts.reduce((acc, post) => acc + post.score, 0) / posts.length || 0),
-    highEngagement: posts.filter(p => p.engagement === "Very High").length,
-    totalPosts: posts.length,
-  }), [posts])
-
-  return (
-    <motion.div
-      className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-    >
-      {[
-        { icon: TrendingUp, value: stats.avgScore, label: "Avg Score", color: "text-[#0077B5]" },
-        { icon: BarChart3, value: stats.highEngagement, label: "High Engagement", color: "text-green-400" },
-        { icon: Sparkles, value: stats.totalPosts, label: "Posts Generated", color: "text-purple-400" },
-      ].map((stat, index) => (
-        <motion.div
-          key={index}
-          className="bg-[#2d3748] rounded-xl p-6 border border-[#374151] shadow-lg"
-          variants={fadeInUp}
-        >
-          <div className="flex items-center gap-3">
-            <stat.icon className={`w-8 h-8 ${stat.color}`} />
-            <div>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-gray-400 text-sm">{stat.label}</div>
-            </div>
-          </div>
-        </motion.div>
-      ))}
-    </motion.div>
-  )
-}
-
-const PostCard: React.FC<PostCardProps> = ({ 
-  post, 
-  index, 
-  totalPosts, 
-  isExpanded, 
-  onToggleExpand, 
-  onSchedule, 
-  onCopy,
-  onPostSuccess,
-  onPostError
-}) => {
-  const shouldShowMore = post.content.length > 200
-
-  return (
-    <motion.div
-      className="bg-[#2d3748] rounded-xl p-6 border border-[#374151] shadow-xl hover:shadow-2xl transition-all duration-300"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ scale: 1.01, y: -2 }}
-    >
-      {/* Post Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="bg-[#0077B5] text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-            Post {post.id}/{totalPosts}
-          </span>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getEngagementColor(post.engagement)}`}>
-            {post.engagement} Engagement
-          </span>
-          <div className="flex items-center gap-1">
-            <Zap className={`w-4 h-4 ${getScoreColor(post.score)}`} />
-            <span className={`text-sm font-bold ${getScoreColor(post.score)}`}>{post.score}/100</span>
-          </div>
-        </div>
-        <button
-          className="flex items-center gap-2 text-[#0077B5] text-sm hover:underline transition-colors"
-          onClick={onToggleExpand}
-        >
-          <Eye className="w-4 h-4" />
-          {isExpanded ? "Collapse" : "Full View"}
-        </button>
-      </div>
-
-      {/* Post Content */}
-      <div className="mb-6">
-        <div className={`text-gray-300 leading-relaxed text-lg ${isExpanded ? "" : "line-clamp-4"}`}>
-          {post.content}
-        </div>
-        {shouldShowMore && (
-          <button
-            className="text-[#0077B5] text-sm mt-2 hover:underline transition-colors"
-            onClick={onToggleExpand}
-          >
-            {isExpanded ? "Show less" : "Show more"}
-          </button>
-        )}
-      </div>
-
-      {/* Media Attachment Section */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 bg-[#0077B5] rounded-full"></div>
-          <span className="text-[#0077B5] text-sm font-medium">Media Attachment</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {MEDIA_TYPES.map((media, index) => {
-            const IconComponent = media.icon
-            return (
-              <div
-                key={index}
-                className={`border-2 border-dashed ${media.borderColor} rounded-lg p-4 text-center bg-[#1a1d29] hover:bg-[#374151]/20 transition-colors cursor-pointer group`}
-              >
-                <IconComponent className={`w-8 h-8 ${media.color} mx-auto mb-2 group-hover:scale-110 transition-transform`} />
-                <p className="text-gray-300 text-sm">{media.label}</p>
-                <p className="text-xs text-gray-500">{media.engagement}</p>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <button
-          className="bg-[#0077B5] hover:bg-[#004182] text-white shadow-lg transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
-          onClick={onSchedule}
-        >
-          <Clock className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Schedule</span>
-          <span className="sm:hidden">Schedule</span>
-        </button>
-
-        <button className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center">
-          <Edit3 className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Edit</span>
-          <span className="sm:hidden">Edit</span>
-        </button>
-
-        <PostToLinkedInButton
-          content={post.content}
-          onSuccess={onPostSuccess}
-          onError={onPostError}
-          className="text-sm sm:text-base"
-        />
-
-        <button
-          className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
-          onClick={onCopy}
-        >
-          <Copy className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Copy</span>
-          <span className="sm:hidden">Copy</span>
-        </button>
-      </div>
-    </motion.div>
-  )
-}
-
-// Main Component
 export default function Dashboard() {
   // State management
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -842,7 +95,6 @@ export default function Dashboard() {
         <Header showBackButton onBack={handleBackToGenerator} />
         
         <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-          {/* Results Header */}
           <motion.div className="text-center mb-8" {...fadeInUp}>
             <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
               ✨ Generated {generatedPosts.length} Posts
@@ -857,7 +109,6 @@ export default function Dashboard() {
 
           <PerformanceOverview posts={generatedPosts} />
 
-          {/* Generated Posts */}
           <div className="space-y-6">
             {generatedPosts.map((post, index) => (
               <PostCard
@@ -875,7 +126,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Generate More Button */}
           <motion.div
             className="text-center mt-8"
             initial={{ opacity: 0 }}
@@ -902,7 +152,6 @@ export default function Dashboard() {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto">
-          {/* Main Header */}
           <motion.div className="text-center mb-8" {...fadeInUp}>
             <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
               🚀 AI Content Generator
@@ -921,11 +170,8 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* Controls Section */}
             <div className="bg-[#2d3748] rounded-xl p-3 sm:p-4 lg:p-6 border border-[#374151] shadow-xl">
-              {/* Top Row: Tone and Number of Posts */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {/* Tone Selection */}
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
                     <Mic className="w-4 h-4 text-[#0077B5]" />
@@ -944,7 +190,6 @@ export default function Dashboard() {
                   </select>
                 </div>
 
-                {/* Post Count Selection */}
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
                     <Hash className="w-4 h-4 text-[#0077B5]" />
@@ -986,7 +231,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Input Area */}
               <div className="relative mb-6">
                 <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[#0077B5]" />
@@ -1010,9 +254,7 @@ Examples:
                 </div>
               </div>
 
-              {/* Bottom Toolbar */}
               <div className="space-y-4">
-                {/* Media Tools Row */}
                 <div className="flex items-center gap-3">
                   {[Camera, Mic, Hash].map((Icon, index) => (
                     <button 
@@ -1024,9 +266,7 @@ Examples:
                   ))}
                 </div>
 
-                {/* Bottom Controls Row */}
                 <div className="flex flex-col gap-4">
-                  {/* Post Length */}
                   <div className="w-full">
                     <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-[#0077B5]" />
@@ -1045,7 +285,6 @@ Examples:
                     </select>
                   </div>
 
-                  {/* Credits and Generate Button Row */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                     <div className="text-left sm:text-right order-2 sm:order-1">
                       <div className="text-gray-400 text-sm">Credits: ∞</div>
@@ -1080,7 +319,6 @@ Examples:
             </div>
           </motion.div>
 
-          {/* Loading State */}
           <AnimatePresence>
             {isGenerating && (
               <motion.div
@@ -1095,7 +333,6 @@ Examples:
                     <span className="text-xl font-semibold text-[#0077B5]">Generating your viral posts...</span>
                   </div>
 
-                  {/* Progress Bar */}
                   <div className="w-full bg-[#374151] rounded-full h-2 mb-4">
                     <motion.div
                       className="bg-[#0077B5] h-2 rounded-full"
