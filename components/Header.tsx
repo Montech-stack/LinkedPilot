@@ -1,12 +1,8 @@
+"use client"
 import React from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Sparkles } from "lucide-react"
-
-interface HeaderProps {
-  showBackButton?: boolean
-  onBack?: () => void
-  onMenuClick?: () => void
-}
+import { HeaderProps } from "../types"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },

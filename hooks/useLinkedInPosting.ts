@@ -1,59 +1,51 @@
-// Updated hooks/useLinkedInPosting.ts for App Router
-import { useState } from 'react'
-import { useLinkedInAuth } from './useLinkedInAuth'
-
-interface PostData {
-  content: string
-  visibility?: 'PUBLIC' | 'CONNECTIONS'
-}
-
-interface PostResponse {
-  success: boolean
-  postId?: string
-  error?: string
-}
+"use client"
+import { useState } from "react"
+import { PostData, PostResult } from "../types"
 
 export const useLinkedInPosting = () => {
   const [isPosting, setIsPosting] = useState(false)
-  const { accessToken, isAuthenticated } = useLinkedInAuth()
-
-  const postToLinkedIn = async (postData: PostData): Promise<PostResponse> => {
-    if (!isAuthenticated || !accessToken) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
+  
+  const postToLinkedIn = async (postData: PostData): Promise<PostResult> => {
     setIsPosting(true)
-
+    
     try {
+      console.log('Sending content to backend:', postData.content)
+      
       const response = await fetch('/api/linkedin/post', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          accessToken,
           content: postData.content,
-          visibility: postData.visibility || 'PUBLIC'
-        })
+        }),
       })
-
+      
       const result = await response.json()
-
-      if (response.ok) {
-        return { success: true, postId: result.postId }
-      } else {
-        return { success: false, error: result.error || 'Failed to post' }
-      }
-    } catch (error) {
-      console.error('Error posting to LinkedIn:', error)
-      return { success: false, error: 'Network error occurred' }
-    } finally {
+      
       setIsPosting(false)
+      
+      if (result.success) {
+        return { 
+          success: true, 
+          postId: result.postId 
+        }
+      } else {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to post to LinkedIn' 
+        }
+      }
+      
+    } catch (error) {
+      setIsPosting(false)
+      console.error('Error posting to LinkedIn:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to post to LinkedIn' 
+      }
     }
   }
 
-  return {
-    postToLinkedIn,
-    isPosting
-  }
+  return { postToLinkedIn, isPosting }
 }

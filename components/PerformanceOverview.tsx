@@ -1,10 +1,13 @@
+"use client"
 import React, { useMemo } from "react"
 import { motion } from "framer-motion"
-import { GeneratedPost } from "../types"
 import { TrendingUp, BarChart3, Sparkles } from "lucide-react"
+import { PerformanceOverviewProps } from "../types"
 
-interface PerformanceOverviewProps {
-  posts: GeneratedPost[]
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 }
 }
 
 const staggerContainer = {
@@ -13,12 +16,6 @@ const staggerContainer = {
       staggerChildren: 0.1
     }
   }
-}
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 }
 }
 
 const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({ posts }) => {

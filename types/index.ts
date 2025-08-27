@@ -1,3 +1,8 @@
+export type UserPlan = "free" | "pro" | "enterprise"
+export type PostTone = "professional" | "friendly" | "assertive" | "inspirational" | "casual" | "thought-provoking"
+export type PostLength = "short" | "medium" | "long"
+export type EngagementLevel = "Very High" | "High" | "Medium" | "Low"
+
 export interface GeneratedPost {
   id: number
   content: string
@@ -6,18 +11,13 @@ export interface GeneratedPost {
   score: number
 }
 
-export type UserPlan = "free" | "pro" | "enterprise"
-export type PostTone = "professional" | "friendly" | "assertive" | "inspirational" | "casual" | "thought-provoking"
-export type PostLength = "short" | "medium" | "long"
-export type EngagementLevel = "Very High" | "High" | "Medium" | "Low"
-
 export interface PlanLimit {
   maxPosts: number
   name: string
 }
 
 export interface MediaType {
-  icon: any // Using any due to Lucide icon typing
+  icon: any // Note: In a real application, this should be a specific type (e.g., React.ComponentType)
   label: string
   engagement: string
   color: string
@@ -51,4 +51,38 @@ export interface ToneOption {
 export interface LengthOption {
   value: PostLength
   label: string
+}
+
+export interface HeaderProps {
+  showBackButton?: boolean
+  onBack?: () => void
+  onMenuClick?: () => void
+}
+
+export interface PerformanceOverviewProps {
+  posts: GeneratedPost[]
+}
+
+export interface PostCardProps {
+  post: GeneratedPost
+  index: number
+  totalPosts: number
+  isExpanded: boolean
+  onToggleExpand: () => void
+  onSchedule: () => void
+  onCopy: () => void
+  onPostSuccess: (postId: string) => void
+  onPostError: (error: string) => void
+}
+
+export interface LinkedInAuthButtonProps {
+  onAuthenticated?: () => void
+  className?: string
+}
+
+export interface PostToLinkedInButtonProps {
+  content: string
+  onSuccess?: (postId: string) => void
+  onError?: (error: string) => void
+  className?: string
 }

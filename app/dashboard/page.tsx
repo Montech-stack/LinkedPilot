@@ -1,14 +1,36 @@
 "use client"
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Header from "@/components/Header"
+import { Loader2, Sparkles, Zap, Plus, Minus, Crown, FileText, Camera, Mic, Hash } from "lucide-react"
+import MobileHeader from "@/components/MobileHeader"
+import Sidebar from "@/components/Sidebar"
 import PerformanceOverview from "@/components/PerformanceOverview"
 import PostCard from "@/components/PostCard"
 import { usePostGeneration } from "@/hooks/usePostGeneration"
-import { GeneratedPost, PostTone, PostLength, UserPlan } from "@/types"
-import { PLAN_LIMITS, TONE_OPTIONS, LENGTH_OPTIONS } from "@/utils/constants"
-import { Plus, Minus, Loader2, Zap, FileText, Mic, Hash, Camera, Crown, Sparkles } from "lucide-react"
-// Animation variants
+import { useRouter } from "next/navigation"
+import { GeneratedPost, UserPlan, PostTone, PostLength, PlanLimit, ToneOption, LengthOption } from "@/types"
+
+const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
+  free: { maxPosts: 5, name: "Free Plan" },
+  pro: { maxPosts: 50, name: "Pro Plan" },
+  enterprise: { maxPosts: 100, name: "Enterprise Plan" },
+}
+
+const TONE_OPTIONS: ToneOption[] = [
+  { value: "professional", label: "🎯 Professional" },
+  { value: "friendly", label: "😊 Friendly" },
+  { value: "assertive", label: "💪 Assertive" },
+  { value: "inspirational", label: "✨ Inspirational" },
+  { value: "casual", label: "😎 Casual" },
+  { value: "thought-provoking", label: "🤔 Thought-Provoking" },
+]
+
+const LENGTH_OPTIONS: LengthOption[] = [
+  { value: "short", label: "📝 Short (50-100 words)" },
+  { value: "medium", label: "📄 Medium (100-200 words)" },
+  { value: "long", label: "📚 Long (200+ words)" },
+]
+
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -16,7 +38,7 @@ const fadeInUp = {
 }
 
 export default function Dashboard() {
-  // State management
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [input, setInput] = useState("")
   const [tone, setTone] = useState<PostTone>("professional")
@@ -28,14 +50,25 @@ export default function Dashboard() {
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedPostForSchedule, setSelectedPostForSchedule] = useState<GeneratedPost | null>(null)
 
-  // Custom hooks
   const { isGenerating, generationProgress, generatePosts, resetGeneration, setIsGenerating } = usePostGeneration()
 
-  // Configuration
   const userPlan: UserPlan = "pro"
   const currentPlanLimit = PLAN_LIMITS[userPlan]
 
-  // Event handlers
+  // Read input query parameter from URL
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search)
+    const inputParam = query.get("input")
+    if (inputParam) {
+      try {
+        setInput(decodeURIComponent(inputParam))
+      } catch (error) {
+        console.error("Failed to decode input parameter:", error, "Raw input:", inputParam)
+        setInput("") // Fallback to empty string on error
+      }
+    }
+  }, [])
+
   const handleGeneratePosts = useCallback(async () => {
     if (!input.trim()) return
 
@@ -51,7 +84,6 @@ export default function Dashboard() {
   const handleCopyToClipboard = useCallback(async (content: string) => {
     try {
       await navigator.clipboard.writeText(content)
-      // TODO: Add toast notification
     } catch (error) {
       console.error("Failed to copy to clipboard:", error)
     }
@@ -59,12 +91,10 @@ export default function Dashboard() {
 
   const handlePostSuccess = useCallback((postId: string) => {
     console.log("Successfully posted to LinkedIn:", postId)
-    // TODO: Add success notification/toast
   }, [])
 
   const handlePostError = useCallback((error: string) => {
     console.error("Failed to post to LinkedIn:", error)
-    // TODO: Add error notification/toast
   }, [])
 
   const handleSchedulePost = useCallback((post: GeneratedPost) => {
@@ -81,76 +111,79 @@ export default function Dashboard() {
   const handleBackToGenerator = useCallback(() => {
     setShowResults(false)
     resetGeneration()
-  }, [resetGeneration])
+    // Clear input and URL query parameter
+    setInput("")
+    router.push("/dashboard")
+  }, [resetGeneration, router])
 
   const handlePostCountInput = useCallback((value: string) => {
     const numValue = parseInt(value) || 1
     setPostCount(Math.min(currentPlanLimit.maxPosts, Math.max(1, numValue)))
   }, [currentPlanLimit.maxPosts])
 
-  // Results View
   if (showResults) {
     return (
-      <div className="min-h-screen bg-[#1a1d29] text-white">
-        <Header showBackButton onBack={handleBackToGenerator} />
-        
-        <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-          <motion.div className="text-center mb-8" {...fadeInUp}>
-            <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
-              ✨ Generated {generatedPosts.length} Posts
+      <div className="min-h-screen bg-[#1a1d29] text-white flex">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-0">
+          <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
+          <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+            <motion.div className="text-center mb-8" {...fadeInUp}>
+              <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
+                ✨ Generated {generatedPosts.length} Posts
+              </div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white">
+                Your Viral Posts Are <span className="text-[#0077B5]">Ready to Go</span>
+              </h1>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                Each post uses proven psychological triggers and engagement patterns. Choose your favorite or schedule them all!
+              </p>
+            </motion.div>
+
+            <PerformanceOverview posts={generatedPosts} />
+
+            <div className="space-y-6">
+              {generatedPosts.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  index={index}
+                  totalPosts={generatedPosts.length}
+                  isExpanded={expandedPost === post.id}
+                  onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
+                  onSchedule={() => handleSchedulePost(post)}
+                  onCopy={() => handleCopyToClipboard(post.content)}
+                  onPostSuccess={handlePostSuccess}
+                  onPostError={handlePostError}
+                />
+              ))}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white">
-              Your Viral Posts Are <span className="text-[#0077B5]">Ready to Go</span>
-            </h1>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Each post uses proven psychological triggers and engagement patterns. Choose your favorite or schedule them all!
-            </p>
-          </motion.div>
 
-          <PerformanceOverview posts={generatedPosts} />
-
-          <div className="space-y-6">
-            {generatedPosts.map((post, index) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                index={index}
-                totalPosts={generatedPosts.length}
-                isExpanded={expandedPost === post.id}
-                onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
-                onSchedule={() => handleSchedulePost(post)}
-                onCopy={() => handleCopyToClipboard(post.content)}
-                onPostSuccess={handlePostSuccess}
-                onPostError={handlePostError}
-              />
-            ))}
-          </div>
-
-          <motion.div
-            className="text-center mt-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <button
-              onClick={handleBackToGenerator}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 text-lg shadow-lg rounded-lg transform hover:scale-105 transition-all duration-300 flex items-center mx-auto"
+            <motion.div
+              className="text-center mt-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Generate More Posts
-            </button>
-          </motion.div>
+              <button
+                onClick={handleBackToGenerator}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 text-lg shadow-lg rounded-lg transform hover:scale-105 transition-all duration-300 flex items-center mx-auto"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Generate More Posts
+              </button>
+            </motion.div>
+          </div>
         </div>
       </div>
     )
   }
 
-  // Generator View
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white flex">
-      <div className="flex-1 lg:ml-0 overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 lg:ml-0">
+        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
         <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto">
           <motion.div className="text-center mb-8" {...fadeInUp}>
             <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
@@ -321,38 +354,50 @@ Examples:
 
           <AnimatePresence>
             {isGenerating && (
-              <motion.div
-                className="mt-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <div className="bg-[#2d3748] rounded-xl p-8 border border-[#374151] shadow-xl text-center">
-                  <div className="inline-flex items-center gap-3 mb-4">
-                    <Loader2 className="w-8 h-8 text-[#0077B5] animate-spin" />
-                    <span className="text-xl font-semibold text-[#0077B5]">Generating your viral posts...</span>
-                  </div>
+              <>
+                <motion.div
+                  className="fixed inset-0 bg-black/50 z-50 min-h-screen h-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+                <motion.div
+                  className="fixed inset-0 flex items-center justify-center z-50 p-4"
+                >
+                  <motion.div
+                    className="bg-[#2d3748] rounded-xl p-6 border border-[#374151] shadow-xl text-center w-[90%] sm:max-w-md max-h-[80vh] overflow-auto"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="inline-flex items-center gap-3 mb-4">
+                      <Loader2 className="w-8 h-8 text-[#0077B5] animate-spin" />
+                      <span className="text-xl font-semibold text-[#0077B5]">Generating your viral posts...</span>
+                    </div>
 
-                  <div className="w-full bg-[#374151] rounded-full h-2 mb-4">
-                    <motion.div
-                      className="bg-[#0077B5] h-2 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${generationProgress}%` }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
+                    <div className="w-full bg-[#374151] rounded-full h-2 mb-4">
+                      <motion.div
+                        className="bg-[#0077B5] h-2 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${generationProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
 
-                  <p className="text-gray-400 mb-4">
-                    Creating {postCount} unique {postLength} posts with {tone} tone...
-                  </p>
+                    <p className="text-gray-400 mb-4">
+                      Creating {postCount} unique {postLength} posts with {tone} tone...
+                    </p>
 
-                  <div className="flex justify-center gap-4 text-sm text-gray-500">
-                    <span>✨ Analyzing trends</span>
-                    <span>🎯 Optimizing engagement</span>
-                    <span>🚀 Crafting hooks</span>
-                  </div>
-                </div>
-              </motion.div>
+                    <div className="flex justify-center gap-4 text-sm text-gray-500">
+                      <span>✨ Analyzing trends</span>
+                      <span>🎯 Optimizing engagement</span>
+                      <span>🚀 Crafting hooks</span>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </div>
