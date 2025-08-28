@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -134,7 +133,8 @@ export default function ViralIdeasLibrary() {
   }
 
   const handleIdeaClick = (hook: string) => {
-    router.push(`/dashboard?input=${encodeURIComponent(hook)}`)
+    const sanitizedHook = hook.replace(/[^\w\s-.,!?]/g, '') // Sanitize to prevent URIError
+    router.push(`/dashboard?input=${encodeURIComponent(sanitizedHook)}`)
   }
 
   const handleAutomate = async () => {
@@ -196,43 +196,43 @@ export default function ViralIdeasLibrary() {
   }
 
   return (
-    <div className="min-h-screen gradient-bg text-white flex">
+    <div className="min-h-screen gradient-bg text-white flex overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:ml-0">
         <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+        <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto">
           <motion.div
-            className="mb-8 text-center lg:text-left"
+            className="mb-6 text-center lg:text-left"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl lg:text-4xl font-bold mb-2 gradient-text">Viral Ideas Library</h1>
-            <p className="text-gray-400 text-lg max-w-2xl">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 gradient-text">Viral Ideas Library</h1>
+            <p className="text-gray-400 text-sm sm:text-base max-w-xl mx-auto lg:mx-0">
               Generate viral content ideas based on LinkedIn trends for your topic or niche
             </p>
           </motion.div>
 
           <motion.div
-            className="gradient-card rounded-xl p-8 mb-8 border border-[#2d3748] shadow-xl glow-card backdrop-blur-sm"
+            className="gradient-card rounded-xl p-3 sm:p-4 lg:p-6 border border-[#2d3748] shadow-xl glow-card backdrop-blur-sm mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
           >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] rounded-full flex items-center justify-center shadow-lg">
-                <Lightbulb className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] rounded-full flex items-center justify-center shadow-lg">
+                <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-white">Generate Viral Ideas</h2>
-                <p className="text-gray-400 text-sm mt-1">Enter a topic or niche (e.g., "AI in marketing", "startup growth hacks")</p>
+                <h2 className="text-base sm:text-lg font-semibold text-white">Generate Viral Ideas</h2>
+                <p className="text-gray-400 text-xs sm:text-sm mt-1">Enter a topic or niche (e.g., "AI in marketing", "startup growth hacks")</p>
               </div>
             </div>
 
             <div className="relative">
-              <label htmlFor="topic-input" className="text-sm font-medium text-gray-300 mb-2 block">
+              <label htmlFor="topic-input" className="text-xs sm:text-sm font-medium text-gray-300 mb-2 block">
                 Topic or Niche
               </label>
               <motion.div
@@ -245,20 +245,20 @@ export default function ViralIdeasLibrary() {
                   placeholder="Enter your topic or niche for viral content ideas..."
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
-                  className="min-h-[120px] bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5] focus:ring-offset-2 hover:border-[#0077B5] rounded-lg text-base leading-relaxed shadow-lg transition-all duration-300 resize-y"
+                  className="min-h-[80px] sm:min-h-[100px] bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5] focus:ring-offset-2 hover:border-[#0077B5] rounded-lg text-sm sm:text-base leading-relaxed shadow-lg transition-all duration-300 resize-y w-full overflow-auto"
                 />
               </motion.div>
             </div>
 
-            <div className="flex gap-4 mt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
               <Button
                 onClick={() => handleGenerate(false)}
                 disabled={isGenerating || !userInput.trim()}
-                className="flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white font-semibold py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
               >
                 {isGenerating ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                     </svg>
@@ -270,30 +270,30 @@ export default function ViralIdeasLibrary() {
               </Button>
               <Button
                 onClick={handleAutomate}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
               >
                 Automate Posting
               </Button>
             </div>
 
             {generatedIdeas.length > 0 && (
-              <div className="mt-4 flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
                 <Button
                   onClick={handleSave}
                   disabled={selected.size === 0}
                   variant="outline"
-                  className="flex-1 border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5]/10 hover:text-[#0077B5] font-semibold rounded-lg shadow-md transition-all duration-300"
+                  className="w-full sm:w-auto flex-1 border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5]/10 hover:text-[#0077B5] font-semibold rounded-lg shadow-md transition-all duration-300 py-2 px-4 text-sm sm:text-base"
                 >
                   Save Selected ({selected.size})
                 </Button>
                 <Button
                   onClick={handleMore}
                   disabled={isGenerating}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="w-full sm:w-auto flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 py-2 px-4 text-sm sm:text-base"
                 >
                   {isGenerating ? (
                     <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                       </svg>
@@ -308,7 +308,7 @@ export default function ViralIdeasLibrary() {
           </motion.div>
 
           <motion.div
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-2"
+            className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -316,37 +316,37 @@ export default function ViralIdeasLibrary() {
             {processedIdeas.map((idea, index) => (
               <motion.div
                 key={idea.id}
-                className="gradient-card rounded-xl p-6 border border-[#2d3748] hover:border-[#0077B5] shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer glow-card"
+                className="gradient-card rounded-xl p-3 sm:p-4 border border-[#2d3748] hover:border-[#0077B5] shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer glow-card w-full max-w-full overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.01, y: -2 }}
                 onClick={() => handleIdeaClick(idea.hook)}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white rounded-full text-sm font-medium shadow-md">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white rounded-full text-xs font-medium shadow-md truncate max-w-[60px] sm:max-w-[80px]">
                       #{index + 1}
                     </span>
-                    <span className="px-3 py-1 bg-[#0077B5]/20 text-[#0077B5] rounded-full text-sm font-medium border border-[#0077B5]/20">
+                    <span className="px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-[#0077B5]/20 text-[#0077B5] rounded-full text-xs font-medium border border-[#0077B5]/20 truncate max-w-[80px] sm:max-w-[100px]">
                       {idea.category}
                     </span>
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium border ${getEngagementColor(idea.engagement)}`}
+                      className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full text-xs font-medium border ${getEngagementColor(idea.engagement)} truncate max-w-[100px] sm:max-w-[120px]`}
                     >
                       {idea.engagement} Engagement
                     </span>
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium border ${getScoreColor(idea.score)}`}
+                      className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full text-xs font-medium border ${getScoreColor(idea.score)} truncate max-w-[60px] sm:max-w-[80px]`}
                     >
                       {idea.score}/100
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <Checkbox
                       checked={selected.has(idea.id)}
                       onCheckedChange={() => toggleSelect(idea.id)}
-                      className="border-[#0077B5] data-[state=checked]:bg-[#0077B5] data-[state=checked]:border-[#0077B5]"
+                      className="border-[#0077B5] data-[state=checked]:bg-[#0077B5] data-[state=checked]:border-[#0077B5] w-5 h-5"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <Button
@@ -356,28 +356,28 @@ export default function ViralIdeasLibrary() {
                         e.stopPropagation()
                         copyIdea(idea.hook)
                       }}
-                      className="text-gray-400 hover:text-white hover:bg-[#2d3748] rounded-full transition-all duration-300"
+                      className="text-gray-400 hover:text-white hover:bg-[#2d3748] rounded-full transition-all duration-300 w-8 h-8"
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
 
-                <p className="text-lg text-gray-100 leading-relaxed font-medium">{idea.hook}</p>
+                <p className="text-sm sm:text-base text-gray-100 leading-relaxed font-medium truncate">{idea.hook}</p>
               </motion.div>
             ))}
           </motion.div>
 
           {generatedIdeas.length === 0 && (
             <motion.div
-              className="text-center py-16"
+              className="text-center py-8"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-gray-200">No Ideas Generated Yet</h3>
-              <p className="text-gray-400 max-w-md mx-auto">
+              <Search className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-200">No Ideas Generated Yet</h3>
+              <p className="text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
                 Enter a topic or niche above and click "Generate Top 5 Ideas" to get started.
               </p>
             </motion.div>
