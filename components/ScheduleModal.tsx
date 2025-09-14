@@ -1,40 +1,91 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Calendar, Repeat, Sparkles, X, Clock, TrendingUp, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import toast from "react-hot-toast"
+import { format, parse, isValid, isFuture, addHours } from "date-fns"
 
 interface ScheduleModalProps {
   isOpen: boolean
   onClose: () => void
-  onSchedule: (scheduleData: any) => void
+  onSchedule: (scheduleData: {
+    postId: string
+    content: string
+    scheduleTime: string
+    recurring?: "daily" | "weekly" | "monthly" | null
+  }) => void
+  post: { id: string; content: string }
 }
 
-export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleModalProps) {
+export default function ScheduleModal({ isOpen, onClose, onSchedule, post }: ScheduleModalProps) {
   const [scheduleType, setScheduleType] = useState<"once" | "recurring">("once")
   const [scheduleDate, setScheduleDate] = useState("")
   const [scheduleTime, setScheduleTime] = useState("")
-  const [recurringType, setRecurringType] = useState("daily")
+  const [recurringType, setRecurringType] = useState<"daily" | "weekly" | "monthly">("daily")
   const [recurringTime, setRecurringTime] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const optimalTimes = [
-    { time: "9:00 AM", engagement: "High", audience: "Morning commuters" },
-    { time: "12:00 PM", engagement: "Very High", audience: "Lunch break browsers" },
-    { time: "2:00 PM", engagement: "Very High", audience: "Afternoon peak" },
-    { time: "5:00 PM", engagement: "High", audience: "End of workday" },
+    { time: "09:00", engagement: "High", audience: "Morning commuters" },
+    { time: "12:00", engagement: "Very High", audience: "Lunch break browsers" },
+    { time: "14:00", engagement: "Very High", audience: "Afternoon peak" },
+    { time: "17:00", engagement: "High", audience: "End of workday" },
   ]
 
-  const handleSchedule = () => {
-    const scheduleData = {
-      type: scheduleType,
-      date: scheduleDate,
-      time: scheduleType === "once" ? scheduleTime : recurringTime,
-      recurring: scheduleType === "recurring" ? recurringType : null,
+  const handleRecurringTypeChange = (value: string) => {
+    if (["daily", "weekly", "monthly"].includes(value)) {
+      setRecurringType(value as "daily" | "weekly" | "monthly")
     }
-    onSchedule(scheduleData)
-    onClose()
+  }
+
+  const validateAndFormatSchedule = useMemo(() => {
+    if (scheduleType === "once") {
+      if (!scheduleDate || !scheduleTime) return null
+      const dateTime = parse(`${scheduleDate} ${scheduleTime}`, "yyyy-MM-dd HH:mm", new Date())
+      if (!isValid(dateTime) || !isFuture(dateTime)) return null
+      const utcDateTime = addHours(dateTime, -1) // WAT (UTC+1) to UTC
+      return format(utcDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    } else {
+      if (!recurringTime) return null
+      const dateTime = parse(`${format(new Date(), "yyyy-MM-dd")} ${recurringTime}`, "yyyy-MM-dd HH:mm", new Date())
+      if (!isValid(dateTime)) return null
+      const utcDateTime = addHours(dateTime, -1) // WAT (UTC+1) to UTC
+      return format(utcDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    }
+  }, [scheduleType, scheduleDate, scheduleTime, recurringTime])
+
+  const handleSchedule = async () => {
+    if (!validateAndFormatSchedule) {
+      toast.error("Please select a valid future date and time")
+      return
+    }
+    if (!post?.id || !post?.content) {
+      console.error("Invalid post data:", post)
+      toast.error("Invalid post data")
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      const scheduleData = {
+        postId: post.id,
+        content: post.content,
+        scheduleTime: validateAndFormatSchedule,
+        recurring: scheduleType === "recurring" ? recurringType : null,
+      }
+      console.log("Scheduling post with data:", scheduleData)
+      await onSchedule(scheduleData)
+      toast.success(`Post ${scheduleType === "once" ? "scheduled" : "set to auto-schedule"}`)
+      onClose()
+    } catch (error) {
+      console.error("Scheduling error:", error)
+      toast.error("Failed to schedule post")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!isOpen) return null
@@ -45,6 +96,9 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      role="dialog"
+      aria-labelledby="schedule-modal-title"
+      aria-modal="true"
     >
       <motion.div
         className="gradient-bg rounded-xl p-4 sm:p-6 w-full max-w-2xl border border-[#2d3748] shadow-2xl max-h-[90vh] overflow-y-auto mx-4"
@@ -53,13 +107,16 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
         exit={{ scale: 0.9, opacity: 0 }}
       >
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold gradient-text">Schedule Your Post</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+          <h3 id="schedule-modal-title" className="text-xl sm:text-2xl font-bold gradient-text">Schedule Your Post</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors p-1"
+            aria-label="Close modal"
+          >
             <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        {/* Schedule Type Toggle */}
         <div className="flex gradient-card rounded-lg p-1 mb-4 sm:mb-6 border border-[#2d3748]">
           <button
             onClick={() => setScheduleType("once")}
@@ -68,6 +125,7 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
                 ? "bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white shadow-lg"
                 : "text-gray-400 hover:text-white hover:bg-white/5"
             }`}
+            aria-pressed={scheduleType === "once"}
           >
             <Calendar className="w-4 h-4" />
             <span className="hidden sm:inline">Schedule Once</span>
@@ -80,6 +138,7 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
                 ? "bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white shadow-lg"
                 : "text-gray-400 hover:text-white hover:bg-white/5"
             }`}
+            aria-pressed={scheduleType === "recurring"}
           >
             <Repeat className="w-4 h-4" />
             <span className="hidden sm:inline">Auto Schedule</span>
@@ -87,15 +146,14 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
           </button>
         </div>
 
-        {/* Optimal Times Section */}
         <div className="gradient-card rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-[#2d3748]">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#0077B5]" />
-            <span className="font-medium text-[#0077B5] text-sm sm:text-base">Optimal Posting Times</span>
+            <span className="font-medium text-[#0077B5] text-sm sm:text-base">Optimal Posting Times (WAT)</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             {optimalTimes.map((timeSlot, index) => (
-              <div
+              <button
                 key={index}
                 className="flex items-center justify-between p-2 sm:p-3 bg-[#0a0b0f] rounded-lg border border-[#374151] hover:border-[#0077B5] transition-colors cursor-pointer"
                 onClick={() => {
@@ -105,6 +163,7 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
                     setRecurringTime(timeSlot.time)
                   }
                 }}
+                aria-label={`Select ${timeSlot.time} for ${timeSlot.audience}`}
               >
                 <div>
                   <div className="font-medium text-white text-sm sm:text-base">{timeSlot.time}</div>
@@ -119,48 +178,55 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
                 >
                   {timeSlot.engagement}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Form fields with better mobile layout */}
         {scheduleType === "once" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <label htmlFor="schedule-date" className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#0077B5]" />
                 Date
               </label>
-              <input
+              <Input
+                id="schedule-date"
                 type="date"
                 value={scheduleDate}
                 onChange={(e) => setScheduleDate(e.target.value)}
                 className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
+                min={format(new Date(), "yyyy-MM-dd")}
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <label htmlFor="schedule-time" className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#0077B5]" />
-                Time
+                Time (WAT)
               </label>
-              <input
+              <Input
+                id="schedule-time"
                 type="time"
                 value={scheduleTime}
                 onChange={(e) => setScheduleTime(e.target.value)}
                 className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
+                required
               />
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <label htmlFor="recurring-type" className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <Repeat className="w-4 h-4 text-[#0077B5]" />
                 Frequency
               </label>
-              <Select value={recurringType} onValueChange={setRecurringType}>
-                <SelectTrigger className="bg-[#0a0b0f] border-[#2d3748] text-white focus:border-[#0077B5] h-10 sm:h-11">
+              <Select value={recurringType} onValueChange={handleRecurringTypeChange}>
+                <SelectTrigger
+                  id="recurring-type"
+                  className="bg-[#0a0b0f] border-[#2d3748] text-white focus:border-[#0077B5] h-10 sm:h-11"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1d29] border-[#2d3748]">
@@ -177,21 +243,22 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <label htmlFor="recurring-time" className="block text-sm font-medium mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#0077B5]" />
-                Time
+                Time (WAT)
               </label>
-              <input
+              <Input
+                id="recurring-time"
                 type="time"
                 value={recurringTime}
                 onChange={(e) => setRecurringTime(e.target.value)}
                 className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
+                required
               />
             </div>
           </div>
         )}
 
-        {/* Analytics Preview */}
         <div className="gradient-card rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-[#2d3748]">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
@@ -218,17 +285,35 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule }: ScheduleM
             variant="outline"
             className="flex-1 border-[#2d3748] text-gray-300 hover:bg-[#2d3748] bg-transparent transition-all duration-300 h-11 sm:h-12"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
             className="flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white shadow-lg glow-button transition-all duration-300 h-11 sm:h-12"
             onClick={handleSchedule}
-            disabled={scheduleType === "once" ? !scheduleDate || !scheduleTime : !recurringTime}
+            disabled={isSubmitting || (scheduleType === "once" ? !scheduleDate || !scheduleTime : !recurringTime)}
+            aria-busy={isSubmitting}
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">{scheduleType === "once" ? "Schedule Post" : "Set Auto Schedule"}</span>
-            <span className="sm:hidden">{scheduleType === "once" ? "Schedule" : "Set Auto"}</span>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Scheduling...
+              </span>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">{scheduleType === "once" ? "Schedule Post" : "Set Auto Schedule"}</span>
+                <span className="sm:hidden">{scheduleType === "once" ? "Schedule" : "Set Auto"}</span>
+              </>
+            )}
           </Button>
         </div>
       </motion.div>

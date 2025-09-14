@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/ProfileDropdown"
 
 const navigationItems = [
+  { icon: Target, label: "Viral Ideas", href: "/hooks" },
   { icon: Sparkles, label: "Generate", href: "/dashboard" },
-  { icon: Target, label: "Hooks", href: "/hooks" },
   { icon: FileText, label: "Posts", href: "/posts" },
-  { icon: Calendar, label: "Scheduled", href: "/scheduled" },
+  { icon: Calendar, label: "Schedules", href: "/scheduled" },
   { icon: CreditCard, label: "Billing", href: "/billing" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ]

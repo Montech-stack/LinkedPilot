@@ -1,4 +1,7 @@
+
+
 "use client"
+
 import React, { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Sparkles, Zap, Plus, Minus, Crown, FileText, Camera, Mic, Hash } from "lucide-react"
@@ -6,8 +9,10 @@ import MobileHeader from "@/components/MobileHeader"
 import Sidebar from "@/components/Sidebar"
 import PerformanceOverview from "@/components/PerformanceOverview"
 import PostCard from "@/components/PostCard"
+import ScheduleModal from "@/components/ScheduleModal"
 import { usePostGeneration } from "@/hooks/usePostGeneration"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 import { GeneratedPost, UserPlan, PostTone, PostLength, PlanLimit, ToneOption, LengthOption } from "@/types"
 
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
@@ -34,7 +39,7 @@ const LENGTH_OPTIONS: LengthOption[] = [
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 }
+  exit: { opacity: 0, y: -20 },
 }
 
 export default function Dashboard() {
@@ -55,7 +60,6 @@ export default function Dashboard() {
   const userPlan: UserPlan = "pro"
   const currentPlanLimit = PLAN_LIMITS[userPlan]
 
-  // Read input query parameter from URL
   useEffect(() => {
     const query = new URLSearchParams(window.location.search)
     const inputParam = query.get("input")
@@ -64,7 +68,7 @@ export default function Dashboard() {
         setInput(decodeURIComponent(inputParam))
       } catch (error) {
         console.error("Failed to decode input parameter:", error, "Raw input:", inputParam)
-        setInput("") // Fallback to empty string on error
+        setInput("")
       }
     }
   }, [])
@@ -73,8 +77,9 @@ export default function Dashboard() {
     if (!input.trim()) return
 
     const posts = await generatePosts(input, tone, postCount, postLength)
+    console.log("Generated posts:", posts)
     setGeneratedPosts(posts)
-    
+
     setTimeout(() => {
       setShowResults(true)
       setIsGenerating(false)
@@ -84,22 +89,57 @@ export default function Dashboard() {
   const handleCopyToClipboard = useCallback(async (content: string) => {
     try {
       await navigator.clipboard.writeText(content)
+      toast.success("Copied to clipboard!")
     } catch (error) {
       console.error("Failed to copy to clipboard:", error)
+      toast.error("Failed to copy to clipboard")
     }
   }, [])
 
   const handlePostSuccess = useCallback((postId: string) => {
     console.log("Successfully posted to LinkedIn:", postId)
+    toast.success("Posted to LinkedIn!")
   }, [])
 
   const handlePostError = useCallback((error: string) => {
     console.error("Failed to post to LinkedIn:", error)
+    toast.error("Failed to post to LinkedIn")
   }, [])
 
   const handleSchedulePost = useCallback((post: GeneratedPost) => {
+    if (!post?.id || !post?.content) {
+      console.error("Invalid post selected for scheduling:", post)
+      toast.error("Invalid post selected for scheduling")
+      return
+    }
     setSelectedPostForSchedule(post)
     setShowScheduleModal(true)
+  }, [])
+
+  const handleSchedule = useCallback(async (scheduleData: {
+    postId: string
+    content: string
+    scheduleTime: string
+    recurring?: "daily" | "weekly" | "monthly" | null
+  }) => {
+    try {
+      console.log("Sending schedule request:", scheduleData)
+      const response = await fetch("/api/schedule-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scheduleData),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to schedule post")
+      }
+      toast.success("Post scheduled successfully")
+      setShowScheduleModal(false)
+      setSelectedPostForSchedule(null)
+    } catch (error) {
+      console.error("Scheduling error:", error)
+      toast.error("Failed to schedule post")
+    }
   }, [])
 
   const handlePostCountChange = useCallback((delta: number) => {
@@ -111,7 +151,6 @@ export default function Dashboard() {
   const handleBackToGenerator = useCallback(() => {
     setShowResults(false)
     resetGeneration()
-    // Clear input and URL query parameter
     setInput("")
     router.push("/dashboard")
   }, [resetGeneration, router])
@@ -173,6 +212,16 @@ export default function Dashboard() {
                 Generate More Posts
               </button>
             </motion.div>
+
+            <ScheduleModal
+              isOpen={showScheduleModal}
+              onClose={() => {
+                setShowScheduleModal(false)
+                setSelectedPostForSchedule(null)
+              }}
+              onSchedule={handleSchedule}
+              post={selectedPostForSchedule || { id: "", content: "" }}
+            />
           </div>
         </div>
       </div>
