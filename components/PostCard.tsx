@@ -1,17 +1,19 @@
+
 "use client"
 import React from "react"
 import { motion } from "framer-motion"
-import { Eye, Clock, Edit3, Copy, Zap } from "lucide-react"
+import { Eye, Clock, Edit3, Copy, Zap, ImageIcon, Video, FileText } from "lucide-react"
 import PostToLinkedInButton from "./PostToLinkedInButton"
 import { PostCardProps, MediaType } from "../types"
 
 const MEDIA_TYPES: MediaType[] = [
-  { icon: "ImageIcon", label: "Add Image", engagement: "+65% engagement", color: "text-[#0077B5]", borderColor: "border-[#0077B5]" },
-  { icon: "Video", label: "Add Video", engagement: "+120% engagement", color: "text-purple-400", borderColor: "border-purple-500" },
-  { icon: "FileText", label: "Add Document", engagement: "+45% engagement", color: "text-green-400", borderColor: "border-green-500" },
+  { icon: ImageIcon, label: "Add Image", engagement: "+65% engagement", color: "text-[#0077B5]", borderColor: "border-[#0077B5]" },
+  { icon: Video, label: "Add Video", engagement: "+120% engagement", color: "text-purple-400", borderColor: "border-purple-500" },
+  { icon: FileText, label: "Add Document", engagement: "+45% engagement", color: "text-green-400", borderColor: "border-green-500" },
 ]
 
-const getEngagementColor = (engagement: string): string => {
+const getEngagementColor = (engagement?: string): string => {
+  if (!engagement) return "text-gray-400 bg-gray-400/10 border-gray-400/20"
   const colorMap: Record<string, string> = {
     "Very High": "text-green-400 bg-green-400/10 border-green-400/20",
     "High": "text-blue-400 bg-blue-400/10 border-blue-400/20",
@@ -21,7 +23,8 @@ const getEngagementColor = (engagement: string): string => {
   return colorMap[engagement] || colorMap.Low
 }
 
-const getScoreColor = (score: number): string => {
+const getScoreColor = (score?: number): string => {
+  if (!score) return "text-gray-400"
   if (score >= 90) return "text-green-400"
   if (score >= 80) return "text-blue-400"
   if (score >= 70) return "text-yellow-400"
@@ -52,15 +55,19 @@ const PostCard: React.FC<PostCardProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <span className="bg-[#0077B5] text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-            Post {post.id}/{totalPosts}
+            Post {post.id || index + 1}/{totalPosts}
           </span>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getEngagementColor(post.engagement)}`}>
-            {post.engagement} Engagement
-          </span>
-          <div className="flex items-center gap-1">
-            <Zap className={`w-4 h-4 ${getScoreColor(post.score)}`} />
-            <span className={`text-sm font-bold ${getScoreColor(post.score)}`}>{post.score}/100</span>
-          </div>
+          {post.engagement && (
+            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getEngagementColor(post.engagement)}`}>
+              {post.engagement} Engagement
+            </span>
+          )}
+          {post.score && (
+            <div className="flex items-center gap-1">
+              <Zap className={`w-4 h-4 ${getScoreColor(post.score)}`} />
+              <span className={`text-sm font-bold ${getScoreColor(post.score)}`}>{post.score}/100</span>
+            </div>
+          )}
         </div>
         <button
           className="flex items-center gap-2 text-[#0077B5] text-sm hover:underline transition-colors"
@@ -144,3 +151,4 @@ const PostCard: React.FC<PostCardProps> = ({
 }
 
 export default PostCard
+

@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation"
 import { useLinkedInAuth } from "@/hooks/useLinkedInAuth"
 import { useLinkedInPosting } from "@/hooks/useLinkedInPosting"
 import { usePostGeneration } from "@/hooks/usePostGeneration"
+import toast from "react-hot-toast"
+import AutomationPreferencesModal from "@/components/AutomationPreferencesModal"
 
 interface ViralIdea {
   id: number
@@ -28,6 +30,7 @@ export default function ViralIdeasLibrary() {
   const [generatedIdeas, setGeneratedIdeas] = useState<ViralIdea[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false)
   const router = useRouter()
   const { isAuthenticated, authenticate } = useLinkedInAuth()
   const { postToLinkedIn } = useLinkedInPosting()
@@ -68,12 +71,14 @@ export default function ViralIdeasLibrary() {
       }
     })
 
-    return ideasWithRelevance
-      .sort((a, b) => b.combinedScore - a.combinedScore)
+    return ideasWithRelevance.sort((a, b) => b.combinedScore - a.combinedScore)
   }, [userInput, generatedIdeas])
 
   const handleGenerate = async (isMore = false) => {
-    if (!userInput.trim()) return
+    if (!userInput.trim()) {
+      toast.error("Please enter a topic or niche")
+      return
+    }
 
     setIsGenerating(true)
 
@@ -90,11 +95,11 @@ export default function ViralIdeasLibrary() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate ideas')
+        throw new Error(`Failed to generate ideas: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('API Response:', data.ideas) // Log to debug number of ideas
+      console.log('API Response:', data.ideas)
 
       const newIdeas = data.ideas.map((idea: Omit<ViralIdea, 'id'>, index: number) => ({
         ...idea,
@@ -102,8 +107,10 @@ export default function ViralIdeasLibrary() {
       }))
 
       setGeneratedIdeas(prev => isMore ? [...prev, ...newIdeas] : newIdeas)
+      toast.success(`Generated ${newIdeas.length} new ideas!`)
     } catch (error) {
       console.error('Error generating ideas:', error)
+      toast.error("Failed to generate ideas")
     } finally {
       setIsGenerating(false)
     }
@@ -115,8 +122,12 @@ export default function ViralIdeasLibrary() {
 
   const handleSave = () => {
     const savedIdeas = generatedIdeas.filter(idea => selected.has(idea.id))
+    if (savedIdeas.length === 0) {
+      toast.error("No ideas selected to save")
+      return
+    }
     localStorage.setItem('savedIdeas', JSON.stringify(savedIdeas))
-    // TODO: Add toast notification
+    toast.success(`Saved ${savedIdeas.length} idea${savedIdeas.length > 1 ? 's' : ''} to local storage`)
     setSelected(new Set())
   }
 
@@ -133,7 +144,7 @@ export default function ViralIdeasLibrary() {
   }
 
   const handleIdeaClick = (hook: string) => {
-    const sanitizedHook = hook.replace(/[^\w\s-.,!?]/g, '') // Sanitize to prevent URIError
+    const sanitizedHook = hook.replace(/[^\w\s-.,!?]/g, '')
     router.push(`/dashboard?input=${encodeURIComponent(sanitizedHook)}`)
   }
 
@@ -142,37 +153,77 @@ export default function ViralIdeasLibrary() {
       authenticate()
       return
     }
-
-    if (generatedIdeas.length === 0) {
-      await handleGenerate()
+    if (!userInput.trim()) {
+      toast.error("Please enter a topic or niche to automate")
+      return
     }
+    setIsAutomationModalOpen(true)
+  }
 
-    const ideasToProcess = selected.size > 0 
-      ? generatedIdeas.filter(idea => selected.has(idea.id))
-      : generatedIdeas.slice(0, 5)
+  const handleAutomationPreferencesConfirm = async (preferences: { frequency: 'daily' | 'weekly' | 'monthly'; tone: string; length: string; count: number }) => {
+    setIsGenerating(true)
 
-    for (const idea of ideasToProcess) {
-      try {
-        const posts = await generatePosts(idea.hook, "professional", 1, "medium")
+    try {
+      // Generate ideas if none exist
+      if (generatedIdeas.length === 0) {
+        await handleGenerate()
+      }
+
+      const ideasToProcess = selected.size > 0 
+        ? generatedIdeas.filter(idea => selected.has(idea.id))
+        : generatedIdeas.slice(0, preferences.count)
+
+      if (ideasToProcess.length === 0) {
+        toast.error("No ideas available to process")
+        return
+      }
+
+      // Schedule initial posts
+      for (const idea of ideasToProcess) {
+        const posts = await generatePosts(idea.hook, preferences.tone, 1, preferences.length)
         if (posts.length > 0) {
           const result = await postToLinkedIn({ content: posts[0].content })
           if (result.success) {
             console.log(`Posted idea: ${idea.hook}`)
-            // TODO: Add toast success
+            toast.success(`Posted idea: ${idea.hook}`)
           } else {
             console.error(`Failed to post idea: ${idea.hook}`)
-            // TODO: Add toast error
+            toast.error(`Failed to post idea: ${idea.hook}`)
           }
         }
-      } catch (error) {
-        console.error('Error automating post:', error)
       }
+
+      // Save automation preferences to backend
+      const response = await fetch('/api/schedule-automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: userInput,
+          tone: preferences.tone,
+          length: preferences.length,
+          count: preferences.count,
+          frequency: preferences.frequency,
+          nextRun: new Date(), // Immediate scheduling for testing
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to schedule automation: ${response.status}`)
+      }
+
+      toast.success(`Automation scheduled for ${preferences.frequency} posts!`)
+      setIsAutomationModalOpen(false)
+    } catch (error) {
+      console.error('Error automating post:', error)
+      toast.error("Failed to set up automation")
+    } finally {
+      setIsGenerating(false)
     }
   }
 
   const copyIdea = (hook: string) => {
     navigator.clipboard.writeText(hook)
-    // TODO: Add toast notification
+    toast.success("Idea copied to clipboard!")
   }
 
   const getEngagementColor = (engagement: string) => {
@@ -198,10 +249,8 @@ export default function ViralIdeasLibrary() {
   return (
     <div className="min-h-screen gradient-bg text-white flex overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
       <div className="flex-1 lg:ml-0">
-        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-
+        <MobileHeader onMenuClick={() => setSidebarOpen(true)} showBackButton={false} />
         <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto">
           <motion.div
             className="mb-6 text-center lg:text-left"
@@ -307,6 +356,12 @@ export default function ViralIdeasLibrary() {
             )}
           </motion.div>
 
+          <AutomationPreferencesModal
+            isOpen={isAutomationModalOpen}
+            onClose={() => setIsAutomationModalOpen(false)}
+            onConfirm={handleAutomationPreferencesConfirm}
+          />
+
           <motion.div
             className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2"
             initial={{ opacity: 0, y: 20 }}
@@ -362,7 +417,6 @@ export default function ViralIdeasLibrary() {
                     </Button>
                   </div>
                 </div>
-
                 <p className="text-sm sm:text-base text-gray-100 leading-relaxed font-medium truncate">{idea.hook}</p>
               </motion.div>
             ))}
