@@ -9,7 +9,7 @@ import ProfileDropdown from "@/components/ProfileDropdown"
 const navigationItems = [
   { icon: Target, label: "Viral Ideas", href: "/hooks" },
   { icon: Sparkles, label: "Generate", href: "/dashboard" },
-  { icon: FileText, label: "Posts", href: "/posts" },
+  // { icon: FileText, label: "Posts", href: "/posts" },
   { icon: Calendar, label: "Schedules", href: "/scheduled" },
   { icon: CreditCard, label: "Billing", href: "/billing" },
   { icon: Settings, label: "Settings", href: "/settings" },

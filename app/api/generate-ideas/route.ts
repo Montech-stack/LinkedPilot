@@ -1,4 +1,3 @@
-
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateContent } from '@/lib/gemini';
 
@@ -20,21 +19,21 @@ Each idea should be a concise hook or title.
 
 Return a JSON array of 5 objects, each with:
 {
-  "category": string (e.g., "Controversial", "Question", "Story", "List", "Career Advice"),
+  "category": string (must be one of: "Controversial", "Question", "Story", "List", "Career Advice"),
   "hook": string,
   "engagement": "Very High" | "High" | "Medium",
   "score": number between 70 and 95,
   "keywords": array of 5-7 relevant keywords
 }
 
+Ensure each idea has a unique category from the list provided.
 Output only a valid JSON array, no other text.`;
 
-    const generatedContent = await generateContent(prompt, { maxTokens: 1500 });
+    const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
 
-    // Clean markdown code fences and extra text
     let cleanedContent = generatedContent
-      .replace(/```json\n|\n```/g, '') // Remove ```json and ```
-      .replace(/```/g, '') // Remove any stray ```
+      .replace(/```json\n|\n```/g, '')
+      .replace(/```/g, '')
       .trim();
 
     let ideas;
@@ -44,22 +43,40 @@ Output only a valid JSON array, no other text.`;
         throw new Error('Generated content is not a valid JSON array');
       }
     } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Raw content:', generatedContent);
-      // Fallback: parse text manually
-      ideas = cleanedContent.split('\n').filter(line => line.trim()).map((line, index) => ({
-        category: 'General',
-        hook: line,
-        engagement: 'Medium',
-        score: 80 + index,
-        keywords: input.split(' ').slice(0, 7),
-      }));
+      console.error('JSON parse error:', parseError, 'Raw content:', cleanedContent);
+      // Attempt to fix truncated JSON
+      if (cleanedContent.endsWith('[') || cleanedContent.endsWith('{')) {
+        cleanedContent += ']}';
+      } else if (cleanedContent.includes('[') && !cleanedContent.endsWith(']')) {
+        cleanedContent = cleanedContent.replace(/,\s*$/, '') + ']';
+      }
+      try {
+        ideas = JSON.parse(cleanedContent);
+      } catch (secondParseError) {
+        console.error('Second parse attempt failed:', secondParseError);
+        // Fallback to manual parsing
+        ideas = cleanedContent.split('\n').filter(line => line.trim()).map((line, index) => ({
+          category: ['Controversial', 'Question', 'Story', 'List', 'Career Advice'][index % 5],
+          hook: line.includes('"hook":') ? JSON.parse(`{${line}}`).hook : `Default hook for ${input} #${index + 1}`,
+          engagement: 'Medium',
+          score: 80 + index,
+          keywords: input.split(' ').slice(0, 7),
+        }));
+      }
     }
 
-    // Cache ideas in MongoDB
-    await fetch('http://localhost:3000/api/cache-ideas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ideas }),
+    // Validate and complete ideas
+    const validCategories = ['Controversial', 'Question', 'Story', 'List', 'Career Advice'];
+    const defaultKeywords = input.split(' ').slice(0, 7);
+    ideas = Array(5).fill(null).map((_, index) => {
+      const idea = ideas[index] || {};
+      return {
+        category: validCategories.includes(idea.category) ? idea.category : validCategories[index],
+        hook: idea.hook || `Default hook for ${input} #${index + 1}`,
+        engagement: ['Very High', 'High', 'Medium'].includes(idea.engagement) ? idea.engagement : 'Medium',
+        score: Math.min(95, Math.max(70, idea.score || 80 + index)),
+        keywords: Array.isArray(idea.keywords) && idea.keywords.length >= 5 ? idea.keywords.slice(0, 7) : defaultKeywords,
+      };
     });
 
     return NextResponse.json({

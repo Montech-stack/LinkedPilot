@@ -1,10 +1,8 @@
-
-
 "use client"
 
 import React, { useState, useCallback, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, Sparkles, Zap, Plus, Minus, Crown, FileText, Camera, Mic, Hash } from "lucide-react"
+import { Loader2, Sparkles, Zap, Plus, Minus, Crown, FileText, Trash2 } from "lucide-react"
 import MobileHeader from "@/components/MobileHeader"
 import Sidebar from "@/components/Sidebar"
 import PerformanceOverview from "@/components/PerformanceOverview"
@@ -47,19 +45,56 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [input, setInput] = useState("")
   const [tone, setTone] = useState<PostTone>("professional")
-  const [postCount, setPostCount] = useState(3)
+  const [postCount, setPostCount] = useState(1)
   const [postLength, setPostLength] = useState<PostLength>("medium")
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([])
-  const [showResults, setShowResults] = useState(false)
   const [expandedPost, setExpandedPost] = useState<number | null>(null)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedPostForSchedule, setSelectedPostForSchedule] = useState<GeneratedPost | null>(null)
 
-  const { isGenerating, generationProgress, generatePosts, resetGeneration, setIsGenerating } = usePostGeneration()
+  const { isGenerating, generationProgress, generatePosts, setIsGenerating } = usePostGeneration()
 
   const userPlan: UserPlan = "pro"
   const currentPlanLimit = PLAN_LIMITS[userPlan]
 
+  // Load cached posts from localStorage on mount
+  useEffect(() => {
+    const cachedPosts = localStorage.getItem('generatedPosts')
+    if (cachedPosts) {
+      try {
+        const parsedPosts = JSON.parse(cachedPosts)
+        if (Array.isArray(parsedPosts)) {
+          setGeneratedPosts(parsedPosts.map((post: GeneratedPost, index: number) => ({
+            ...post,
+            id: post.id || `post-${index + 1}`,
+            content: post.content || '',
+            engagement: post.engagement || 'Medium',
+            score: Math.min(95, Math.max(70, post.score || 80)),
+          })))
+        }
+      } catch (error) {
+        console.error('Error loading cached posts:', error)
+        localStorage.removeItem('generatedPosts')
+        toast.error('Failed to load cached posts')
+      }
+    }
+  }, [])
+
+  // Save posts to localStorage whenever generatedPosts changes
+  useEffect(() => {
+    if (generatedPosts.length > 0) {
+      try {
+        localStorage.setItem('generatedPosts', JSON.stringify(generatedPosts))
+      } catch (error) {
+        console.error('Error saving to localStorage:', error)
+        toast.error('Failed to cache posts locally')
+      }
+    } else {
+      localStorage.removeItem('generatedPosts')
+    }
+  }, [generatedPosts])
+
+  // Load input from URL query
   useEffect(() => {
     const query = new URLSearchParams(window.location.search)
     const inputParam = query.get("input")
@@ -74,17 +109,51 @@ export default function Dashboard() {
   }, [])
 
   const handleGeneratePosts = useCallback(async () => {
-    if (!input.trim()) return
+    if (!input.trim()) {
+      toast.error("Please enter a post idea")
+      return
+    }
 
-    const posts = await generatePosts(input, tone, postCount, postLength)
-    console.log("Generated posts:", posts)
-    setGeneratedPosts(posts)
+    setIsGenerating(true)
 
-    setTimeout(() => {
-      setShowResults(true)
+    try {
+      const newPosts = await generatePosts(input, tone, postCount, postLength)
+      console.log("Generated posts:", newPosts)
+      if (newPosts.length === 0) {
+        throw new Error('No posts generated')
+      }
+      // Append new posts to existing ones
+      setGeneratedPosts(prev => [
+        ...prev,
+        ...newPosts.map((post, index) => ({
+          ...post,
+          id: post.id || `${Date.now()}-${index}/${postCount}`,
+          engagement: post.engagement || 'Medium',
+          score: Math.min(95, Math.max(70, post.score || 80)),
+        }))
+      ])
+      toast.success(`Generated ${newPosts.length} new post${newPosts.length > 1 ? 's' : ''}!`)
+    } catch (error) {
+      console.error("Error generating posts:", error)
+      toast.error("Failed to generate posts")
+    } finally {
       setIsGenerating(false)
-    }, 500)
+    }
   }, [input, tone, postCount, postLength, generatePosts, setIsGenerating])
+
+  const handleClearAllPosts = useCallback(() => {
+    setGeneratedPosts([])
+    localStorage.removeItem('generatedPosts')
+    toast.success("All posts cleared!")
+  }, [])
+
+  const handleDeletePost = useCallback((postId: string) => {
+    setGeneratedPosts(prev => {
+      const updatedPosts = prev.filter(post => post.id !== postId)
+      return updatedPosts
+    })
+    toast.success("Post deleted!")
+  }, [])
 
   const handleCopyToClipboard = useCallback(async (content: string) => {
     try {
@@ -148,85 +217,10 @@ export default function Dashboard() {
     )
   }, [currentPlanLimit.maxPosts])
 
-  const handleBackToGenerator = useCallback(() => {
-    setShowResults(false)
-    resetGeneration()
-    setInput("")
-    router.push("/dashboard")
-  }, [resetGeneration, router])
-
   const handlePostCountInput = useCallback((value: string) => {
     const numValue = parseInt(value) || 1
     setPostCount(Math.min(currentPlanLimit.maxPosts, Math.max(1, numValue)))
   }, [currentPlanLimit.maxPosts])
-
-  if (showResults) {
-    return (
-      <div className="min-h-screen bg-[#1a1d29] text-white flex">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-0">
-          <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-          <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-            <motion.div className="text-center mb-8" {...fadeInUp}>
-              <div className="inline-block px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-full text-sm mb-4 shadow-lg bg-[#0077B5]/5">
-                ✨ Generated {generatedPosts.length} Posts
-              </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white">
-                Your Viral Posts Are <span className="text-[#0077B5]">Ready to Go</span>
-              </h1>
-              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                Each post uses proven psychological triggers and engagement patterns. Choose your favorite or schedule them all!
-              </p>
-            </motion.div>
-
-            <PerformanceOverview posts={generatedPosts} />
-
-            <div className="space-y-6">
-              {generatedPosts.map((post, index) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  index={index}
-                  totalPosts={generatedPosts.length}
-                  isExpanded={expandedPost === post.id}
-                  onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
-                  onSchedule={() => handleSchedulePost(post)}
-                  onCopy={() => handleCopyToClipboard(post.content)}
-                  onPostSuccess={handlePostSuccess}
-                  onPostError={handlePostError}
-                />
-              ))}
-            </div>
-
-            <motion.div
-              className="text-center mt-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <button
-                onClick={handleBackToGenerator}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 text-lg shadow-lg rounded-lg transform hover:scale-105 transition-all duration-300 flex items-center mx-auto"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Generate More Posts
-              </button>
-            </motion.div>
-
-            <ScheduleModal
-              isOpen={showScheduleModal}
-              onClose={() => {
-                setShowScheduleModal(false)
-                setSelectedPostForSchedule(null)
-              }}
-              onSchedule={handleSchedule}
-              post={selectedPostForSchedule || { id: "", content: "" }}
-            />
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white flex">
@@ -256,7 +250,6 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
-                    <Mic className="w-4 h-4 text-[#0077B5]" />
                     Select Tone
                   </label>
                   <select 
@@ -274,7 +267,7 @@ export default function Dashboard() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
-                    <Hash className="w-4 h-4 text-[#0077B5]" />
+
                     Number of Posts
                     {userPlan === "free" && (
                       <Crown className="w-4 h-4 text-yellow-400" title="Upgrade for more posts" />
@@ -337,17 +330,6 @@ Examples:
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  {[Camera, Mic, Hash].map((Icon, index) => (
-                    <button 
-                      key={index}
-                      className="w-10 h-10 bg-[#1a1d29] rounded-full flex items-center justify-center hover:bg-[#374151] transition-all duration-300 shadow-lg group"
-                    >
-                      <Icon className="w-5 h-5 text-gray-400 group-hover:text-[#0077B5] group-hover:scale-110 transition-all" />
-                    </button>
-                  ))}
-                </div>
-
                 <div className="flex flex-col gap-4">
                   <div className="w-full">
                     <label className="block text-sm font-medium mb-2 text-gray-300 flex items-center gap-2">
@@ -401,6 +383,46 @@ Examples:
             </div>
           </motion.div>
 
+          {generatedPosts.length > 0 && (
+            <motion.div
+              className="mt-8 space-y-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white">
+                  Generated Posts ({generatedPosts.length})
+                </h2>
+                <button
+                  onClick={handleClearAllPosts}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center text-sm"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clear All Posts
+                </button>
+              </div>
+              <PerformanceOverview posts={generatedPosts} />
+              <div className="space-y-6">
+                {generatedPosts.map((post, index) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    index={index}
+                    totalPosts={generatedPosts.length}
+                    isExpanded={expandedPost === post.id}
+                    onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
+                    onSchedule={() => handleSchedulePost(post)}
+                    onCopy={() => handleCopyToClipboard(post.content)}
+                    onPostSuccess={handlePostSuccess}
+                    onPostError={handlePostError}
+                    onDelete={() => handleDeletePost(post.id)}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           <AnimatePresence>
             {isGenerating && (
               <>
@@ -449,6 +471,16 @@ Examples:
               </>
             )}
           </AnimatePresence>
+
+          <ScheduleModal
+            isOpen={showScheduleModal}
+            onClose={() => {
+              setShowScheduleModal(false)
+              setSelectedPostForSchedule(null)
+            }}
+            onSchedule={handleSchedule}
+            post={selectedPostForSchedule || { id: "", content: "" }}
+          />
         </div>
       </div>
     </div>
