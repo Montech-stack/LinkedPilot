@@ -70,7 +70,6 @@ export default function Dashboard() {
   const userPlan: UserPlan = "pro"
   const currentPlanLimit = PLAN_LIMITS[userPlan]
 
-  // ✅ Load saved state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("linkedpilot_dashboard_state")
     if (saved) {
@@ -87,7 +86,6 @@ export default function Dashboard() {
     }
   }, [])
 
-  // ✅ Save state to localStorage whenever changes occur
   useEffect(() => {
     const state = {
       input,
@@ -266,26 +264,30 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ✅ Generate Button Below Input */}
-            <div className="flex justify-center">
+            {/* Expanded Generate Button */}
+            <motion.div
+              className="flex justify-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
               <Button
                 onClick={handleGeneratePosts}
                 disabled={!input.trim() || isGenerating}
-                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#0077B5] to-[#9333ea] hover:opacity-90 text-white font-semibold rounded-full shadow-lg transition-all"
+                className="w-full sm:w-full flex items-center justify-center gap-3 px-12 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-[#0077B5] via-[#7e22ce] to-[#9333ea] hover:opacity-90 transition-all shadow-2xl hover:shadow-[#9333ea]/30"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-6 h-6 animate-spin" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <Zap className="w-5 h-5" />
-                    Generate {postCount}
+                    <Zap className="w-6 h-6" />
+                    Generate {postCount} Post{postCount > 1 ? "s" : ""}
                   </>
                 )}
               </Button>
-            </div>
+            </motion.div>
           </div>
 
           {/* Generated Posts */}
