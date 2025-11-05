@@ -70,6 +70,35 @@ export default function Dashboard() {
   const userPlan: UserPlan = "pro"
   const currentPlanLimit = PLAN_LIMITS[userPlan]
 
+  // ✅ Load saved state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("linkedpilot_dashboard_state")
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setInput(parsed.input || "")
+        setTone(parsed.tone || "professional")
+        setPostCount(parsed.postCount || 1)
+        setPostLength(parsed.postLength || "medium")
+        setGeneratedPosts(parsed.generatedPosts || [])
+      } catch (err) {
+        console.error("Failed to parse saved dashboard state:", err)
+      }
+    }
+  }, [])
+
+  // ✅ Save state to localStorage whenever changes occur
+  useEffect(() => {
+    const state = {
+      input,
+      tone,
+      postCount,
+      postLength,
+      generatedPosts,
+    }
+    localStorage.setItem("linkedpilot_dashboard_state", JSON.stringify(state))
+  }, [input, tone, postCount, postLength, generatedPosts])
+
   useEffect(() => {
     async function checkConnection() {
       const res = await fetch("/api/linkedin/status", { credentials: "include" })
@@ -93,6 +122,12 @@ export default function Dashboard() {
     }
   }, [input, tone, postCount, postLength, generatePosts, setIsGenerating])
 
+  const clearAllPosts = () => {
+    setGeneratedPosts([])
+    localStorage.removeItem("linkedpilot_dashboard_state")
+    toast.success("Cleared all posts")
+  }
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -105,7 +140,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-4xl font-extrabold bg-gradient-to-r from-[#0077B5] to-purple-500 bg-clip-text text-transparent mb-3">
-               AI Content Studio
+              AI Content Studio
             </h1>
             <p className="text-gray-400">
               Instantly generate scroll-stopping viral LinkedIn posts with one click.
@@ -245,6 +280,7 @@ export default function Dashboard() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-4 min-h-[160px] resize-none shadow-inner"
+                maxLength={500}
               />
               <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                 {input.length}/500
@@ -264,10 +300,7 @@ export default function Dashboard() {
                   Generated Posts ({generatedPosts.length})
                 </h2>
                 <button
-                  onClick={() => {
-                    setGeneratedPosts([])
-                    toast.success("Cleared all posts")
-                  }}
+                  onClick={clearAllPosts}
                   className="flex items-center gap-2 text-sm px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg"
                 >
                   <Trash2 className="w-4 h-4" /> Clear All
