@@ -1,154 +1,251 @@
-
 "use client"
-import React from "react"
+import React, { useState } from "react"
 import { motion } from "framer-motion"
-import { Eye, Clock, Edit3, Copy, Zap, ImageIcon, Video, FileText } from "lucide-react"
+import {
+  Eye,
+  Clock,
+  Edit3,
+  Copy,
+  Check,
+  Trash2,
+  ImageIcon,
+  Video,
+  X,
+  Save,
+} from "lucide-react"
 import PostToLinkedInButton from "./PostToLinkedInButton"
-import { PostCardProps, MediaType } from "../types"
+import toast from "react-hot-toast"
 
-const MEDIA_TYPES: MediaType[] = [
-  { icon: ImageIcon, label: "Add Image", engagement: "+65% engagement", color: "text-[#0077B5]", borderColor: "border-[#0077B5]" },
-  { icon: Video, label: "Add Video", engagement: "+120% engagement", color: "text-purple-400", borderColor: "border-purple-500" },
-  { icon: FileText, label: "Add Document", engagement: "+45% engagement", color: "text-green-400", borderColor: "border-green-500" },
-]
-
-const getEngagementColor = (engagement?: string): string => {
-  if (!engagement) return "text-gray-400 bg-gray-400/10 border-gray-400/20"
-  const colorMap: Record<string, string> = {
-    "Very High": "text-green-400 bg-green-400/10 border-green-400/20",
-    "High": "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    "Medium": "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-    "Low": "text-gray-400 bg-gray-400/10 border-gray-400/20",
-  }
-  return colorMap[engagement] || colorMap.Low
-}
-
-const getScoreColor = (score?: number): string => {
-  if (!score) return "text-gray-400"
-  if (score >= 90) return "text-green-400"
-  if (score >= 80) return "text-blue-400"
-  if (score >= 70) return "text-yellow-400"
-  return "text-gray-400"
-}
-
-const PostCard: React.FC<PostCardProps> = ({ 
-  post, 
-  index, 
-  totalPosts, 
-  isExpanded, 
-  onToggleExpand, 
-  onSchedule, 
+export default function PostCard({
+  post,
+  index,
+  totalPosts,
+  isExpanded,
+  onToggleExpand,
+  onSchedule,
   onCopy,
   onPostSuccess,
-  onPostError
-}) => {
-  const shouldShowMore = post.content.length > 200
+  onPostError,
+  onDelete,
+  isLinkedInConnected,
+}: any) {
+  const [editing, setEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState(post.content)
+  const [media, setMedia] = useState<string | null>(null)
+  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(editedContent)
+    setCopied(true)
+    toast.success("Copied to clipboard!")
+    onCopy?.()
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  const handleMediaUpload = (type: "image" | "video") => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = type === "image" ? "image/*" : "video/*"
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement
+      const file = target.files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          setMedia(event.target?.result as string)
+          setMediaType(type)
+          toast.success(`${type === "image" ? "Image" : "Video"} added!`)
+        }
+        reader.readAsDataURL(file)
+      }
+    }
+    input.click()
+  }
+
+  const handleSave = () => {
+    post.content = editedContent
+    setEditing(false)
+    toast.success("Post updated!")
+  }
+
+  const handleCancel = () => {
+    setEditedContent(post.content)
+    setEditing(false)
+  }
+
+  const handleRemoveMedia = () => {
+    setMedia(null)
+    setMediaType(null)
+    toast("Media removed", { icon: "🗑️" })
+  }
 
   return (
     <motion.div
-      className="bg-[#2d3748] rounded-xl p-6 border border-[#374151] shadow-xl hover:shadow-2xl transition-all duration-300"
+      className={`relative bg-[#1E1F25] rounded-2xl p-5 border border-[#2E3038] shadow-lg transition-all duration-300 ${
+        copied ? "shadow-green-500/30" : "hover:shadow-blue-900/20"
+      }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ scale: 1.01, y: -2 }}
+      transition={{ delay: index * 0.06 }}
+      whileHover={{ scale: 1.01 }}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="bg-[#0077B5] text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-            Post {post.id || index + 1}/{totalPosts}
-          </span>
-          {post.engagement && (
-            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getEngagementColor(post.engagement)}`}>
-              {post.engagement} Engagement
-            </span>
-          )}
-          {post.score && (
-            <div className="flex items-center gap-1">
-              <Zap className={`w-4 h-4 ${getScoreColor(post.score)}`} />
-              <span className={`text-sm font-bold ${getScoreColor(post.score)}`}>{post.score}/100</span>
-            </div>
-          )}
-        </div>
+      {/* --- Action Icons --- */}
+      <div className="absolute top-3 right-3 flex gap-2">
         <button
-          className="flex items-center gap-2 text-[#0077B5] text-sm hover:underline transition-colors"
-          onClick={onToggleExpand}
+          onClick={onSchedule}
+          title="Schedule"
+          className="p-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:scale-110 transition-all"
         >
-          <Eye className="w-4 h-4" />
-          {isExpanded ? "Collapse" : "Full View"}
+          <Clock size={16} />
+        </button>
+
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            title="Edit"
+            className="p-2 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:scale-110 transition-all"
+          >
+            <Edit3 size={16} />
+          </button>
+        )}
+
+        <button
+          onClick={handleCopy}
+          title="Copy"
+          className={`p-2 rounded-full ${
+            copied
+              ? "bg-green-500/10 text-green-400 animate-pulse"
+              : "bg-purple-500/10 text-purple-400"
+          } hover:bg-purple-500/20 hover:scale-110 transition-all`}
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+        </button>
+
+        <button
+          onClick={onDelete}
+          title="Delete"
+          className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:scale-110 transition-all"
+        >
+          <Trash2 size={16} />
         </button>
       </div>
 
-      <div className="mb-6">
-        <div className={`text-gray-300 leading-relaxed text-lg ${isExpanded ? "" : "line-clamp-4"}`}>
-          {post.content}
-        </div>
-        {shouldShowMore && (
-          <button
-            className="text-[#0077B5] text-sm mt-2 hover:underline transition-colors"
-            onClick={onToggleExpand}
+      {/* --- Header --- */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
+          Post {index + 1}/{totalPosts}
+        </span>
+      </div>
+
+      {/* --- Content --- */}
+      <div className="mb-3">
+        {editing ? (
+          <textarea
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            className="w-full min-h-[150px] bg-[#15161C] border border-[#2E3038] rounded-lg text-gray-200 p-3 focus:border-blue-500 outline-none text-sm"
+          />
+        ) : (
+          <p
+            className={`text-gray-300 leading-relaxed text-sm ${
+              isExpanded ? "" : "line-clamp-4"
+            }`}
           >
-            {isExpanded ? "Show less" : "Show more"}
-          </button>
+            {editedContent}
+          </p>
         )}
       </div>
 
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 bg-[#0077B5] rounded-full"></div>
-          <span className="text-[#0077B5] text-sm font-medium">Media Attachment</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {MEDIA_TYPES.map((media, index) => {
-            const IconComponent = media.icon
-            return (
-              <div
-                key={index}
-                className={`border-2 border-dashed ${media.borderColor} rounded-lg p-4 text-center bg-[#1a1d29] hover:bg-[#374151]/20 transition-colors cursor-pointer group`}
-              >
-                <IconComponent className={`w-8 h-8 ${media.color} mx-auto mb-2 group-hover:scale-110 transition-transform`} />
-                <p className="text-gray-300 text-sm">{media.label}</p>
-                <p className="text-xs text-gray-500">{media.engagement}</p>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+      {!editing && (
         <button
-          className="bg-[#0077B5] hover:bg-[#004182] text-white shadow-lg transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
-          onClick={onSchedule}
+          onClick={onToggleExpand}
+          className="text-blue-400 text-xs font-medium mt-1 hover:underline flex items-center gap-1 transition-colors"
         >
-          <Clock className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Schedule</span>
-          <span className="sm:hidden">Schedule</span>
+          <Eye size={14} />
+          {isExpanded ? "Collapse" : "Full View"}
         </button>
+      )}
 
-        <button className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center">
-          <Edit3 className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Edit</span>
-          <span className="sm:hidden">Edit</span>
-        </button>
+      {/* --- Save / Cancel Buttons --- */}
+      {editing && (
+        <div className="flex gap-3 mt-3">
+          <button
+            onClick={handleSave}
+            className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg py-2 transition"
+          >
+            <Save size={16} /> Save
+          </button>
+          <button
+            onClick={handleCancel}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-semibold rounded-lg py-2 transition"
+          >
+            <X size={16} /> Cancel
+          </button>
+        </div>
+      )}
 
+      {/* --- Media Upload --- */}
+      {!editing && (
+        <div className="grid grid-cols-2 gap-3 mt-4 mb-4">
+          <button
+            onClick={() => handleMediaUpload("image")}
+            className="p-3 rounded-xl border-2 border-dashed border-sky-400/30 bg-[#15161C] hover:bg-[#23242C] transition flex flex-col items-center"
+          >
+            <ImageIcon className="text-sky-400 w-6 h-6 mb-2" />
+            <span className="text-gray-300 text-xs font-medium">
+              Add Image
+            </span>
+          </button>
+          <button
+            onClick={() => handleMediaUpload("video")}
+            className="p-3 rounded-xl border-2 border-dashed border-purple-400/30 bg-[#15161C] hover:bg-[#23242C] transition flex flex-col items-center"
+          >
+            <Video className="text-purple-400 w-6 h-6 mb-2" />
+            <span className="text-gray-300 text-xs font-medium">
+              Add Video
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* --- Media Preview --- */}
+      {media && (
+        <div className="relative mt-3">
+          {mediaType === "image" ? (
+            <img
+              src={media}
+              alt="Preview"
+              className="rounded-lg w-full object-cover border border-[#2E3038]"
+            />
+          ) : (
+            <video
+              src={media}
+              controls
+              className="rounded-lg w-full border border-[#2E3038]"
+            />
+          )}
+          <button
+            onClick={handleRemoveMedia}
+            className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1 rounded-full transition"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* --- Post Button --- */}
+      <div className="mt-4">
         <PostToLinkedInButton
-          content={post.content}
+          content={editedContent}
+          media={media}
+          mediaType={mediaType}
           onSuccess={onPostSuccess}
           onError={onPostError}
-          className="text-sm sm:text-base"
+          isLinkedInConnected={isLinkedInConnected}
+          className="w-full bg-gradient-to-r from-[#0077B5] to-[#005885] text-white font-semibold rounded-lg py-2 hover:shadow-lg hover:scale-[1.02] transition-all"
         />
-
-        <button
-          className="border border-[#374151] bg-[#2d3748] text-white hover:bg-[#374151] transition-all duration-300 text-sm sm:text-base px-4 py-2 rounded-lg flex items-center justify-center"
-          onClick={onCopy}
-        >
-          <Copy className="w-4 h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Copy</span>
-          <span className="sm:hidden">Copy</span>
-        </button>
       </div>
     </motion.div>
   )
 }
-
-export default PostCard
-

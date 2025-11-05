@@ -1,95 +1,137 @@
+// components/PostToLinkedInButton.tsx  (replace your existing file)
 "use client"
-import React, { useState } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Loader2, Share2, CheckCircle, AlertCircle } from "lucide-react"
-import { useLinkedInAuth } from "../hooks/useLinkedInAuth"
-import { useLinkedInPosting } from "../hooks/useLinkedInPosting"
-import { PostToLinkedInButtonProps } from "../types"
+import toast from "react-hot-toast"
 
-const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({ content, onSuccess, onError, className }) => {
-  const { isAuthenticated, isLoading: authLoading, authenticate } = useLinkedInAuth()
-  const { postToLinkedIn, isPosting } = useLinkedInPosting()
-  const [postStatus, setPostStatus] = useState<'idle' | 'success' | 'error' | 'needs_auth'>('idle')
+interface Props {
+  content: string
+  media?: string | null
+  mediaType?: 'image' | 'video' | null
+  onSuccess?: (postId: string) => void
+  onError?: (error: string) => void
+  className?: string
+  isLinkedInConnected?: boolean // optional prop but we still verify server-side
+}
 
-  const handlePost = async () => {
-    console.log("Post button clicked with content:", content)
-    console.log("Checking authentication...")
-    
-    if (!isAuthenticated) {
-      console.log("User not authenticated, showing auth prompt")
-      setPostStatus('needs_auth')
-      return
-    }
+const PostToLinkedInButton: React.FC<Props> = ({ content, media, mediaType, onSuccess, onError, className, isLinkedInConnected }) => {
+  const [isPosting, setIsPosting] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'needs_auth' | 'success' | 'error'>('idle')
+  const popupRef = useRef<Window | null>(null)
+  const pendingPostRef = useRef<{ content: string, media?: string | null, mediaType?: string | null } | null>(null)
 
-    console.log("User authenticated, starting post to LinkedIn...")
-    
+  // Helper: post to server directly (ensures cookies are sent via credentials: 'include')
+  const postToLinkedInDirect = async (payload: { content: string, media?: string | null, mediaType?: string | null }) => {
+    setIsPosting(true)
     try {
-      const result = await postToLinkedIn({ content })
-      
-      console.log("Post result:", result)
-
-      if (result.success && result.postId) {
-        setPostStatus('success')
-        onSuccess?.(result.postId)
-        
-        setTimeout(() => {
-          setPostStatus('idle')
-        }, 3000)
-      } else {
-        setPostStatus('error')
-        onError?.(result.error || 'Unknown error occurred')
-        
-        setTimeout(() => {
-          setPostStatus('idle')
-        }, 3000)
+      const res = await fetch('/api/linkedin/post', {
+        method: 'POST',
+        credentials: 'include', // IMPORTANT - send cookies
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to post')
       }
-    } catch (error) {
-      console.error("Error posting to LinkedIn:", error)
-      setPostStatus('error')
-      onError?.('Failed to post')
-      
-      setTimeout(() => {
-        setPostStatus('idle')
-      }, 3000)
+      setStatus('success')
+      onSuccess?.(data.postId)
+      toast.success(media ? "Posted with media!" : "Posted to LinkedIn!")
+    } catch (err: any) {
+      console.error('Post error:', err)
+      setStatus('error')
+      onError?.(err?.message || 'Failed to post')
+      toast.error('Failed to post to LinkedIn')
+    } finally {
+      setIsPosting(false)
+      // reset status back to idle after a short delay so user can post again
+      setTimeout(() => setStatus('idle'), 3000)
+    }
+  }
+
+  // Listen for postMessage from popup (the callback HTML posts this)
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (!e.data) return
+      if (e.data?.type === 'linkedin-auth-success') {
+        // popup reported success — close it if open
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close()
+        }
+        // if a post was pending, perform it now
+        if (pendingPostRef.current) {
+          postToLinkedInDirect(pendingPostRef.current)
+          pendingPostRef.current = null
+        }
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  // Called when "Connect" is clicked
+  const openAuthPopup = () => {
+    // open LinkedIn auth route in popup
+    const width = 600, height = 700
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+    popupRef.current = window.open('/auth/linkedin', 'linkedin_auth', `width=${width},height=${height},left=${left},top=${top}`)
+    // If popup blocked, fallback: navigate in current tab
+    if (!popupRef.current) {
+      window.location.href = '/auth/linkedin'
     }
   }
 
   const handleAuthenticate = () => {
-    console.log("Authenticating user...")
-    authenticate()
-    setPostStatus('idle')
+    setStatus('needs_auth')
+    openAuthPopup()
   }
 
-  const handleCancelAuth = () => {
-    setPostStatus('idle')
+  const handlePostClick = async () => {
+    // Quick validation
+    if (!content || content.trim().length === 0) {
+      toast.error('Content is empty')
+      return
+    }
+
+    // Check server-side auth status before posting
+    try {
+      setIsPosting(true)
+      const statusRes = await fetch('/api/linkedin/status', { credentials: 'include' })
+      const statusJson = await statusRes.json()
+      if (!statusJson.isAuthenticated) {
+        // queue post, open auth popup
+        pendingPostRef.current = { content, media, mediaType }
+        setStatus('needs_auth')
+        openAuthPopup()
+        setIsPosting(false)
+        return
+      }
+      // if authenticated, post directly
+      await postToLinkedInDirect({ content, media, mediaType })
+    } catch (err) {
+      console.error('Auth check failed:', err)
+      setIsPosting(false)
+      toast.error('Auth check failed')
+    }
   }
 
-  if (authLoading) {
+  // Render
+  if (status === 'needs_auth') {
     return (
-      <button disabled className={`${className} opacity-50 cursor-not-allowed`}>
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        Loading...
-      </button>
-    )
-  }
-
-  if (postStatus === 'needs_auth') {
-    return (
-      <div className="space-y-2">
-        <div className="text-xs text-yellow-400 text-center mb-2">
-          Connect LinkedIn to post
-        </div>
+      <div className="w-full">
+        <div className="text-xs text-yellow-400 text-center mb-2">Connect LinkedIn to post</div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={handleAuthenticate}
             className="flex-1 bg-[#0077B5] hover:bg-[#004182] text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm transition-colors"
           >
-            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-            </svg>
-            Connect
+            <Share2 className="w-4 h-4 mr-1" /> Connect
           </button>
-          <button 
-            onClick={handleCancelAuth}
+          <button
+            onClick={() => setStatus('idle')}
             className="px-3 py-2 border border-gray-500 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
           >
             Cancel
@@ -99,55 +141,30 @@ const PostToLinkedInButton: React.FC<PostToLinkedInButtonProps> = ({ content, on
     )
   }
 
-  const getButtonContent = () => {
-    if (isPosting) {
-      return (
-        <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          <span className="hidden sm:inline">Posting...</span>
-          <span className="sm:hidden">Posting...</span>
-        </>
-      )
-    }
-
-    if (postStatus === 'success') {
-      return (
-        <>
-          <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-          <span className="hidden sm:inline">Posted Successfully!</span>
-          <span className="sm:hidden">Posted!</span>
-        </>
-      )
-    }
-
-    return (
-      <>
-        <Share2 className="w-4 h-4 mr-2" />
-        <span className="hidden sm:inline">Post Now</span>
-        <span className="sm:hidden">Post</span>
-      </>
-    )
-  }
-
-  const getButtonStyles = () => {
-    if (postStatus === 'success') {
-      return "bg-green-500 hover:bg-green-600 text-white"
-    }
-    return "bg-green-500 hover:bg-green-600 text-white"
-  }
-
   return (
-    <div className="space-y-2">
+    <div className="w-full">
       <button
-        onClick={handlePost}
-        disabled={isPosting || postStatus === 'success'}
-        className={`${getButtonStyles()} shadow-lg transition-all duration-300 px-4 py-2 rounded-lg flex items-center ${className}`}
+        onClick={handlePostClick}
+        disabled={isPosting || status === 'success'}
+        className={`w-full ${className ?? ''} ${isPosting ? 'opacity-60 cursor-not-allowed' : ''} bg-[#0077B5] hover:bg-[#004182] text-white shadow-lg px-3 py-2 rounded-lg flex items-center justify-center transition-colors`}
       >
-        {getButtonContent()}
+        {isPosting ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Posting...
+          </>
+        ) : status === 'success' ? (
+          <>
+            <CheckCircle className="w-4 h-4 mr-2" /> Posted
+          </>
+        ) : (
+          <>
+            <Share2 className="w-4 h-4 mr-2" /> Post
+          </>
+        )}
       </button>
-      
-      {postStatus === 'error' && (
-        <div className="flex items-center gap-1 text-red-400 text-xs">
+
+      {status === 'error' && (
+        <div className="flex items-center gap-1 text-red-400 text-xs mt-2">
           <AlertCircle className="w-3 h-3" />
           <span>Failed to post to LinkedIn</span>
         </div>

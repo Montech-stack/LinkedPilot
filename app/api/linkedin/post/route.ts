@@ -1,87 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { content, userId } = await request.json();
+    const cookieStore = await cookies() // ✅ Await the cookies Promise
+    const accessToken = cookieStore.get('linkedin_access_token')?.value
+    const userId = cookieStore.get('linkedin_user_id')?.value
+
+    if (!accessToken || !userId) {
+      return NextResponse.json({ success: false, error: 'Not authenticated with LinkedIn' }, { status: 401 })
+    }
+
+    const { content, media, mediaType } = await request.json()
 
     if (!content) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'No content provided' 
-      }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Content is required' }, { status: 400 })
     }
 
-    // Get stored access token (from cookies or database)
-    const cookieStore = cookies();
-    const access_token = cookieStore.get('linkedin_access_token')?.value;
-    const linkedin_user_id = cookieStore.get('linkedin_user_id')?.value;
-
-    if (!access_token || !linkedin_user_id) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'LinkedIn not connected. Please reconnect your account.' 
-      }, { status: 401 });
-    }
-
-    // Create LinkedIn post with selected content
-    const postContent = {
-      author: `urn:li:person:${linkedin_user_id}`,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: {
-            text: content // Use the selected content from dashboard
-          },
-          shareMediaCategory: 'NONE'
-        }
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-      }
-    };
-
-    const postResponse = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    // --- Continue with your post logic ---
+    // Use accessToken instead of env var:
+    const postRes = await fetch('https://api.linkedin.com/v2/ugcPosts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${access_token}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0'
+        'X-Restli-Protocol-Version': '2.0.0',
       },
-      body: JSON.stringify(postContent)
-    });
+      body: JSON.stringify({
+        author: `urn:li:person:${userId}`,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: { text: content },
+            shareMediaCategory: 'NONE',
+          },
+        },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }),
+    })
 
-    if (!postResponse.ok) {
-      const errorText = await postResponse.text();
-      console.error('LinkedIn post failed:', postResponse.status, errorText);
-      
-      // Check if token expired
-      if (postResponse.status === 401) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'LinkedIn token expired. Please reconnect your account.' 
-        }, { status: 401 });
-      }
-      
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to post to LinkedIn' 
-      }, { status: 400 });
+    if (!postRes.ok) {
+      const errorText = await postRes.text()
+      console.error('LinkedIn post error:', errorText)
+      return NextResponse.json({ success: false, error: 'Failed to create LinkedIn post' }, { status: 500 })
     }
 
-    const postResult = await postResponse.json();
-    
-    return NextResponse.json({
-      success: true,
-      postId: postResult.id,
-      message: 'Successfully posted to LinkedIn!'
-    });
-
+    const data = await postRes.json()
+    return NextResponse.json({ success: true, postId: data.id })
   } catch (error) {
-    console.error('LinkedIn post error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Internal server error' 
-    }, { status: 500 });
+    console.error('LinkedIn API error:', error)
+    return NextResponse.json({ success: false, error: error.message || 'Unexpected error' }, { status: 500 })
   }
 }

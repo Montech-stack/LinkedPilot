@@ -1,17 +1,19 @@
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
-  try {
-    const cookieStore = cookies();
-    const access_token = cookieStore.get('linkedin_access_token')?.value;
-    const linkedin_user_id = cookieStore.get('linkedin_user_id')?.value;
+export async function GET(request: NextRequest) {
+  const accessToken = request.cookies.get('linkedin_access_token')?.value
+  const userId = request.cookies.get('linkedin_user_id')?.value
 
-    if (access_token && linkedin_user_id) {
-      return NextResponse.json({ isAuthenticated: true });
-    }
-    return NextResponse.json({ isAuthenticated: false });
-  } catch (error) {
-    return NextResponse.json({ isAuthenticated: false });
+  // Debug log to check if cookies exist
+  console.log('linkedin_access_token:', accessToken)
+  console.log('linkedin_user_id:', userId)
+
+  if (!accessToken || !userId) {
+    return NextResponse.json({ isAuthenticated: false })
   }
+
+  return NextResponse.json({
+    isAuthenticated: true,
+    userId,
+  })
 }
