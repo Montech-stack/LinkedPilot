@@ -147,117 +147,131 @@ export default function Dashboard() {
             </p>
           </motion.div>
 
-          {/* Toolbar */}
+          {/* Toolbar & Input */}
           <div className="bg-[#1b1f2a] p-6 rounded-2xl shadow-2xl border border-[#2c2f3a]">
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                {/* Tone Selector */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
-                        tone ? "ring-1 ring-[#0077B5]/40" : ""
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
+              {/* Tone Selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
+                      tone ? "ring-1 ring-[#0077B5]/40" : ""
+                    }`}
+                    title="Tone"
+                  >
+                    <Palette className="w-5 h-5 text-[#7dd3fc]" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                  <div className="text-sm font-medium mb-2 text-gray-400">Select Tone</div>
+                  {TONE_OPTIONS.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => setTone(t.value as PostTone)}
+                      className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#0077B5]/20 transition-all ${
+                        tone === t.value ? "text-[#0077B5] bg-[#0077B5]/10" : "text-gray-300"
                       }`}
-                      title="Tone"
                     >
-                      <Palette className="w-5 h-5 text-[#7dd3fc]" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
-                    <div className="text-sm font-medium mb-2 text-gray-400">Select Tone</div>
-                    {TONE_OPTIONS.map((t) => (
-                      <button
-                        key={t.value}
-                        onClick={() => setTone(t.value as PostTone)}
-                        className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#0077B5]/20 transition-all ${
-                          tone === t.value ? "text-[#0077B5] bg-[#0077B5]/10" : "text-gray-300"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
+                      {t.label}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
 
-                {/* Length Selector */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
-                        postLength ? "ring-1 ring-[#8b5cf6]/40" : ""
+              {/* Length Selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
+                      postLength ? "ring-1 ring-[#8b5cf6]/40" : ""
+                    }`}
+                    title="Post Length"
+                  >
+                    <Gauge className="w-5 h-5 text-[#c084fc]" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                  <div className="text-sm font-medium mb-2 text-gray-400">Select Length</div>
+                  {LENGTH_OPTIONS.map((l) => (
+                    <button
+                      key={l.value}
+                      onClick={() => setPostLength(l.value as PostLength)}
+                      className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#9333ea]/20 transition-all ${
+                        postLength === l.value
+                          ? "text-[#c084fc] bg-[#9333ea]/10"
+                          : "text-gray-300"
                       }`}
-                      title="Post Length"
                     >
-                      <Gauge className="w-5 h-5 text-[#c084fc]" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
-                    <div className="text-sm font-medium mb-2 text-gray-400">Select Length</div>
-                    {LENGTH_OPTIONS.map((l) => (
-                      <button
-                        key={l.value}
-                        onClick={() => setPostLength(l.value as PostLength)}
-                        className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#9333ea]/20 transition-all ${
-                          postLength === l.value
-                            ? "text-[#c084fc] bg-[#9333ea]/10"
-                            : "text-gray-300"
-                        }`}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
+                      {l.label}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
 
-                {/* Post Count Selector */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
-                        postCount > 1 ? "ring-1 ring-[#34d399]/40" : ""
-                      }`}
-                      title="Number of Posts"
+              {/* Post Count Selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${
+                      postCount > 1 ? "ring-1 ring-[#34d399]/40" : ""
+                    }`}
+                    title="Number of Posts"
+                  >
+                    <SlidersHorizontal className="w-5 h-5 text-[#34d399]" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                  <div className="text-sm font-medium mb-2 text-gray-400">Number of Posts</div>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => setPostCount(Math.max(1, postCount - 1))}
+                      className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
                     >
-                      <SlidersHorizontal className="w-5 h-5 text-[#34d399]" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
-                    <div className="text-sm font-medium mb-2 text-gray-400">Number of Posts</div>
-                    <div className="flex items-center justify-center gap-3">
-                      <button
-                        onClick={() => setPostCount(Math.max(1, postCount - 1))}
-                        className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <div className="text-lg font-semibold w-8 text-center">{postCount}</div>
-                      <button
-                        onClick={() =>
-                          setPostCount(Math.min(currentPlanLimit.maxPosts, postCount + 1))
-                        }
-                        className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      Max {currentPlanLimit.maxPosts} ({currentPlanLimit.name})
-                    </p>
-                  </PopoverContent>
-                </Popover>
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="text-lg font-semibold w-8 text-center">{postCount}</div>
+                    <button
+                      onClick={() =>
+                        setPostCount(Math.min(currentPlanLimit.maxPosts, postCount + 1))
+                      }
+                      className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Max {currentPlanLimit.maxPosts} ({currentPlanLimit.name})
+                  </p>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Input Box */}
+            <div className="relative mb-6">
+              <textarea
+                placeholder="Describe your LinkedIn post idea..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-4 min-h-[160px] resize-none shadow-inner"
+                maxLength={500}
+              />
+              <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                {input.length}/500
               </div>
+            </div>
 
-              {/* Generate Button */}
+            {/* ✅ Generate Button Below Input */}
+            <div className="flex justify-center">
               <Button
                 onClick={handleGeneratePosts}
                 disabled={!input.trim() || isGenerating}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#0077B5] to-[#9333ea] hover:opacity-90 text-white font-semibold rounded-full shadow-lg transition-all"
+                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#0077B5] to-[#9333ea] hover:opacity-90 text-white font-semibold rounded-full shadow-lg transition-all"
               >
                 {isGenerating ? (
                   <>
@@ -271,20 +285,6 @@ export default function Dashboard() {
                   </>
                 )}
               </Button>
-            </div>
-
-            {/* Input Box */}
-            <div className="relative">
-              <textarea
-                placeholder="Describe your LinkedIn post idea..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-4 min-h-[160px] resize-none shadow-inner"
-                maxLength={500}
-              />
-              <div className="absolute bottom-2 right-3 text-xs text-gray-500">
-                {input.length}/500
-              </div>
             </div>
           </div>
 
