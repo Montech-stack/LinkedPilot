@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { User, Mail, Lock, Linkedin, ArrowRight } from "lucide-react"
+import { User, Mail, Lock, ArrowRight } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
@@ -21,18 +21,34 @@ export default function SignUp() {
     setIsLoading(true)
 
     try {
-      // Handle user registration here
-      console.log("Sign up:", { username, email, password })
-      // After successful registration, redirect to dashboard
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text)
+      }
+
+      // ✅ Automatically sign in after successful signup
+      await signIn("credentials", {
+        email,
+        password,
+        redirect: true,
+        callbackUrl: "/dashboard",
+      })
     } catch (error) {
       console.error("Sign up error:", error)
+      alert((error as Error).message || "Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleLinkedInSignUp = () => {
-    signIn("linkedin", { callbackUrl: "/dashboard" })
+  const handleGoogleSignUp = () => {
+    signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (
@@ -52,16 +68,19 @@ export default function SignUp() {
           <p className="text-gray-400">Start creating amazing LinkedIn content today</p>
         </div>
 
-        {/* LinkedIn OAuth Button */}
-        <Button onClick={handleLinkedInSignUp} className="w-full bg-[#0077B5] hover:bg-[#004182] text-white mb-6 h-12">
-          <Linkedin className="w-5 h-5 mr-2" />
-          Continue with LinkedIn
+        {/* Google OAuth Button */}
+        <Button
+          onClick={handleGoogleSignUp}
+          className="w-full bg-white text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-2 h-12 mb-6"
+        >
+          <FcGoogle className="w-6 h-6" />
+          Continue with Google
         </Button>
 
         {/* Divider */}
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#374151]"></div>
+            <div className="w-full border-t border-[#374151]" />
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="px-2 bg-[#1a1d29] text-gray-400">or</span>

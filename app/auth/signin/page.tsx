@@ -1,39 +1,55 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Mail, Lock, Linkedin, ArrowRight } from "lucide-react"
+import { Mail, Lock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
+import { FcGoogle } from "react-icons/fc"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      await signIn("credentials", {
-        email,
-        password,
-        callbackUrl: "/dashboard",
-      })
-    } catch (error) {
-      console.error("Sign in error:", error)
-    } finally {
-      setIsLoading(false)
+  try {
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false, // 🚀 Prevent NextAuth redirect
+    });
+
+    if (res?.error) {
+      // ✅ Handle specific errors
+      if (res.error.includes("No user")) {
+        alert("No user found — please sign up first.");
+      } else if (res.error.includes("Invalid password")) {
+        alert("Invalid password. Please try again.");
+      } else {
+        alert("Sign-in failed. Please check your credentials.");
+      }
+    } else {
+      // ✅ Success — redirect manually
+      window.location.href = "/dashboard";
     }
+  } catch (error) {
+    console.error("Sign-in error:", error);
+    alert("An unexpected error occurred. Please try again later.");
+  } finally {
+    setIsLoading(false);
   }
+};
 
-  const handleLinkedInSignIn = () => {
-    signIn("linkedin", { callbackUrl: "/dashboard" })
+
+  const handleGoogleSignIn = () => {
+    signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (
@@ -53,10 +69,13 @@ export default function SignIn() {
           <p className="text-gray-400">Continue creating amazing LinkedIn content</p>
         </div>
 
-        {/* LinkedIn OAuth Button */}
-        <Button onClick={handleLinkedInSignIn} className="w-full bg-[#0077B5] hover:bg-[#004182] text-white mb-6 h-12">
-          <Linkedin className="w-5 h-5 mr-2" />
-          Continue with LinkedIn
+        {/* Google OAuth Button */}
+        <Button
+          onClick={handleGoogleSignIn}
+          className="w-full bg-white hover:bg-gray-100 text-gray-700 font-semibold mb-6 h-12 flex items-center justify-center gap-2"
+        >
+          <FcGoogle className="w-6 h-6" />
+          Continue with Google
         </Button>
 
         {/* Divider */}
@@ -108,7 +127,7 @@ export default function SignIn() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-gray-400">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/auth/signup" className="text-[#0077B5] hover:underline">
               Sign up
             </Link>
