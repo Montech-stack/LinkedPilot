@@ -6,10 +6,8 @@ if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
-let cached: { conn: mongoose.Mongoose | null; promise: Promise<mongoose.Mongoose> | null } = (global as any).mongoose || {
-  conn: null,
-  promise: null,
-};
+let cached: { conn: mongoose.Mongoose | null; promise: Promise<mongoose.Mongoose> | null } =
+  (global as any).mongoose || { conn: null, promise: null };
 
 async function connectToDatabase() {
   if (cached.conn) {
@@ -17,16 +15,19 @@ async function connectToDatabase() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      dbName: 'Linkedpilot', // Updated to match Atlas
-      bufferCommands: false,
-    }).then((mongoose) => {
-      console.log('Connected to MongoDB Atlas');
-      return mongoose;
-    }).catch((error) => {
-      console.error('MongoDB connection error:', error);
-      throw error;
-    });
+    cached.promise = mongoose
+      .connect(MONGODB_URI, {
+        dbName: 'Linkedpilot',
+        bufferCommands: false,
+      })
+      .then((mongoose) => {
+        console.log('Connected to MongoDB Atlas');
+        return mongoose;
+      })
+      .catch((error) => {
+        console.error('MongoDB connection error:', error);
+        throw error;
+      });
   }
 
   cached.conn = await cached.promise;

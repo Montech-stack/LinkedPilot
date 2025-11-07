@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   Linkedin,
@@ -26,7 +26,7 @@ const platforms = [
     icon: Linkedin,
     color: "text-[#0077B5]",
     bg: "bg-[#0077B5]/10 hover:bg-[#0077B5]/20",
-    connectUrl: "/api/linkedin/login", // OAuth entry route
+    connectUrl: "/api/linkedin/auth",
   },
   {
     name: "Facebook",
@@ -61,27 +61,29 @@ const platforms = [
 ]
 
 export default function LinksPage() {
-  const [accounts, setAccounts] = useState<{
-    [platform: string]: {
-      name: string
-      email: string
-      connected: boolean
-    }[]
-  }>({})
-
+  const [accounts, setAccounts] = useState<{ [platform: string]: any[] }>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  
-
   const [showForm, setShowForm] = useState<{ [platform: string]: boolean }>({})
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-  })
+  const [formData, setFormData] = useState({ name: "", email: "" })
   const [loading, setLoading] = useState(false)
 
-  const handleAddAccount = (platform: string, connectUrl?: string) => {
+  // Fetch accounts on page load
+  useEffect(() => {
+    fetch("/api/social")
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.reduce((acc: any, item: any) => {
+          if (!acc[item.platform]) acc[item.platform] = []
+          acc[item.platform].push(item)
+          return acc
+        }, {})
+        setAccounts(formatted)
+      })
+  }, [])
+
+  // Add account + save to DB
+  const handleAddAccount = async (platform: string, connectUrl?: string) => {
     if (platform === "LinkedIn") {
-      // Redirect to your real LinkedIn OAuth route
       window.location.href = connectUrl || "/api/linkedin/login"
       return
     }
@@ -92,48 +94,72 @@ export default function LinksPage() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      setAccounts((prev) => ({
-        ...prev,
-        [platform]: [
-          ...(prev[platform] || []),
-          { name: formData.name, email: formData.email, connected: false },
-        ],
-      }))
-      setFormData({ name: "", email: "" })
-      setShowForm((prev) => ({ ...prev, [platform]: false }))
-      setLoading(false)
-      toast.success(`Linked new ${platform} account!`)
-    }, 1000)
-  }
 
-  const handleRemoveAccount = (platform: string, index: number) => {
+    const res = await fetch("/api/social", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platform,
+        name: formData.name,
+        email: formData.email,
+        connected: false,
+      }),
+    })
+
+    const record = await res.json()
+
     setAccounts((prev) => ({
       ...prev,
-      [platform]: prev[platform].filter((_, i) => i !== index),
+      [platform]: [...(prev[platform] || []), record],
     }))
+
+    setFormData({ name: "", email: "" })
+    setShowForm((prev) => ({ ...prev, [platform]: false }))
+    setLoading(false)
+    toast.success(`Linked new ${platform} account!`)
+  }
+
+  // Delete account (DB + UI)
+  const handleRemoveAccount = async (platform: string, index: number) => {
+    const account = accounts[platform][index]
+
+    await fetch(`/api/social/${account._id}`, {
+      method: "DELETE",
+    })
+
+    setAccounts((prev) => ({
+      ...prev,
+      [platform]: prev[platform].filter((_: any, i: number) => i !== index),
+    }))
+
     toast("Account unlinked", { icon: "🗑️" })
   }
 
-  const handleToggleConnection = (platform: string, index: number) => {
-    setAccounts((prev) => {
-      const updated = [...(prev[platform] || [])]
-      updated[index].connected = !updated[index].connected
-      toast.success(
-        updated[index].connected
-          ? `${updated[index].name} connected!`
-          : `${updated[index].name} disconnected!`
-      )
-      return { ...prev, [platform]: updated }
+  // Toggle connect/disconnect
+  const handleToggleConnection = async (platform: string, index: number) => {
+    const account = accounts[platform][index]
+
+    const res = await fetch(`/api/social/${account._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ connected: !account.connected }),
     })
+
+    const updated = await res.json()
+
+    setAccounts((prev) => {
+      const arr = [...prev[platform]]
+      arr[index] = updated
+      return { ...prev, [platform]: arr }
+    })
+
+    toast.success(updated.connected ? "Connected!" : "Disconnected!")
   }
 
   return (
     <div className="min-h-screen bg-[#0F1116] text-white flex">
-      {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Section */}
       <div className="flex-1 flex flex-col">
         <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
 
@@ -164,7 +190,6 @@ export default function LinksPage() {
                   whileHover={{ scale: 1.03 }}
                   className="relative bg-[#1E1F25] border border-[#2E3038] rounded-2xl p-6 shadow-md transition-all duration-300 hover:shadow-blue-900/20"
                 >
-                  {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className={`flex items-center gap-3 ${color}`}>
                       <div className={`p-3 rounded-xl ${bg}`}>
@@ -172,17 +197,14 @@ export default function LinksPage() {
                       </div>
                       <span className="font-semibold text-base">{name}</span>
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {linkedAccounts.length} linked
-                    </span>
+                    <span className="text-xs text-gray-400">{linkedAccounts.length} linked</span>
                   </div>
 
-                  {/* Linked Accounts */}
                   {linkedAccounts.length > 0 ? (
                     <div className="space-y-2 mb-4">
                       {linkedAccounts.map((acc, idx) => (
                         <div
-                          key={idx}
+                          key={acc._id || idx}
                           className="flex flex-col bg-[#15161C] border border-[#2E3038] rounded-lg p-3 text-sm text-gray-300"
                         >
                           <div className="flex justify-between items-center mb-1">
@@ -213,12 +235,9 @@ export default function LinksPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 mb-4">
-                      No accounts linked yet.
-                    </p>
+                    <p className="text-sm text-gray-500 mb-4">No accounts linked yet.</p>
                   )}
 
-                  {/* Link Account Form */}
                   {isFormVisible && (
                     <div className="bg-[#15161C] border border-[#2E3038] rounded-lg p-4 mb-3 space-y-3 animate-in fade-in">
                       <input
@@ -226,10 +245,7 @@ export default function LinksPage() {
                         placeholder="Account Name"
                         value={formData.name}
                         onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            name: e.target.value,
-                          }))
+                          setFormData((prev) => ({ ...prev, name: e.target.value }))
                         }
                         className="w-full bg-[#0F1116] border border-[#2E3038] rounded-md px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 outline-none"
                       />
@@ -238,13 +254,11 @@ export default function LinksPage() {
                         placeholder="Email or Username"
                         value={formData.email}
                         onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            email: e.target.value,
-                          }))
+                          setFormData((prev) => ({ ...prev, email: e.target.value }))
                         }
                         className="w-full bg-[#0F1116] border border-[#2E3038] rounded-md px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 outline-none"
                       />
+
                       <div className="flex gap-3">
                         <Button
                           onClick={() => handleAddAccount(name, connectUrl)}
@@ -262,12 +276,10 @@ export default function LinksPage() {
                             </>
                           )}
                         </Button>
+
                         <Button
                           onClick={() =>
-                            setShowForm((prev) => ({
-                              ...prev,
-                              [name]: false,
-                            }))
+                            setShowForm((prev) => ({ ...prev, [name]: false }))
                           }
                           variant="outline"
                           className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-semibold py-2 rounded-md"
@@ -278,12 +290,9 @@ export default function LinksPage() {
                     </div>
                   )}
 
-                  {/* Link New Account Button */}
                   {!isFormVisible && (
                     <Button
-                      onClick={() =>
-                        setShowForm((prev) => ({ ...prev, [name]: true }))
-                      }
+                      onClick={() => setShowForm((prev) => ({ ...prev, [name]: true }))}
                       className="w-full text-sm font-semibold py-2 rounded-lg transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90"
                     >
                       <Plus size={16} /> Link New Account
