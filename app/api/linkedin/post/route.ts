@@ -5,7 +5,7 @@ import { refreshLinkedInToken } from "@/lib/linkedinRefresh";
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, media } = await request.json();
+    const { content, media, mediaType } = await request.json();
 
     if (!content) {
       return NextResponse.json({ success: false, error: "No content provided" }, { status: 400 });
@@ -61,91 +61,161 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, result });
     }
 
-    // ==========================================
-    // WITH IMAGE — LinkedIn Asset Upload Flow
-    // ==========================================
+    // Parse Base64
+    const base64 = media.split(",")[1];
+    const buffer = Buffer.from(base64, "base64");
 
-    // 1️⃣ Register upload
-    const registerRes = await fetch(
-      "https://api.linkedin.com/v2/assets?action=registerUpload",
-      {
+    // ===================================================================
+    // IMAGE UPLOAD
+    // ===================================================================
+    if (mediaType === "image") {
+      const registerRes = await fetch(
+        "https://api.linkedin.com/v2/assets?action=registerUpload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            registerUploadRequest: {
+              recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+              owner: `urn:li:person:${user.linkedinId}`,
+              serviceRelationships: [
+                {
+                  relationshipType: "OWNER",
+                  identifier: "urn:li:userGeneratedContent",
+                },
+              ],
+            },
+          }),
+        }
+      );
+
+      const uploadInfo = await registerRes.json();
+      const uploadUrl =
+        uploadInfo.value.uploadMechanism[
+          "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+        ].uploadUrl;
+
+      const asset = uploadInfo.value.asset;
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "image/jpeg",
+        },
+        body: buffer,
+      });
+
+      const postBody = {
+        author: `urn:li:person:${user.linkedinId}`,
+        lifecycleState: "PUBLISHED",
+        specificContent: {
+          "com.linkedin.ugc.ShareContent": {
+            shareCommentary: { text: content },
+            shareMediaCategory: "IMAGE",
+            media: [{ status: "READY", media: asset }],
+          },
+        },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+      };
+
+      const linkedInResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
+          "X-Restli-Protocol-Version": "2.0.0",
         },
-        body: JSON.stringify({
-          registerUploadRequest: {
-            recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-            owner: `urn:li:person:${user.linkedinId}`,
-            serviceRelationships: [
-              {
-                relationshipType: "OWNER",
-                identifier: "urn:li:userGeneratedContent",
-              },
-            ],
+        body: JSON.stringify(postBody),
+      });
+
+      const result = await linkedInResponse.json();
+
+      return NextResponse.json({
+        success: true,
+        postId: result.id,
+        message: "Successfully posted image to LinkedIn!",
+      });
+    }
+
+    // ===================================================================
+    // VIDEO UPLOAD
+    // ===================================================================
+    if (mediaType === "video") {
+      const registerRes = await fetch(
+        "https://api.linkedin.com/v2/assets?action=registerUpload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-      }
-    );
-
-    const uploadInfo = await registerRes.json();
-
-    const uploadUrl =
-      uploadInfo.value.uploadMechanism[
-        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-      ].uploadUrl;
-
-    const asset = uploadInfo.value.asset;
-
-    // 2️⃣ Upload binary to LinkedIn
-    const base64 = media.split(",")[1];
-    const buffer = Buffer.from(base64, "base64");
-
-    await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "image/jpeg",
-      },
-      body: buffer,
-    });
-
-    // 3️⃣ Create post referencing uploaded image
-    const postBody = {
-      author: `urn:li:person:${user.linkedinId}`,
-      lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: { text: content },
-          shareMediaCategory: "IMAGE",
-          media: [
-            {
-              status: "READY",
-              media: asset,
+          body: JSON.stringify({
+            registerUploadRequest: {
+              recipes: ["urn:li:digitalmediaRecipe:feedshare-video"],
+              owner: `urn:li:person:${user.linkedinId}`,
+              serviceRelationships: [
+                {
+                  relationshipType: "OWNER",
+                  identifier: "urn:li:userGeneratedContent",
+                },
+              ],
             },
-          ],
+          }),
+        }
+      );
+
+      const uploadInfo = await registerRes.json();
+      const uploadUrl =
+        uploadInfo.value.uploadMechanism[
+          "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+        ].uploadUrl;
+
+      const asset = uploadInfo.value.asset;
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "video/mp4",
         },
-      },
-      visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
-    };
+        body: buffer,
+      });
 
-    const linkedInResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-      body: JSON.stringify(postBody),
-    });
+      const postBody = {
+        author: `urn:li:person:${user.linkedinId}`,
+        lifecycleState: "PUBLISHED",
+        specificContent: {
+          "com.linkedin.ugc.ShareContent": {
+            shareCommentary: { text: content },
+            shareMediaCategory: "VIDEO",
+            media: [{ status: "READY", media: asset }],
+          },
+        },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+      };
 
-    const result = await linkedInResponse.json();
+      const linkedInResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "X-Restli-Protocol-Version": "2.0.0",
+        },
+        body: JSON.stringify(postBody),
+      });
 
-    return NextResponse.json({
-      success: true,
-      postId: result.id,
-      message: "Successfully posted image to LinkedIn!",
-    });
+      const result = await linkedInResponse.json();
+
+      return NextResponse.json({
+        success: true,
+        postId: result.id,
+        message: "Successfully posted video to LinkedIn!",
+      });
+    }
+
+    return NextResponse.json({ success: false, error: "Unsupported mediaType" }, { status: 400 });
 
   } catch (error) {
     console.error("LinkedIn post error:", error);
