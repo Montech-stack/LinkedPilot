@@ -135,9 +135,17 @@ export default function PostCard({
       {/* Content */}
       <div className="mb-3">
         {editing ? (
-          <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="w-full min-h-[150px] bg-[#15161C] border border-[#2E3038] rounded-lg text-gray-200 p-3 focus:border-blue-500 outline-none text-sm" />
+          <textarea
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            className="w-full min-h-[150px] bg-[#15161C] border border-[#2E3038] rounded-lg text-gray-200 p-3 focus:border-blue-500 outline-none text-sm"
+          />
         ) : (
-          <p className={`text-gray-300 leading-relaxed text-sm ${isExpanded ? "" : "line-clamp-4"}`}>{editedContent}</p>
+          <div
+            className={`text-gray-300 leading-relaxed text-sm ${isExpanded ? "whitespace-pre-wrap" : "line-clamp-4 whitespace-pre-wrap"}`}
+          >
+            {editedContent}
+          </div>
         )}
       </div>
 
