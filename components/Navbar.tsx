@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -18,7 +19,7 @@ export default function Navbar() {
 
   return (
     <motion.nav
-      className="fixed top-0 left-0 right-0 z-50 bg-[#0a0b0f]/95 backdrop-blur-md border-b border-[#1a1d29]"
+      className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-[#0b0b0c] via-[#0d1118] to-[#0d1b2a]/95 backdrop-blur-lg border-b border-[#1f2330] shadow-lg"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -26,13 +27,14 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-[#0077B5] to-purple-500 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg">
-              L
-            </div>
-            <span className="font-extrabold bg-gradient-to-r from-[#0077B5] to-purple-500 bg-clip-text text-transparent text-lg">
-              Linked
-            </span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/Linked Logo.png"
+              alt="Linked Logo"
+              width={75}
+              height={35}
+              className="object-contain"
+            />
           </Link>
 
           {/* Desktop Nav */}
@@ -41,10 +43,10 @@ export default function Navbar() {
               <a
                 key={item.name}
                 href={item.href}
-                className="text-gray-300 hover:text-white transition-colors relative group"
+                className="text-gray-300 hover:text-white transition relative group"
               >
                 {item.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#0077B5] to-purple-500 transition-all duration-300 group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#00b4ff] to-[#ffb347] transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
           </div>
@@ -52,18 +54,21 @@ export default function Navbar() {
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
             <Link href="/auth/signin">
-              <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10">
+              <Button
+                variant="ghost"
+                className="text-gray-300 hover:text-white hover:bg-white/10"
+              >
                 Sign In
               </Button>
             </Link>
             <Link href="/dashboard">
-              <Button className="bg-gradient-to-r from-[#0077B5] to-purple-500 text-white shadow-lg hover:opacity-90 transition">
+              <Button className="bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white shadow-md hover:opacity-90 transition">
                 Get Started
               </Button>
             </Link>
           </div>
 
-          {/* Mobile menu toggle */}
+          {/* Mobile Toggle */}
           <div className="md:hidden">
             <Button
               variant="ghost"
@@ -79,7 +84,7 @@ export default function Navbar() {
         {/* Mobile Nav */}
         {isOpen && (
           <motion.div
-            className="md:hidden mt-2 bg-[#0a0b0f]/90 backdrop-blur-lg border border-[#1a1d29] rounded-lg shadow-lg"
+            className="md:hidden mt-2 bg-[#0b0b0c]/95 backdrop-blur-lg border border-[#1a1d29] rounded-lg shadow-lg"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -102,7 +107,7 @@ export default function Navbar() {
                   </Button>
                 </Link>
                 <Link href="/dashboard" className="block">
-                  <Button className="w-full bg-gradient-to-r from-[#0077B5] to-purple-500 text-white hover:opacity-90">
+                  <Button className="w-full bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white hover:opacity-90">
                     Get Started
                   </Button>
                 </Link>

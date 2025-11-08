@@ -205,7 +205,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#0077B5] to-purple-500 bg-clip-text text-transparent mb-2">
+             <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] bg-clip-text text-transparent mb-2">
               AI Content Studio
             </h1>
             <p className="text-gray-400 text-sm sm:text-base">
@@ -219,7 +219,7 @@ export default function Dashboard() {
               <Popover> {/* Tone popover */ }
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${tone ? "ring-1 ring-[#0077B5]/40" : ""}`} title="Tone">
-                    <Palette className="w-5 h-5 text-[#7dd3fc]" />
+                    <Palette className="w-5 h-5 text-[#00FFFF]" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
@@ -239,7 +239,7 @@ export default function Dashboard() {
               <Popover> {/* Length popover */ }
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postLength ? "ring-1 ring-[#8b5cf6]/40" : ""}`} title="Post Length">
-                    <Gauge className="w-5 h-5 text-[#c084fc]" />
+                    <Gauge className="w-5 h-5 text-[#FFA500]" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
@@ -259,7 +259,7 @@ export default function Dashboard() {
               <Popover> {/* Post count popover */ }
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postCount > 1 ? "ring-1 ring-[#34d399]/40" : ""}`} title="Number of Posts">
-                    <SlidersHorizontal className="w-5 h-5 text-[#34d399]" />
+                    <SlidersHorizontal className="w-5 h-5 text-[#00FFFF]" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
@@ -289,7 +289,7 @@ export default function Dashboard() {
               <Button
                 onClick={handleGeneratePosts}
                 disabled={!input.trim() || isGenerating}
-                className="w-full sm:w-full flex items-center justify-center gap-3 px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-[#0077B5] via-[#7e22ce] to-[#9333ea] hover:opacity-90 transition-all shadow-2xl hover:shadow-[#9333ea]/30"
+                className="w-full sm:w-full flex items-center justify-center gap-3 px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 transition-all shadow-2xl hover:shadow-[#FFA500]/30"
               >
                 {isGenerating ? (
                   <>
