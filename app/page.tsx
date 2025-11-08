@@ -71,7 +71,8 @@ export default function LandingPage() {
   ]
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0b0b0c] via-[#0d1118] to-[#0d1b2a] text-white">
+  <div className="bg-gradient-to-br from-[#0f0f10] via-[#0b1220] to-[#0a1a2a] text-white min-h-screen">
+ 
       <Navbar />
 
       {/* Hero */}
