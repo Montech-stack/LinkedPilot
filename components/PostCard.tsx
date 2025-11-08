@@ -28,11 +28,12 @@ export default function PostCard({
   onPostError,
   onDelete,
   isLinkedInConnected,
+  onUpdateMedia, // ✅ NEW
 }: any) {
   const [editing, setEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post.content);
-  const [media, setMedia] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const [media, setMedia] = useState<string | null>(post.media || null);
+  const [mediaType, setMediaType] = useState<"image" | "video" | null>(post.mediaType || null);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -53,8 +54,13 @@ export default function PostCard({
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          setMedia(event.target?.result as string);
+          const base = event.target?.result as string;
+          setMedia(base);
           setMediaType(type);
+
+          // ✅ push to parent
+          onUpdateMedia(post.id, base, type);
+
           toast.success(`${type === "image" ? "Image" : "Video"} added!`);
         };
         reader.readAsDataURL(file);
@@ -77,57 +83,51 @@ export default function PostCard({
   const handleRemoveMedia = () => {
     setMedia(null);
     setMediaType(null);
+
+    // ✅ update parent too
+    onUpdateMedia(post.id, null, null);
+
     toast("Media removed", { icon: "🗑️" });
+  };
+
+  const confirmDelete = () => {
+    if (confirm("Delete this post?")) {
+      onDelete?.();
+    }
   };
 
   return (
     <motion.div
-      className={`relative bg-[#1E1F25] rounded-2xl p-4 sm:p-5 border border-[#2E3038] shadow-lg transition-all duration-300 ${copied ? "shadow-green-500/30" : "hover:shadow-blue-900/20"}`}
+      className={`relative bg-[#1E1F25] rounded-2xl p-5 border border-[#2E3038] shadow-lg transition-all duration-300 ${copied ? "shadow-green-500/30" : "hover:shadow-blue-900/20"}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
       whileHover={{ scale: 1.01 }}
     >
       {/* Action Icons */}
-      <div className="absolute top-3 right-3 flex gap-2 z-10">
-        <button
-          onClick={onSchedule}
-          title="Schedule"
-          className="p-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition transform"
-        >
+      <div className="absolute top-3 right-3 flex gap-2">
+        <button onClick={onSchedule} title="Schedule" className="p-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:scale-110 transition-all">
           <Clock size={16} />
         </button>
 
         {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            title="Edit"
-            className="p-2 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 transition transform"
-          >
+          <button onClick={() => setEditing(true)} title="Edit" className="p-2 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 hover:scale-110 transition-all">
             <Edit3 size={16} />
           </button>
         )}
 
-        <button
-          onClick={handleCopy}
-          title="Copy"
-          className={`p-2 rounded-full ${copied ? "bg-green-500/10 text-green-400 animate-pulse" : "bg-purple-500/10 text-purple-400"} hover:bg-purple-500/20 transition transform`}
-        >
+        <button onClick={handleCopy} title="Copy" className={`p-2 rounded-full ${copied ? "bg-green-500/10 text-green-400 animate-pulse" : "bg-purple-500/10 text-purple-400"} hover:bg-purple-500/20 hover:scale-110 transition-all`}>
           {copied ? <Check size={16} /> : <Copy size={16} />}
         </button>
 
-        <button
-          onClick={onDelete}
-          title="Delete"
-          className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition transform"
-        >
+        <button onClick={confirmDelete} title="Delete" className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:scale-110 transition-all">
           <Trash2 size={16} />
         </button>
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow">
+      <div className="flex items-center justify-between mb-3">
+        <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow">
           Post {index + 1}/{totalPosts}
         </span>
       </div>
@@ -135,15 +135,9 @@ export default function PostCard({
       {/* Content */}
       <div className="mb-3">
         {editing ? (
-          <textarea
-            value={editedContent}
-            onChange={(e) => setEditedContent(e.target.value)}
-            className="w-full min-h-[120px] sm:min-h-[150px] bg-[#15161C] border border-[#2E3038] rounded-lg text-gray-200 p-3 focus:border-blue-500 outline-none text-sm sm:text-base"
-          />
+          <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="w-full min-h-[150px] bg-[#15161C] border border-[#2E3038] rounded-lg text-gray-200 p-3 focus:border-blue-500 outline-none text-sm" />
         ) : (
-          <p className={`text-gray-300 leading-relaxed text-sm sm:text-base ${isExpanded ? "" : "line-clamp-4"}`}>
-            {editedContent}
-          </p>
+          <p className={`text-gray-300 leading-relaxed text-sm ${isExpanded ? "" : "line-clamp-4"}`}>{editedContent}</p>
         )}
       </div>
 
@@ -154,19 +148,17 @@ export default function PostCard({
         </button>
       )}
 
-      {/* Save / Cancel Buttons */}
       {editing && (
-        <div className="flex flex-col sm:flex-row gap-3 mt-3">
-          <button onClick={handleSave} className="w-full sm:flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg py-2 transition">
+        <div className="flex gap-3 mt-3">
+          <button onClick={handleSave} className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg py-2 transition">
             <Save size={16} /> Save
           </button>
-          <button onClick={handleCancel} className="w-full sm:flex-1 flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-semibold rounded-lg py-2 transition">
+          <button onClick={handleCancel} className="flex-1 flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-semibold rounded-lg py-2 transition">
             <X size={16} /> Cancel
           </button>
         </div>
       )}
 
-      {/* Media Upload */}
       {!editing && (
         <div className="grid grid-cols-2 gap-3 mt-4 mb-4">
           <button onClick={() => handleMediaUpload("image")} className="p-3 rounded-xl border-2 border-dashed border-sky-400/30 bg-[#15161C] hover:bg-[#23242C] transition flex flex-col items-center">
@@ -180,7 +172,6 @@ export default function PostCard({
         </div>
       )}
 
-      {/* Media Preview */}
       {media && (
         <div className="relative mt-3">
           {mediaType === "image" ? (
@@ -194,7 +185,6 @@ export default function PostCard({
         </div>
       )}
 
-      {/* Post Button */}
       <div className="mt-4">
         <PostToLinkedInButton
           content={editedContent}

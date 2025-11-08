@@ -66,6 +66,10 @@ export default function Dashboard() {
   const [expandedPost, setExpandedPost] = useState<number | null>(null);
   const [isLinkedInConnected, setIsLinkedInConnected] = useState(false);
 
+  // scheduling modal state
+  const [scheduledPost, setScheduledPost] = useState<GeneratedPost | null>(null);
+  const [scheduledAtISO, setScheduledAtISO] = useState<string>("");
+
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
   const userPlan: UserPlan = "pro";
   const currentPlanLimit = PLAN_LIMITS[userPlan];
@@ -115,8 +119,10 @@ export default function Dashboard() {
     setIsGenerating(true);
     try {
       const newPosts = await generatePosts(input, tone, postCount, postLength);
-      setGeneratedPosts((prev) => [...prev, ...newPosts]);
-      toast.success(`Generated ${newPosts.length} post${newPosts.length > 1 ? "s" : ""}!`);
+      // ensure each post has an id (safe)
+      const withIds = newPosts.map((p) => ({ id: p.id || crypto.randomUUID(), ...p }));
+      setGeneratedPosts((prev) => [...prev, ...withIds]);
+      toast.success(`Generated ${withIds.length} post${withIds.length > 1 ? "s" : ""}!`);
     } catch {
       toast.error("Failed to generate posts");
     } finally {
@@ -129,6 +135,64 @@ export default function Dashboard() {
     localStorage.removeItem("linkedpilot_dashboard_state");
     toast.success("Cleared all posts");
   };
+
+  // DELETE single generated post locally
+  const handleDeletePost = (id: string) => {
+    setGeneratedPosts((prev) => prev.filter((p) => p.id !== id));
+    toast.success("Post removed");
+  };
+
+  // OPEN schedule modal
+  const handleSchedulePost = (post: GeneratedPost) => {
+    setScheduledPost(post);
+    // default scheduledAt to +10 minutes
+    const dt = new Date(Date.now() + 10 * 60 * 1000);
+    setScheduledAtISO(dt.toISOString().slice(0, 16)); // "yyyy-MM-ddTHH:mm"
+  };
+
+  // SAVE scheduled post to backend
+  const saveScheduleToServer = async () => {
+    if (!scheduledPost) return;
+    if (!scheduledAtISO) {
+      toast.error("Pick a date & time");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/linkedin/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          content: scheduledPost.content,
+          media: scheduledPost.media || null,
+          mediaType: scheduledPost.mediaType || null,
+          scheduledAt: new Date(scheduledAtISO).toISOString(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to schedule");
+      } else {
+        toast.success("Scheduled successfully!");
+        setScheduledPost(null);
+      }
+    } catch (err) {
+      console.error("Schedule save error:", err);
+      toast.error("Failed to schedule post");
+    }
+  };
+
+  // update media inside generatedPosts array
+  const updateMedia = (id: string, media: string | null, mediaType: string | null) => {
+    setGeneratedPosts(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, media, mediaType } : p
+      )
+    );
+  };
+
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white flex flex-col md:flex-row overflow-x-hidden">
@@ -149,18 +213,12 @@ export default function Dashboard() {
             </p>
           </motion.div>
 
-          {/* Toolbar & Input */}
           <div className="bg-[#1b1f2a] p-4 sm:p-6 rounded-2xl shadow-2xl border border-[#2c2f3a]">
             <div className="flex items-center gap-2 mb-4 flex-wrap justify-center sm:justify-start">
-              {/* Tone Selector */}
-              <Popover>
+              {/* tone, length, post count popovers (unchanged) */}
+              <Popover> {/* Tone popover */ }
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${tone ? "ring-1 ring-[#0077B5]/40" : ""}`}
-                    title="Tone"
-                  >
+                  <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${tone ? "ring-1 ring-[#0077B5]/40" : ""}`} title="Tone">
                     <Palette className="w-5 h-5 text-[#7dd3fc]" />
                   </Button>
                 </PopoverTrigger>
@@ -178,15 +236,9 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
 
-              {/* Length Selector */}
-              <Popover>
+              <Popover> {/* Length popover */ }
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postLength ? "ring-1 ring-[#8b5cf6]/40" : ""}`}
-                    title="Post Length"
-                  >
+                  <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postLength ? "ring-1 ring-[#8b5cf6]/40" : ""}`} title="Post Length">
                     <Gauge className="w-5 h-5 text-[#c084fc]" />
                   </Button>
                 </PopoverTrigger>
@@ -204,43 +256,24 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
 
-              {/* Post Count Selector */}
-              <Popover>
+              <Popover> {/* Post count popover */ }
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postCount > 1 ? "ring-1 ring-[#34d399]/40" : ""}`}
-                    title="Number of Posts"
-                  >
+                  <Button variant="outline" size="icon" className={`bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633] ${postCount > 1 ? "ring-1 ring-[#34d399]/40" : ""}`} title="Number of Posts">
                     <SlidersHorizontal className="w-5 h-5 text-[#34d399]" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
                   <div className="text-sm font-medium mb-2 text-gray-400">Number of Posts</div>
                   <div className="flex items-center justify-center gap-3">
-                    <button
-                      onClick={() => setPostCount(Math.max(1, postCount - 1))}
-                      className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => setPostCount(Math.max(1, postCount - 1))} className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"><Minus className="w-4 h-4" /></button>
                     <div className="text-lg font-semibold w-8 text-center">{postCount}</div>
-                    <button
-                      onClick={() => setPostCount(Math.min(currentPlanLimit.maxPosts, postCount + 1))}
-                      className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => setPostCount(Math.min(currentPlanLimit.maxPosts, postCount + 1))} className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"><Plus className="w-4 h-4" /></button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Max {currentPlanLimit.maxPosts} ({currentPlanLimit.name})
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2 text-center">Max {currentPlanLimit.maxPosts} ({currentPlanLimit.name})</p>
                 </PopoverContent>
               </Popover>
             </div>
 
-            {/* Input Box */}
             <div className="relative mb-4">
               <textarea
                 placeholder="Describe your LinkedIn post idea..."
@@ -249,12 +282,9 @@ export default function Dashboard() {
                 className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-3 min-h-[120px] resize-none shadow-inner text-sm sm:text-base"
                 maxLength={500}
               />
-              <div className="absolute bottom-2 right-3 text-xs text-gray-500">
-                {input.length}/500
-              </div>
+              <div className="absolute bottom-2 right-3 text-xs text-gray-500">{input.length}/500</div>
             </div>
 
-            {/* Generate Button */}
             <motion.div className="flex justify-center w-full" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <Button
                 onClick={handleGeneratePosts}
@@ -276,13 +306,10 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* Generated Posts */}
           {generatedPosts.length > 0 && (
             <motion.div className="mt-8 space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
-                <h2 className="text-xl sm:text-2xl font-bold text-white">
-                  Generated Posts ({generatedPosts.length})
-                </h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Generated Posts ({generatedPosts.length})</h2>
                 <button onClick={clearAllPosts} className="flex items-center gap-2 text-sm px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg w-full sm:w-auto justify-center">
                   <Trash2 className="w-4 h-4" /> Clear All
                 </button>
@@ -297,13 +324,37 @@ export default function Dashboard() {
                   isExpanded={expandedPost === post.id}
                   onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
                   onCopy={() => navigator.clipboard.writeText(post.content)}
+                  onDelete={() => handleDeletePost(post.id)}
+                  onSchedule={() => handleSchedulePost(post)}
                   isLinkedInConnected={isLinkedInConnected}
+                  onUpdateMedia={updateMedia}
+
                 />
               ))}
             </motion.div>
           )}
         </div>
       </div>
+
+      {/* Scheduling modal (small floating) */}
+      {scheduledPost && (
+        <div className="fixed bottom-4 right-4 bg-[#1b1f2a] border border-[#2c2f3a] rounded-xl shadow-xl p-4 z-50 w-[300px]">
+          <h3 className="font-semibold mb-2 text-white">Schedule Post</h3>
+          <div className="text-xs text-gray-300 mb-2 line-clamp-3">{scheduledPost.content}</div>
+
+          <input
+            type="datetime-local"
+            value={scheduledAtISO}
+            onChange={(e) => setScheduledAtISO(e.target.value)}
+            className="w-full p-2 bg-[#11151c] border border-[#2c2f3a] rounded-lg text-gray-200 mb-3"
+          />
+
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setScheduledPost(null)} className="px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600">Cancel</button>
+            <button onClick={saveScheduleToServer} className="px-3 py-1 rounded-md bg-[#0077B5] hover:bg-[#005885]">Save</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
