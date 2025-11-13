@@ -9,9 +9,9 @@ import ProfileDropdown from "@/components/ProfileDropdown"
 import Image from "next/image"
 
 const navigationItems = [
+  { icon: Sparkles, label: "Studio", href: "/dashboard" },
   { icon: Link2, label: "Links", href: "/links" },
   { icon: Target, label: "Viral Ideas", href: "/hooks" },
-  { icon: Sparkles, label: "Generate", href: "/dashboard" },
   { icon: Calendar, label: "Schedules", href: "/scheduled" },
   { icon: CreditCard, label: "Billing", href: "/billing" },
   { icon: Settings, label: "Settings", href: "/settings" },

@@ -2,18 +2,14 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Search, Copy, Lightbulb, CheckSquare } from "lucide-react"
+import { Search, Copy, Trash2, Save, X, Lightbulb } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import MobileHeader from "@/components/MobileHeader"
 import Sidebar from "@/components/Sidebar"
 import { useRouter } from "next/navigation"
-import { useLinkedInAuth } from "@/hooks/useLinkedInAuth"
-import { useLinkedInPosting } from "@/hooks/useLinkedInPosting"
 import { usePostGeneration } from "@/hooks/usePostGeneration"
 import toast from "react-hot-toast"
-import AutomationPreferencesModal from "@/components/AutomationPreferencesModal"
 
 interface ViralIdea {
   id: number
@@ -24,280 +20,123 @@ interface ViralIdea {
   keywords: string[]
 }
 
-interface Post {
-  content: string
-}
-
 export default function ViralIdeasLibrary() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userInput, setUserInput] = useState("")
   const [generatedIdeas, setGeneratedIdeas] = useState<ViralIdea[]>([])
-  const [generatedPosts, setGeneratedPosts] = useState<Post[]>([])
-  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false)
   const router = useRouter()
-  const { isAuthenticated, authenticate } = useLinkedInAuth()
-  const { postToLinkedIn } = useLinkedInPosting()
   const { generatePosts } = usePostGeneration()
 
-  // Load cached ideas from localStorage on mount
+  // Load cached ideas from localStorage if needed
   useEffect(() => {
-    const cachedIdeas = localStorage.getItem('generatedIdeas')
+    const cachedIdeas = localStorage.getItem("generatedIdeas")
     if (cachedIdeas) {
       try {
-        const parsedIdeas = JSON.parse(cachedIdeas)
-        if (Array.isArray(parsedIdeas)) {
-          setGeneratedIdeas(parsedIdeas.map((idea: ViralIdea, index: number) => ({
-            ...idea,
-            id: index + 1,
-            score: Math.min(95, Math.max(70, idea.score || 80)),
-            category: ['Controversial', 'Question', 'Story', 'List', 'Career Advice'].includes(idea.category) ? idea.category : 'General',
-            engagement: ['Very High', 'High', 'Medium'].includes(idea.engagement) ? idea.engagement : 'Medium',
-            keywords: Array.isArray(idea.keywords) ? idea.keywords.slice(0, 7) : ['default', 'keyword'],
-          })))
-        }
-      } catch (error) {
-        console.error('Error loading cached ideas:', error)
-        localStorage.removeItem('generatedIdeas')
+        const parsed = JSON.parse(cachedIdeas)
+        if (Array.isArray(parsed)) setGeneratedIdeas(parsed)
+      } catch {
+        localStorage.removeItem("generatedIdeas")
       }
     }
   }, [])
 
   const processedIdeas = useMemo(() => {
-    if (!generatedIdeas.length) {
-      return generatedIdeas
-    }
+    if (!generatedIdeas.length) return []
+    if (!userInput.trim()) return [...generatedIdeas].sort((a, b) => b.score - a.score)
 
-    if (!userInput.trim()) {
-      return [...generatedIdeas].sort((a, b) => b.score - a.score)
-    }
-
-    const keywords = userInput.toLowerCase().split(" ").filter((word) => word.length > 2)
-
-    const ideasWithRelevance = generatedIdeas.map((idea) => {
-      let relevanceScore = 0
-
-      keywords.forEach((keyword) => {
-        const keywordMatches = idea.keywords.filter(
-          (ideaKeyword) => ideaKeyword.toLowerCase().includes(keyword) || keyword.includes(ideaKeyword.toLowerCase()),
-        ).length
-
-        const textMatches = idea.hook.toLowerCase().includes(keyword) ? 1 : 0
-
-        const categoryMatch = idea.category.toLowerCase().includes(keyword) ? 1 : 0
-
-        relevanceScore += keywordMatches * 3 + textMatches * 2 + categoryMatch
+    const keywords = userInput.toLowerCase().split(" ").filter((w) => w.length > 2)
+    return generatedIdeas
+      .map((idea) => {
+        let relevance = 0
+        keywords.forEach((k) => {
+          const keywordMatches = idea.keywords.filter(
+            (kw) => kw.toLowerCase().includes(k) || k.includes(kw.toLowerCase())
+          ).length
+          const textMatches = idea.hook.toLowerCase().includes(k) ? 1 : 0
+          const categoryMatches = idea.category.toLowerCase().includes(k) ? 1 : 0
+          relevance += keywordMatches * 3 + textMatches * 2 + categoryMatches
+        })
+        return { ...idea, combinedScore: relevance * 0.7 + idea.score * 0.3 }
       })
-
-      const combinedScore = relevanceScore * 0.7 + idea.score * 0.3
-
-      return {
-        ...idea,
-        relevanceScore,
-        combinedScore,
-      }
-    })
-
-    return ideasWithRelevance.sort((a, b) => b.combinedScore - a.combinedScore)
+      .sort((a, b) => b.combinedScore - a.combinedScore)
   }, [userInput, generatedIdeas])
 
   const handleGenerate = async (isMore = false) => {
-    if (!userInput.trim()) {
-      toast.error("Please enter a topic or niche")
-      return
-    }
-
+    if (!userInput.trim()) return toast.error("Please enter a topic or niche")
     setIsGenerating(true)
-
     try {
-      const response = await fetch('/api/generate-ideas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: userInput,
-          previous: isMore ? generatedIdeas.map(i => i.hook) : [],
-        }),
+      const res = await fetch("/api/generate-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: userInput, previous: isMore ? generatedIdeas.map((i) => i.hook) : [] }),
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate ideas: ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('API Response (/api/generate-ideas):', data)
-
-      // Validate and filter ideas
+      if (!res.ok) throw new Error(`Failed: ${res.status}`)
+      const data = await res.json()
       const validIdeas = data.ideas
-        .filter((idea: any) => idea.category && idea.hook && idea.engagement && typeof idea.score === 'number' && Array.isArray(idea.keywords))
-        .map((idea: Omit<ViralIdea, 'id'>, index: number) => ({
-          id: generatedIdeas.length + index + 1,
-          category: ['Controversial', 'Question', 'Story', 'List', 'Career Advice'].includes(idea.category) ? idea.category : 'General',
-          hook: idea.hook,
-          engagement: ['Very High', 'High', 'Medium'].includes(idea.engagement) ? idea.engagement : 'Medium',
-          score: Math.min(95, Math.max(70, idea.score)),
-          keywords: idea.keywords.slice(0, 7),
+        .filter((i: any) => i.category && i.hook && i.engagement && typeof i.score === "number" && Array.isArray(i.keywords))
+        .map((i: Omit<ViralIdea, "id">, idx: number) => ({
+          id: generatedIdeas.length + idx + 1,
+          category: ["Controversial", "Question", "Story", "List", "Career Advice"].includes(i.category)
+            ? i.category
+            : "General",
+          hook: i.hook,
+          engagement: ["Very High", "High", "Medium"].includes(i.engagement) ? i.engagement : "Medium",
+          score: Math.min(95, Math.max(70, i.score)),
+          keywords: i.keywords.slice(0, 7),
         }))
-
-      if (validIdeas.length === 0) {
-        throw new Error('No valid ideas generated')
-      }
-
+      if (!validIdeas.length) throw new Error("No valid ideas")
       const newIdeas = isMore ? [...generatedIdeas, ...validIdeas] : validIdeas
       setGeneratedIdeas(newIdeas)
-      // Cache ideas in localStorage
-      try {
-        localStorage.setItem('generatedIdeas', JSON.stringify(newIdeas))
-      } catch (error) {
-        console.error('Error saving to localStorage:', error)
-        toast.error('Failed to cache ideas locally')
-      }
-      toast.success(`Generated ${validIdeas.length} new ideas!`)
-    } catch (error) {
-      console.error('Error generating ideas:', error)
+      localStorage.setItem("generatedIdeas", JSON.stringify(newIdeas))
+      toast.success(`Generated ${validIdeas.length} idea${validIdeas.length > 1 ? "s" : ""}`)
+    } catch (err) {
+      console.error(err)
       toast.error("Failed to generate ideas")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleMore = () => {
-    handleGenerate(true)
+  const handleClear = () => {
+    setGeneratedIdeas([])
+    localStorage.removeItem("generatedIdeas")
+    setUserInput("")
   }
 
-  const handleSave = () => {
-    const savedIdeas = generatedIdeas.filter(idea => selected.has(idea.id))
-    if (savedIdeas.length === 0) {
-      toast.error("No ideas selected to save")
-      return
-    }
+  const handleSave = async () => {
+    if (!generatedIdeas.length) return toast.error("No ideas to save")
     try {
-      const existingSaved = JSON.parse(localStorage.getItem('savedIdeas') || '[]')
-      const updatedSaved = [...existingSaved, ...savedIdeas]
-      localStorage.setItem('savedIdeas', JSON.stringify(updatedSaved))
-      toast.success(`Saved ${savedIdeas.length} idea${savedIdeas.length > 1 ? 's' : ''} to local storage`)
-      setSelected(new Set())
-    } catch (error) {
-      console.error('Error saving to localStorage:', error)
-      toast.error('Failed to save ideas')
-    }
-  }
-
-  const toggleSelect = (id: number) => {
-    setSelected(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-      return newSet
-    })
-  }
-
-  const handleIdeaClick = (hook: string) => {
-    const sanitizedHook = hook.replace(/[^\w\s-.,!?]/g, '')
-    router.push(`/dashboard?input=${encodeURIComponent(sanitizedHook)}`)
-  }
-
-  const handleGeneratePost = async (hook: string) => {
-    setIsGenerating(true)
-    try {
-      const posts = await generatePosts(hook, 'professional', 1, 'medium')
-      if (posts.length > 0) {
-        setGeneratedPosts(prev => [...prev, ...posts])
-        toast.success(`Generated post for idea: ${hook}`)
-      } else {
-        throw new Error('No posts generated')
-      }
-    } catch (error) {
-      console.error('Error generating post:', error)
-      toast.error('Failed to generate post')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleAutomate = async () => {
-    if (!isAuthenticated) {
-      authenticate()
-      return
-    }
-    if (!userInput.trim()) {
-      toast.error("Please enter a topic or niche to automate")
-      return
-    }
-    setIsAutomationModalOpen(true)
-  }
-
-  const handleAutomationPreferencesConfirm = async (preferences: { frequency: 'daily' | 'weekly' | 'monthly'; tone: string; length: string; count: number }) => {
-    setIsGenerating(true)
-
-    try {
-      if (generatedIdeas.length === 0) {
-        await handleGenerate()
-      }
-
-      const ideasToProcess = selected.size > 0 
-        ? generatedIdeas.filter(idea => selected.has(idea.id))
-        : generatedIdeas.slice(0, preferences.count)
-
-      if (ideasToProcess.length === 0) {
-        toast.error("No ideas available to process")
-        return
-      }
-
-      for (const idea of ideasToProcess) {
-        const posts = await generatePosts(idea.hook, preferences.tone, 1, preferences.length)
-        if (posts.length > 0) {
-          setGeneratedPosts(prev => [...prev, ...posts])
-          const result = await postToLinkedIn({ content: posts[0].content })
-          if (result.success) {
-            console.log(`Posted idea: ${idea.hook}`)
-            toast.success(`Posted idea: ${idea.hook}`)
-          } else {
-            console.error(`Failed to post idea: ${idea.hook}`)
-            toast.error(`Failed to post idea: ${idea.hook}`)
-          }
-        } else {
-          console.error(`No posts generated for idea: ${idea.hook}`)
-          toast.error(`No posts generated for idea: ${idea.hook}`)
-        }
-      }
-
-      const response = await fetch('/api/schedule-automation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: userInput,
-          tone: preferences.tone,
-          length: preferences.length,
-          count: preferences.count,
-          frequency: preferences.frequency,
-          nextRun: new Date(),
-        }),
+      const res = await fetch("/api/save-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideas: generatedIdeas }),
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to schedule automation: ${response.status}`)
-      }
-
-      toast.success(`Automation scheduled for ${preferences.frequency} posts!`)
-      setIsAutomationModalOpen(false)
-      router.push('/schedules')
-    } catch (error) {
-      console.error('Error automating post:', error)
-      toast.error("Failed to set up automation")
-    } finally {
-      setIsGenerating(false)
+      if (!res.ok) throw new Error("Failed to save ideas")
+      toast.success(`Saved ${generatedIdeas.length} idea${generatedIdeas.length > 1 ? "s" : ""}`)
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to save ideas")
     }
+  }
+
+  const deleteIdea = (id: number) => {
+    setGeneratedIdeas((prev) => prev.filter((i) => i.id !== id))
+    localStorage.setItem(
+      "generatedIdeas",
+      JSON.stringify(generatedIdeas.filter((i) => i.id !== id))
+    )
+  }
+
+  // NEW: Navigate to dashboard with query param
+  const handleIdeaClick = (hook: string) => {
+    router.push(`/dashboard?input=${encodeURIComponent(hook)}`)
+    toast.success("Idea sent to Dashboard!")
   }
 
   const copyIdea = (hook: string) => {
     navigator.clipboard.writeText(hook)
-    toast.success("Idea copied to clipboard!")
+    toast.success("Copied!")
   }
 
   const getEngagementColor = (engagement: string) => {
@@ -321,251 +160,85 @@ export default function ViralIdeasLibrary() {
   }
 
   return (
-    <div className="min-h-screen gradient-bg text-white flex overflow-x-hidden">
+    <div className="min-h-screen bg-[#0d1117] text-white flex flex-col md:flex-row">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 lg:ml-0">
-        <MobileHeader onMenuClick={() => setSidebarOpen(true)} showBackButton={false} />
-        <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto">
-          <motion.div
-            className="mb-6 text-center lg:text-left"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 gradient-text">Viral Ideas Library</h1>
-            <p className="text-gray-400 text-sm sm:text-base max-w-xl mx-auto lg:mx-0">
-              Generate viral content ideas based on LinkedIn trends for your topic or niche
-            </p>
+      <div className="flex-1 flex flex-col">
+        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+          <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <h1 className="text-3xl font-extrabold mb-2 bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] bg-clip-text text-transparent">
+              Viral Ideas Library
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base">Generate multi-platform content ideas</p>
           </motion.div>
 
-          <motion.div
-            className="gradient-card rounded-xl p-3 sm:p-4 lg:p-6 border border-[#2d3748] shadow-xl glow-card backdrop-blur-sm mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <div className="flex items-center gap-2 sm:gap-3 mb-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] rounded-full flex items-center justify-center shadow-lg">
-                <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white">Generate Viral Ideas</h2>
-                <p className="text-gray-400 text-xs sm:text-sm mt-1">Enter a topic or niche (e.g., "AI in marketing", "startup growth hacks")</p>
-              </div>
-            </div>
+          <motion.div className="bg-[#1b1f2a] p-4 rounded-2xl shadow-2xl border border-[#2c2f3a] mb-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Textarea
+              placeholder="Enter your topic or niche..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              className="min-h-[100px] bg-[#11151c] text-white border border-[#2c2f3a] rounded-xl p-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-[#0077B5]/40"
+            />
 
-            <div className="relative">
-              <label htmlFor="topic-input" className="text-xs sm:text-sm font-medium text-gray-300 mb-2 block">
-                Topic or Niche
-              </label>
-              <motion.div
-                initial={{ scale: 1 }}
-                whileFocus={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Textarea
-                  id="topic-input"
-                  placeholder="Enter your topic or niche for viral content ideas..."
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  className="min-h-[80px] sm:min-h-[100px] bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5] focus:ring-offset-2 hover:border-[#0077B5] rounded-lg text-sm sm:text-base leading-relaxed shadow-lg transition-all duration-300 resize-y w-full overflow-auto"
-                />
-              </motion.div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
+            <div className="flex gap-2 mt-3 justify-start">
+              <Button size="icon" onClick={handleSave} className="bg-[#0077B5] hover:bg-[#005f8f] rounded-xl p-2">
+                <Save size={20} />
+              </Button>
+              <Button size="icon" onClick={handleClear} className="bg-[#7f1d1d] hover:bg-[#5c1313] rounded-xl p-2">
+                <X size={20} />
+              </Button>
               <Button
                 onClick={() => handleGenerate(false)}
                 disabled={isGenerating || !userInput.trim()}
-                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
+                className="flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white font-semibold py-2 px-4 rounded-xl text-sm"
               >
-                {isGenerating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                    Generating...
-                  </span>
-                ) : (
-                  "Generate Top 5 Ideas"
-                )}
-              </Button>
-              <Button
-                onClick={handleAutomate}
-                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
-              >
-                Automate Posting
+                {isGenerating ? "Generating..." : "Generate Top 5 Ideas"}
               </Button>
             </div>
-
-            {generatedIdeas.length > 0 && (
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
-                <Button
-                  onClick={handleSave}
-                  disabled={selected.size === 0}
-                  variant="outline"
-                  className="w-full sm:w-auto flex-1 border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5]/10 hover:text-[#0077B5] font-semibold rounded-lg shadow-md transition-all duration-300 py-2 px-4 text-sm sm:text-base"
-                >
-                  Save Selected ({selected.size})
-                </Button>
-                <Button
-                  onClick={handleMore}
-                  disabled={isGenerating}
-                  className="w-full sm:w-auto flex-1 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 py-2 px-4 text-sm sm:text-base"
-                >
-                  {isGenerating ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                      </svg>
-                      Generating...
-                    </span>
-                  ) : (
-                    "More Ideas"
-                  )}
-                </Button>
-              </div>
-            )}
           </motion.div>
 
-          <AutomationPreferencesModal
-            isOpen={isAutomationModalOpen}
-            onClose={() => setIsAutomationModalOpen(false)}
-            onConfirm={handleAutomationPreferencesConfirm}
-          />
+          {processedIdeas.length > 0 && (
+            <motion.div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+              {processedIdeas.map((idea) => (
+                <motion.div key={idea.id} className="bg-[#161b23] rounded-2xl p-3 border border-[#2c2f3a] shadow-lg hover:shadow-xl transition-all duration-200 relative">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 bg-[#0077B5]/20 text-[#00BFFF] rounded-full text-xs font-medium truncate">
+                      {idea.category}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getEngagementColor(idea.engagement)}`}>
+                      {idea.engagement} Engagement
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getScoreColor(idea.score)}`}>
+                      {idea.score}/100
+                    </span>
+                  </div>
 
-          {generatedIdeas.length > 0 && (
-            <motion.div
-              className="mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Generated Ideas</h2>
-              <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
-                {processedIdeas.map((idea, index) => (
-                  <motion.div
-                    key={idea.id}
-                    className="gradient-card rounded-xl p-3 sm:p-4 border border-[#2d3748] hover:border-[#0077B5] shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer glow-card w-full max-w-full overflow-hidden"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.01, y: -2 }}
+                  <p
                     onClick={() => handleIdeaClick(idea.hook)}
+                    className="text-sm sm:text-base font-medium text-gray-100 mb-2 cursor-pointer hover:text-[#00BFFF]"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className="px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white rounded-full text-xs font-medium shadow-md truncate max-w-[60px] sm:max-w-[80px]">
-                          #{index + 1}
-                        </span>
-                        <span className="px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-[#0077B5]/20 text-[#0077B5] rounded-full text-xs font-medium border border-[#0077B5]/20 truncate max-w-[80px] sm:max-w-[100px]">
-                          {idea.category}
-                        </span>
-                        <span
-                          className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full text-xs font-medium border ${getEngagementColor(idea.engagement)} truncate max-w-[100px] sm:max-w-[120px]`}
-                        >
-                          {idea.engagement} Engagement
-                        </span>
-                        <span
-                          className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full text-xs font-medium border ${getScoreColor(idea.score)} truncate max-w-[60px] sm:max-w-[80px]`}
-                        >
-                          {idea.score}/100
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <Checkbox
-                          checked={selected.has(idea.id)}
-                          onCheckedChange={() => toggleSelect(idea.id)}
-                          className="border-[#0077B5] data-[state=checked]:bg-[#0077B5] data-[state=checked]:border-[#0077B5] w-4 h-4"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            copyIdea(idea.hook)
-                          }}
-                          className="text-gray-400 hover:text-white hover:bg-[#2d3748] rounded-full transition-all duration-300 w-8 h-8"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleGeneratePost(idea.hook)
-                          }}
-                          className="text-gray-400 hover:text-white hover:bg-[#2d3748] rounded-full transition-all duration-300 w-8 h-8"
-                        >
-                          <Lightbulb className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-sm sm:text-base text-gray-100 leading-relaxed font-medium text-wrap">{idea.hook}</p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {idea.keywords.map((keyword, idx) => (
-                        <span key={idx} className="text-xs text-gray-400 bg-gray-800/50 px-1.5 py-0.5 rounded">
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+                    {idea.hook}
+                  </p>
 
-          {generatedPosts.length > 0 && (
-            <motion.div
-              className="mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-            >
-              <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Generated Posts</h2>
-              <div className="grid gap-2 sm:gap-3 grid-cols-1">
-                {generatedPosts.map((post, index) => (
-                  <motion.div
-                    key={index}
-                    className="gradient-card rounded-xl p-3 sm:p-4 border border-[#2d3748] shadow-lg hover:shadow-xl transition-all duration-300 w-full max-w-full overflow-hidden"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <p className="text-sm sm:text-base text-gray-100 leading-relaxed">{post.content}</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        navigator.clipboard.writeText(post.content)
-                        toast.success("Post copied to clipboard!")
-                      }}
-                      className="text-gray-400 hover:text-white hover:bg-[#2d3748] rounded-full transition-all duration-300 w-8 h-8 mt-2"
-                    >
-                      <Copy className="w-4 h-4" />
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {idea.keywords.map((k, idx) => (
+                      <span key={idx} className="text-xs text-gray-400 bg-gray-800/50 px-2 py-0.5 rounded">
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 mt-2">
+                    <Button size="icon" variant="ghost" onClick={() => copyIdea(idea.hook)} className="text-gray-400 hover:text-white">
+                      <Copy size={16} />
                     </Button>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {generatedIdeas.length === 0 && (
-            <motion.div
-              className="text-center py-8"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Search className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-200">No Ideas Generated Yet</h3>
-              <p className="text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
-                Enter a topic or niche above and click "Generate Top 5 Ideas" to get started.
-              </p>
+                    <Button size="icon" variant="ghost" onClick={() => deleteIdea(idea.id)} className="text-red-500 hover:text-red-400">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
           )}
         </div>
