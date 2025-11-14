@@ -18,7 +18,7 @@ import MobileHeader from "@/components/MobileHeader";
 import Sidebar from "@/components/Sidebar";
 import PostCard from "@/components/PostCard";
 import { usePostGeneration } from "@/hooks/usePostGeneration";
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import toast from "react-hot-toast";
 import {
   GeneratedPost,
@@ -59,10 +59,6 @@ const LENGTH_OPTIONS: LengthOption[] = [
 
 export default function Dashboard() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  
-  // Get the input from query params
-  const queryInput = searchParams.get("input") || ""
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -121,12 +117,15 @@ export default function Dashboard() {
     }
   }, []); // ✅ EMPTY dependency = run ONCE on mount only
 
-  // 2️⃣ SYNC QUERY PARAM (separate effect)
+  // 2️⃣ SYNC QUERY PARAM (read from window.location to avoid useSearchParams / Suspense requirement)
   useEffect(() => {
-    if (queryInput && queryInput.trim()) {
-      setInput(decodeURIComponent(queryInput));
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("input") || "";
+    if (q && q.trim()) {
+      setInput(decodeURIComponent(q));
     }
-  }, [queryInput]);
+  }, []);
 
   // 3️⃣ PERSIST STATE (run whenever state changes)
   useEffect(() => {
