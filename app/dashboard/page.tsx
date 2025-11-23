@@ -75,6 +75,7 @@ export default function Dashboard() {
 
   // NEW: upload & post-to-all states
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for textarea
   const [uploadedMedia, setUploadedMedia] = useState<string | null>(null);
   const [uploadedMediaType, setUploadedMediaType] = useState<"image" | "video" | null>(null);
   const [postConfirmOpen, setPostConfirmOpen] = useState(false);
@@ -83,6 +84,32 @@ export default function Dashboard() {
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
   const userPlan: UserPlan = "pro";
   const currentPlanLimit = PLAN_LIMITS[userPlan];
+
+  // Function to automatically resize the textarea height
+  const autoResizeTextarea = useCallback(() => {
+    if (textareaRef.current) {
+      // 1. Reset height to 'auto' to correctly calculate scrollHeight for the current content
+      textareaRef.current.style.height = "auto";
+      
+      // 2. Set the new height, respecting the max-h-96 (384px) defined in Tailwind
+      const maxHeight = 384; 
+      const newHeight = Math.min(textareaRef.current.scrollHeight, maxHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, []);
+
+  // Effect to call resize function whenever the input changes
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [input, autoResizeTextarea]);
+
+  // Combined change handler
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // The useEffect handles the update, but we can call it immediately for slightly snappier response
+    autoResizeTextarea();
+  };
+
 
   // 1️⃣ LOAD SAVED STATE ONCE ON MOUNT (run only once)
   useEffect(() => {
@@ -349,13 +376,14 @@ export default function Dashboard() {
                 AI Content Studio
               </h1>
               <p className="text-gray-400 text-sm sm:text-base">
-                Instantly generate scroll-stopping viral LinkedIn posts with one click.
+                Instantly generate scroll-stopping viral posts with one click.
               </p>
             </motion.div>
 
             {/* Post input + options */}
             <div className="bg-[#1b1f2a] p-4 sm:p-6 rounded-2xl shadow-2xl border border-[#2c2f3a]">
-              <div className="flex items-center gap-2 mb-4 flex-wrap justify-between">
+              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                {/* LEFT: Icon buttons (Tone, Length, Post Count) */}
                 <div className="flex items-center gap-2">
                   {/* Tone popover */}
                   <Popover>
@@ -418,13 +446,38 @@ export default function Dashboard() {
                   </Popover>
                 </div>
 
-                {/* UPLOAD BUTTON on the right */}
+                {/* RIGHT: Upload + Delete buttons */}
                 <div className="flex items-center gap-2">
+                  {/* Upload button */}
                   <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
-                  <button onClick={handleUploadClick} title="Upload media" className="px-3 py-2 rounded-lg bg-[#11151c] border border-[#2c2f3a] hover:bg-[#23242C] text-sm flex items-center gap-2">
+                  {/* Post Button - Full width on mobile, half on larger */}
+                  <Button
+                    onClick={handlePostAllClick}
+                    disabled={postingAllLoading || (!input.trim() && generatedPosts.length === 0)}
+                    className="w-full flex items-center justify-center px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold rounded-xl sm:rounded-2xl bg-orange-400 hover:bg-blue-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Post to all connected platforms"
+                  >
+                    {postingAllLoading ? (
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    ) : (
+                      <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
+                  </Button>
+                  <button onClick={handleUploadClick} title="Upload media" className="px-3 py-2 rounded-lg bg-[#11151c] border border-[#2c2f3a] hover:bg-[#23242C] text-sm flex items-center gap-2 transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 7l4-4 4 4" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="13" width="18" height="8" rx="2" stroke="#9CA3AF" strokeWidth="1.5"/></svg>
-                    Upload
+                    <span className="hidden sm:inline">Upload</span>
                   </button>
+
+                  {/* Delete All button (only show when posts exist) */}
+                  {generatedPosts.length > 0 && (
+                    <button
+                      onClick={clearAllPosts}
+                      className="p-2 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center transition-colors"
+                      title="Clear All Posts"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -434,7 +487,7 @@ export default function Dashboard() {
                   <div className="absolute top-2 right-2 z-20">
                     <button
                       onClick={removeUploadedMedia}
-                      className="p-1 bg-black/40 hover:bg-black/60 rounded-full text-gray-200"
+                      className="p-1 bg-black/40 hover:bg-black/60 rounded-full text-gray-200 transition-colors"
                       title="Remove media"
                     >
                       <X className="w-4 h-4" />
@@ -452,62 +505,54 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Textarea - expands with text */}
               <div className="relative mb-4">
                 <textarea
-                  placeholder="Describe your LinkedIn post idea..."
+                  ref={textareaRef} // Attach the ref
+                  placeholder="Describe your post idea..."
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-3 min-h-[120px] resize-none shadow-inner text-sm sm:text-base"
-                  maxLength={500}
+                  onChange={handleInputChange} // Use the new handler
+                  className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 transition-all rounded-xl p-4 min-h-[120px] max-h-96 resize-none shadow-inner text-sm sm:text-base leading-relaxed"
+                  style={{
+                    overflowY: 'scroll', // Crucial to hide scrollbar and let JS control height
+                    paddingBottom: '2.5rem'
+                  }}
                 />
-                <div className="absolute bottom-2 right-3 text-xs text-gray-500">{input.length}/500</div>
+                <div className="absolute bottom-3 right-4 text-xs text-gray-500 pointer-events-none">
+
+                </div>
               </div>
 
-              {/* Generate + Post buttons (side-by-side) */}
-              <motion.div className="flex gap-3 justify-center w-full" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="w-full sm:w-auto flex-1">
-                  <Button
-                    onClick={handleGeneratePosts}
-                    disabled={!input.trim() || isGenerating}
-                    className="w-full sm:w-auto flex items-center justify-center px-6 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 transition-all shadow-2xl hover:shadow-[#FFA500]/30"
-                    title={`Generate ${postCount} post${postCount > 1 ? "s" : ""}`}
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Zap className="w-5 h-5" />
-                    )}
-                    <span className="ml-3">Generate</span>
-                  </Button>
-                </div>
+              {/* Generate + Post buttons (fully responsive) */}
+              <motion.div 
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full" 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {/* Generate Button - Full width on mobile, half on larger */}
+                <Button
+                  onClick={handleGeneratePosts}
+                  disabled={!input.trim() || isGenerating}
+                  className="w-full flex items-center justify-center px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-semibold rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 transition-all shadow-2xl hover:shadow-[#FFA500]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={`Generate ${postCount} post${postCount > 1 ? "s" : ""}`}
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
+                  <span className="ml-2">Generate</span>
+                </Button>
 
-                <div className="w-full sm:w-auto">
-                  <Button
-                    onClick={handlePostAllClick}
-                    disabled={postingAllLoading}
-                    className="w-full sm:w-auto flex items-center justify-center px-6 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-blue-600 hover:bg-blue-700 transition-all shadow-md"
-                    title="Post to all connected platforms"
-                  >
-                    {postingAllLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
-                    <span className="ml-3">Post</span>
-                  </Button>
-                </div>
+
               </motion.div>
             </div>
 
             {/* Generated posts list */}
             {generatedPosts.length > 0 && (
               <motion.div className="mt-8 space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl sm:text-2xl font-bold text-white">Generated Posts ({generatedPosts.length})</h2>
-                  {/* Clear All icon-only button */}
-                  <button
-                    onClick={clearAllPosts}
-                    className="p-2 bg-red-500 hover:bg-red-600 rounded-lg flex items-center justify-center"
-                    title="Clear All Posts"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
 
                 {generatedPosts.map((post, index) => (
@@ -547,8 +592,8 @@ export default function Dashboard() {
           />
 
           <div className="flex justify-end gap-2">
-            <button onClick={() => setScheduledPost(null)} className="px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600">Cancel</button>
-            <button onClick={saveScheduleToServer} className="px-3 py-1 rounded-md bg-[#0077B5] hover:bg-[#005885]">Save</button>
+            <button onClick={() => setScheduledPost(null)} className="px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600 transition-colors">Cancel</button>
+            <button onClick={saveScheduleToServer} className="px-3 py-1 rounded-md bg-[#0077B5] hover:bg-[#005885] transition-colors">Save</button>
           </div>
         </div>
       )}
@@ -559,13 +604,13 @@ export default function Dashboard() {
           <div className="w-full max-w-lg bg-[#14151a] border border-[#2c2f3a] rounded-xl p-6 shadow-xl">
             <h3 className="text-lg font-semibold mb-3">Post to all connected platforms</h3>
             <p className="text-sm text-gray-300 mb-4">
-              This content will be posted to all connected accounts. To adjust which accounts are used, go to the <button onClick={() => { setPostConfirmOpen(false); router.push("/links"); }} className="underline text-[#00BFFF]">Links</button> page.
+              This content will be posted to all connected accounts. To adjust which accounts are used, go to the <button onClick={() => { setPostConfirmOpen(false); router.push("/links"); }} className="underline text-[#00BFFF] hover:text-[#00FFFF] transition-colors">Links</button> page.
             </p>
 
             <div className="mb-4">
               <div className="text-xs text-gray-400 mb-1">Preview</div>
-              <div className="bg-[#0f1317] p-3 rounded-md border border-[#2c2f3a]">
-                <p className="text-sm text-gray-200 mb-2">{input.trim() || generatedPosts.map(p => p.content).join("\n\n")}</p>
+              <div className="bg-[#0f1317] p-3 rounded-md border border-[#2c2f3a] max-h-48 overflow-y-auto">
+                <p className="text-sm text-gray-200 mb-2 whitespace-pre-wrap">{input.trim() || generatedPosts.map(p => p.content).slice(0, 2).join("\n\n")}</p>
                 {uploadedMedia && (
                   <div className="mt-2">
                     {uploadedMediaType === "image" ? (
@@ -580,8 +625,8 @@ export default function Dashboard() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => setPostConfirmOpen(false)} className="px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600">Cancel</button>
-              <button onClick={confirmPostToAll} className="px-3 py-1 rounded-md bg-[#0077B5] hover:bg-[#005885] flex items-center gap-2">
+              <button onClick={() => setPostConfirmOpen(false)} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors">Cancel</button>
+              <button onClick={confirmPostToAll} disabled={postingAllLoading} className="px-4 py-2 rounded-lg bg-[#0077B5] hover:bg-[#005885] transition-colors flex items-center gap-2 disabled:opacity-50">
                 {postingAllLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Confirm & Post</span>
               </button>

@@ -4,6 +4,8 @@ import React, { useState } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   Zap,
@@ -32,10 +34,16 @@ import {
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/Navbar"
 import TestimonialCarousel from "@/components/TestimonialCarousel"
+import { AuthModal } from "@/components/auth-modal"
 
 export default function LandingPage() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login")
   const [beforeAfter, setBeforeAfter] = useState<"before" | "after">("after")
+
+  const { data: session } = useSession()
+  const router = useRouter()
 
   // Brand colors
   const electricBlue = "#00A8FF"
@@ -70,14 +78,30 @@ export default function LandingPage() {
     },
   ]
 
+  const handleTryLinked = () => {
+    if (session) {
+      router.push("/dashboard")
+    } else {
+      setAuthMode("signup")
+      setAuthOpen(true)
+    }
+  }
+
+  const handleLogin = () => {
+    if (session) {
+      router.push("/dashboard")
+    } else {
+      setAuthMode("login")
+      setAuthOpen(true)
+    }
+  }
+
   return (
-  <div className="bg-gradient-to-br from-[#0f0f10] via-[#0b1220] to-[#0a1a2a] text-white min-h-screen">
- 
+    <div className="bg-gradient-to-br from-[#0f0f10] via-[#0b1220] to-[#0a1a2a] text-white min-h-screen">
       <Navbar />
 
       {/* Hero */}
       <header className="relative overflow-hidden pt-20 pb-12 px-6 sm:px-8 lg:px-16">
-        {/* subtle background gradient mesh */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-br from-[#041022] via-transparent to-[#001428] opacity-60"></div>
           <div className="absolute -left-36 -top-40 w-96 h-96 rounded-full" style={{ background: `radial-gradient(circle at 30% 30%, ${electricBlue}22, transparent 25%)` }} />
@@ -86,22 +110,21 @@ export default function LandingPage() {
 
         <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row items-center gap-12">
           <motion.div className="w-full lg:w-6/12 relative z-10" {...fadeIn}>
-
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
-              Link. Create. Schedule. <span className="block sm:inline" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, WebkitBackgroundClip: 'text', color: 'transparent' }}>Go Viral Everywhere</span>
+              Link. Create. Schedule.{" "}
+              <span className="block sm:inline" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, WebkitBackgroundClip: 'text', color: 'transparent' }}>
+                Go Viral Everywhere
+              </span>
             </h1>
 
             <p className="text-gray-300 max-w-2xl mb-6 text-lg">
-              Linked is an AI-powered social media manager that writes platform-optimized posts, schedules them across
-              all your networks, and automatically tunes for virality — so you stay consistent and grow your audience.
+              Linked is an AI-powered social media manager that writes platform-optimized posts, schedules them across all your networks, and automatically tunes for virality — so you stay consistent and grow your audience.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:gap-6">
-              <Link href="/dashboard">
-                <Button className="px-6 py-3 rounded-full text-base font-semibold shadow-2xl transform hover:scale-[1.03] transition-all" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}>
-                  Try Linked — Free Trial <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
+              <Button onClick={handleTryLinked} className="px-6 py-3 rounded-full text-base font-semibold shadow-2xl transform hover:scale-[1.03] transition-all" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}>
+                Try Linked — Free Trial <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
 
               <Link href="#how-it-works">
                 <Button variant="ghost" className="px-5 py-3 rounded-full border border-white/10 text-white/90">
@@ -116,12 +139,12 @@ export default function LandingPage() {
                 <span>Trusted by 2,500+ creators</span>
               </div>
               <div className="flex items-center gap-4">
-                  <Linkedin className="w-5 h-5 text-white/60 hover:text-white" />
-                  <Twitter className="w-5 h-5 text-white/60 hover:text-white" />
-                  <Globe className="w-5 h-5 text-white/60 hover:text-white" />
-                  <Facebook className="w-5 h-5 text-white/60 hover:text-white" />
-                  <Instagram className="w-5 h-5 text-white/60 hover:text-white" />
-                </div>
+                <Linkedin className="w-5 h-5 text-white/60 hover:text-white" />
+                <Twitter className="w-5 h-5 text-white/60 hover:text-white" />
+                <Globe className="w-5 h-5 text-white/60 hover:text-white" />
+                <Facebook className="w-5 h-5 text-white/60 hover:text-white" />
+                <Instagram className="w-5 h-5 text-white/60 hover:text-white" />
+              </div>
             </div>
           </motion.div>
         </div>
@@ -172,13 +195,12 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { icon: Zap, title: "Viral Post Generator", desc: "Smart hooks, captions, and variants tailored per platform." },
+          {[{ icon: Zap, title: "Viral Post Generator", desc: "Smart hooks, captions, and variants tailored per platform." },
             { icon: BarChart2, title: "Smart Analytics", desc: "Engagement predictions, best time suggestions, and growth KPIs." },
             { icon: Users, title: "Multi-Account Sync", desc: "Manage teams, permissions and multiple brand accounts." },
             { icon: Mic, title: "Brand Voice Training", desc: "Upload sample posts and the AI will learn your tone and cadence." },
             { icon: Edit3, title: "One-click Variants", desc: "Generate caption/image variations that match each platform’s style." },
-            { icon: Settings, title: "Integrations & API", desc: "Connect analytics, CRMs and custom workflows with our API." },
+            { icon: Settings, title: "Integrations & API", desc: "Connect analytics, CRMs and custom workflows with our API." }
           ].map((f, i) => (
             <motion.div key={i} className="p-6 rounded-2xl bg-[#071526] border border-[#11202a] shadow-lg" whileHover={{ y: -6 }}>
               <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-3" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` }}>
@@ -190,7 +212,6 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
-
 
       {/* Pricing */}
       <section id="pricing" className="px-6 sm:px-8 lg:px-16 py-12">
@@ -218,19 +239,18 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Button className={`w-full py-3 rounded-full`} style={{ background: p.popular ? `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` : 'transparent', color: p.popular ? '#071127' : 'white', border: p.popular ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>{p.cta}</Button>
+              <Button onClick={handleTryLinked} className={`w-full py-3 rounded-full`} style={{ background: p.popular ? `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` : 'transparent', color: p.popular ? '#071127' : 'white', border: p.popular ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>{p.cta}</Button>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="px-6 sm:px-8 lg:px-16 py-12">
+      <section id="testimonials" className="px-6 sm:px-8 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-8">
           <h2 className="text-3xl font-bold mb-2">Loved by creators</h2>
           <p className="text-gray-300">Real growth stories from users who scaled with Linked.</p>
         </div>
-
         <div className="max-w-4xl mx-auto">
           <TestimonialCarousel />
         </div>
@@ -242,22 +262,17 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold">Frequently asked</h2>
           <p className="text-gray-300">Everything you need to know about platform support, billing and data.</p>
         </div>
-
         <div className="max-w-4xl mx-auto space-y-4">
-          {[
-            { q: "Which platforms can I connect?", a: "Linked supports LinkedIn, X, Instagram, TikTok, Facebook, and any platform with posting APIs. We regularly add more integrations." },
+          {[{ q: "Which platforms can I connect?", a: "Linked supports LinkedIn, X, Instagram, TikTok, Facebook, and any platform with posting APIs. We regularly add more integrations." },
             { q: "Can it post automatically at best times?", a: "Yes — Linked can auto-schedule at predicted high-engagement windows or use your custom schedule." },
-            { q: "Is my content private?", a: "Absolutely. We use encrypted storage for credentials and give you full control of access and exportable data." },
+            { q: "Is my content private?", a: "Absolutely. We use encrypted storage for credentials and give you full control of access and exportable data." }
           ].map((f, i) => (
             <motion.div key={i} className="p-4 rounded-xl bg-[#071526] border border-[#11202a]" whileHover={{ y: -4 }}>
               <button className="w-full text-left flex items-center justify-between" onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}>
                 <div className="font-semibold">{f.q}</div>
                 <ChevronDown className={`w-6 h-6 text-[#00A8FF] ${expandedFaq === i ? 'rotate-180' : ''}`} />
               </button>
-
-              {expandedFaq === i && (
-                <motion.p className="mt-3 text-gray-300" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{f.a}</motion.p>
-              )}
+              {expandedFaq === i && <motion.p className="mt-3 text-gray-300" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{f.a}</motion.p>}
             </motion.div>
           ))}
         </div>
@@ -271,11 +286,40 @@ export default function LandingPage() {
           <p className="text-gray-300 mb-6">Start creating viral posts and schedule with confidence. Let Linked handle the posting so you can focus on impact.</p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard"><Button className="px-6 py-3 rounded-full" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}>Start Free Trial</Button></Link>
-            <Link href="/pricing"><Button variant="ghost" className="px-6 py-3 rounded-full border border-white/10">See Pricing</Button></Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={handleTryLinked}
+                className="px-6 py-3 rounded-full"
+                style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}
+              >
+                Start Free Trial
+              </Button>
+              <Link href="#pricing">
+                <Button
+                  variant="ghost"
+                  className="px-6 py-3 rounded-full border border-white/10 text-white/90"
+                >
+                  View Pricing
+                </Button>
+              </Link>
+            </div>
+
           </div>
         </div>
       </section>
+
+      {/* Auth Modal */}
+      {authOpen && (
+        <AuthModal
+          open={authOpen}
+          mode={authMode}
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => {
+            setAuthOpen(false)
+            router.push("/dashboard") // redirect after successful sign in/up
+          }}
+        />
+      )}
 
       {/* Footer */}
       <footer className="px-6 sm:px-8 lg:px-16 py-8 border-t border-[#0f1720]">
@@ -306,3 +350,4 @@ export default function LandingPage() {
     </div>
   )
 }
+

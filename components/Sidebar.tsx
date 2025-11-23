@@ -50,13 +50,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[#1a1d29]">
-              <Image
-                src="/Linked Logo.png"
-                alt="Linked Logo"
-                width={75}
-                height={35}
-                className="object-contain"
-              />
+
               <Button
                 variant="ghost"
                 size="icon"

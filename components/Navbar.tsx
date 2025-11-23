@@ -2,13 +2,29 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Menu, X } from "lucide-react"
+import { Menu, X, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
+import ThemeToggle from "./ThemeToggle"
+import { AuthModal } from "@/components/auth-modal"
+import { useSession, signOut } from "next-auth/react"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login")
+
+  const { data: session } = useSession() // <-- NextAuth session
+
+  const openSignIn = () => {
+    setAuthMode("login")
+    setAuthOpen(true)
+  }
+  const openTryLinked = () => {
+    setAuthMode("signup")
+    setAuthOpen(true)
+  }
 
   const navItems = [
     { name: "Features", href: "#features" },
@@ -19,7 +35,7 @@ export default function Navbar() {
 
   return (
     <motion.nav
-      className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-[#0b0b0c] via-[#0d1118] to-[#0d1b2a]/95 backdrop-blur-lg border-b border-[#1f2330] shadow-lg"
+      className="fixed top-0 left-0 right-0 z-50 app-surface bg-opacity-80 backdrop-blur-lg border-b border-[#1f2330] shadow-lg"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -51,21 +67,50 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* CTA */}
+          {/* CTA / User */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/auth/signin">
-              <Button
-                variant="ghost"
-                className="text-gray-300 hover:text-white hover:bg-white/10"
-              >
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button className="bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white shadow-md hover:opacity-90 transition">
-                Get Started
-              </Button>
-            </Link>
+            <ThemeToggle />
+
+            {session ? (
+              <div className="flex items-center gap-3">
+                <span className="text-gray-2 text-center font-medium hidden sm:inline">
+                  {session.user?.name || session.user?.email}
+                </span>
+                {session.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="User Avatar"
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <User className="w-8 h-8 text-gray-300" />
+                )}
+                <Button
+                  variant="ghost"
+                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                  onClick={() => signOut()}
+                >
+                  Sign Out
+                </Button>    </div>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={openSignIn}
+                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                >
+                  Sign In
+                </Button>
+                <Button
+                  onClick={openTryLinked}
+                  className="bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white shadow-md hover:opacity-90 transition"
+                >
+                  Try Linked
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Toggle */}
@@ -100,22 +145,47 @@ export default function Navbar() {
                   {item.name}
                 </a>
               ))}
+
               <div className="pt-3 space-y-2">
-                <Link href="/auth/signin" className="block">
-                  <Button variant="ghost" className="w-full text-gray-300 hover:text-white hover:bg-white/10">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/dashboard" className="block">
-                  <Button className="w-full bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white hover:opacity-90">
-                    Get Started
-                  </Button>
-                </Link>
+                <ThemeToggle />
+                {session ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-gray-200 font-medium">
+                      {session.user?.name || session.user?.email}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-gray-300 hover:text-white hover:bg-white/10"
+                      onClick={() => signOut()}
+                    >
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-gray-300 hover:text-white hover:bg-white/10"
+                      onClick={openSignIn}
+                    >
+                      Sign In
+                    </Button>
+                    <Button
+                      className="w-full bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white hover:opacity-90"
+                      onClick={openTryLinked}
+                    >
+                      Try Linked
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
         )}
       </div>
+
+      {/* Auth modal */}
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} mode={authMode} />
     </motion.nav>
   )
 }

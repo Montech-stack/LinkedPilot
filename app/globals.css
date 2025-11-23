@@ -39,6 +39,11 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.2 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --bg-start: #09090b;
+  --bg-mid: #0b1118;
+  --bg-end: #07131a;
+  --primary-blue: #00b4ff;
+  --primary-gold: #ffb347;
 }
 
 .dark {
@@ -406,5 +411,18 @@
     100% {
       background-position: 200% 0;
     }
+  }
+
+  /* Auth layout specific styles */
+  .auth-card {
+    @apply bg-[#1a1f2e]/50 backdrop-blur-xl border border-[#2a2f3f] rounded-2xl p-6 sm:p-8 shadow-2xl;
+  }
+
+  .auth-input {
+    @apply bg-[#11151c] border-[#2c2f3a] text-white placeholder-gray-500 focus:border-[#00b4ff] focus:ring-[#00b4ff]/50;
+  }
+
+  .auth-button {
+    @apply bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white font-semibold hover:opacity-90 transition shadow-lg;
   }
 }

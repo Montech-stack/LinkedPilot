@@ -1,33 +1,67 @@
+import { NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
 import { connectToDatabase } from "@/lib/mongodb"
-import bcrypt from "bcrypt"
-import User from "@/models/User"
+import { User } from "@/models/User"
 
 export async function POST(req: Request) {
   try {
-    const { username, email, password } = await req.json()
+    const { email, password, name } = await req.json()
 
-    if (!username || !email || !password) {
-      return new Response("Missing required fields", { status: 400 })
+    if (!email || !password || !name) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      )
     }
 
     await connectToDatabase()
 
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return new Response("User already exists", { status: 400 })
+    const existing = await User.findOne({ email })
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Email already in use" },
+        { status: 400 }
+      )
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashed = await bcrypt.hash(password, 10)
 
     const newUser = await User.create({
-      name: username,
+      name,
       email,
-      password: hashedPassword,
+      password: hashed,
+      provider: "credentials",
+      role: "user",
+      plan: "free",
+      tokensRemaining: 0,      // no free tokens
+      billingEnabled: false,   // must enable billing first
     })
 
-    return new Response(JSON.stringify(newUser), { status: 201 })
-  } catch (error) {
-    console.error("Signup error:", error)
-    return new Response("Internal Server Error", { status: 500 })
+    const sanitizedUser = {
+      id: newUser._id.toString(),
+      email: newUser.email,
+      name: newUser.name,
+      tokensRemaining: 0,
+      billingEnabled: false,
+    }
+
+    const redirectUrl =
+      sanitizedUser.tokensRemaining > 0 && sanitizedUser.billingEnabled
+        ? "/home"
+        : "/billing"
+
+    return NextResponse.json({
+      success: true,
+      user: sanitizedUser,
+      redirectUrl,
+    })
+
+  } catch (err) {
+    console.error("Signup error:", err)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
