@@ -34,10 +34,8 @@ const SocialAccountSchema = new Schema(
       type: String, 
       required: true 
     },
-    linkedinId: { 
-      type: String, 
-      required: false // Only for LinkedIn accounts
-    },
+    linkedinId: { type: String, required: true, unique: true },
+
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt

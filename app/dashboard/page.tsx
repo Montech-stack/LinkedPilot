@@ -246,9 +246,14 @@ export default function Dashboard() {
       );
       const results = await Promise.all(postPromises);
       const okCount = results.filter(r => r.ok).length;
-      toast[okCount === connected.length ? "success" : "info"](
-        `Posted to ${okCount}/${connected.length} account${okCount > 1 ? "s" : ""}`
-      );
+      const message = `Posted to ${okCount}/${connected.length} account${okCount > 1 ? "s" : ""}`;
+      if (okCount === connected.length) {
+        toast.success(message);
+      } else if (okCount === 0) {
+        toast.error(message);
+      } else {
+        toast(message);
+      }
       setPostConfirmOpen(false);
     } catch (err) {
       console.error(err);
