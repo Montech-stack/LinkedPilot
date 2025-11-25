@@ -1,4 +1,4 @@
-// app/billing/page.tsx
+// app/billing/page.tsx (updated to handle free plan if needed, but button logic already prevents calling for free if current)
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -59,24 +59,33 @@ export default function BillingPage() {
   }, []);
 
   const handleSubscribe = async (planName: string, amount: number) => {
+    if (planName === "Free") {
+      // Handle downgrade or activation without payment
+      toast.success("Switched to Free plan!");
+      setCurrentPlan("free");
+      // Call API to update user plan if needed
+      return;
+    }
     setLoadingPlan(planName);
     try {
-      // Call backend to initialize transaction with plan
       const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: userEmail,
-          amount: amount * 100, // Convert to subunits (kobo for NGN, adjust for currency)
-          plan: planName.toLowerCase(), // Assume plan codes are lowercase
-          ...(planName === "Pay as You Go" && { numAccounts, numTokens }), // Pass extra for payg
+          amount: amount * 100, // Convert to cents
+          plan: planName.toLowerCase(),
+          ...(planName === "Pay as You Go" && { numAccounts, numTokens }),
         }),
       });
       const data = await response.json();
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
+      } else if (data.error) {
+        throw new Error(data.error);
       } else {
-        throw new Error("Failed to initialize subscription");
+        toast.success(`${planName} plan activated!`);
+        setCurrentPlan(planName.toLowerCase());
       }
     } catch (error) {
       console.error(error);
@@ -165,7 +174,7 @@ export default function BillingPage() {
                   ) : (
                     <Button
                       onClick={() => handleSubscribe(plan.name, plan.price)}
-                      disabled={loadingPlan === plan.name || currentPlan === plan.name.toLowerCase()}
+                      disabled={loadingPlan === plan.name || (plan.name === "Free" && currentPlan === "free")}
                       className="w-full bg-gradient-to-r from-[#0077B5] to-[#005885] hover:opacity-90 text-white font-semibold py-3 rounded-xl shadow-md hover:shadow-lg transition-all"
                     >
                       {currentPlan === plan.name.toLowerCase() ? "Current Plan" : loadingPlan === plan.name ? "Processing..." : "Subscribe Now"}
