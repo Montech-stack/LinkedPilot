@@ -14,7 +14,7 @@ const navigationItems = [
   { icon: Target, label: "Viral Ideas", href: "/hooks" },
   { icon: Calendar, label: "Schedules", href: "/scheduled" },
   { icon: CreditCard, label: "Billing", href: "/billing" },
-  { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: Settings, label: "HomePage", href: "/" },
 ]
 
 interface SidebarProps {
