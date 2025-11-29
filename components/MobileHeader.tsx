@@ -24,11 +24,11 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
       </Button>
 
       {/* Logo */}
-      <div className="flex-1 flex justify-center">
+      <div className="flex-1 flex">
         <Image
           src="/Linked Logo.png"
           alt="Linked Logo"
-          width={85}
+          width={45}
           height={35}
           className="object-contain"
         />

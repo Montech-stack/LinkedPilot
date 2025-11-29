@@ -1,41 +1,38 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { generateContent } from '@/lib/gemini';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { input, previous = [] } = await request.json();
-
     if (!input) {
       return NextResponse.json({ error: 'Missing required field: input' }, { status: 400 });
     }
-
-    const previousStr = previous.length > 0 
-      ? `Exclude these previous ideas: \n${previous.join('\n')}\n\n` 
+    const previousStr = previous.length > 0
+      ? `Exclude these previous ideas: \n${previous.join('\n')}\n\n`
       : '';
+    const prompt = `${previousStr}Generate 5 viral social media post ideas for the topic: "${input}". Optimize for maximum virality across platforms like LinkedIn, Twitter (X), Facebook, Instagram, and TikTok.
 
-    const prompt = `${previousStr}Generate 5 viral LinkedIn post ideas for the topic: ${input}.
-
-Each idea should be a concise hook or title.
+Each idea should be a concise hook or title that's highly engaging and relatable, designed to go viral on every platform.
+- Incorporate psychological triggers like curiosity, urgency, FOMO, storytelling, or actionable insights.
+- Vary structures: e.g., question-based, listicle, story, tip, or poll-style.
+- Keep ideas conversational and jargon-free. Avoid asterisks (*) or any markdown in the hooks.
+- Ensure diversity: Each idea must have a unique category from: "Controversial", "Question", "Story", "List", "Career Advice".
 
 Return a JSON array of 5 objects, each with:
 {
-  "category": string (must be one of: "Controversial", "Question", "Story", "List", "Career Advice"),
-  "hook": string,
-  "engagement": "Very High" | "High" | "Medium",
-  "score": number between 70 and 95,
-  "keywords": array of 5-7 relevant keywords
+  "category": string (one of: "Controversial", "Question", "Story", "List", "Career Advice"),
+  "hook": string (concise, viral-optimized hook/title),
+  "engagement": "Very High" | "High" | "Medium" (estimated virality),
+  "score": number (70-95, based on quality and potential),
+  "keywords": array of 3-5 relevant keywords
 }
 
-Ensure each idea has a unique category from the list provided.
 Output only a valid JSON array, no other text.`;
-
     const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
-
     let cleanedContent = generatedContent
       .replace(/```json\n|\n```/g, '')
       .replace(/```/g, '')
       .trim();
-
     let ideas;
     try {
       ideas = JSON.parse(cleanedContent);
@@ -64,7 +61,6 @@ Output only a valid JSON array, no other text.`;
         }));
       }
     }
-
     // Validate and complete ideas
     const validCategories = ['Controversial', 'Question', 'Story', 'List', 'Career Advice'];
     const defaultKeywords = input.split(' ').slice(0, 7);
@@ -78,7 +74,6 @@ Output only a valid JSON array, no other text.`;
         keywords: Array.isArray(idea.keywords) && idea.keywords.length >= 5 ? idea.keywords.slice(0, 7) : defaultKeywords,
       };
     });
-
     return NextResponse.json({
       ideas,
       success: true,

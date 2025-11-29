@@ -86,7 +86,7 @@ export default function ViralIdeasLibrary() {
           keywords: i.keywords.slice(0, 7),
         }))
       if (!validIdeas.length) throw new Error("No valid ideas")
-      const newIdeas = isMore ? [...generatedIdeas, ...validIdeas] : validIdeas
+      const newIdeas = [...generatedIdeas, ...validIdeas]
       setGeneratedIdeas(newIdeas)
       localStorage.setItem("generatedIdeas", JSON.stringify(newIdeas))
       toast.success(`Generated ${validIdeas.length} idea${validIdeas.length > 1 ? "s" : ""}`)

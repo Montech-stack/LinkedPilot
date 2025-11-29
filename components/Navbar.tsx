@@ -47,7 +47,7 @@ export default function Navbar() {
             <Image
               src="/Linked Logo.png"
               alt="Linked Logo"
-              width={75}
+              width={55}
               height={35}
               className="object-contain"
             />
