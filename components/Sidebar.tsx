@@ -1,12 +1,14 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Link2 , HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, Home } from "lucide-react"
+import { Link2, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, Home } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/ProfileDropdown"
 import Image from "next/image"
+import { useSession } from "next-auth/react"
+import { useBillingStore, SUBSCRIPTION_PLANS } from "@/lib/billing-store"
 
 const navigationItems = [
   { icon: Sparkles, label: "Studio", href: "/dashboard" },
@@ -24,6 +26,14 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  
+  // Get user from NextAuth
+  const { data: session } = useSession()
+  const user = session?.user
+  
+  // Get billing info
+  const { currentPlan } = useBillingStore()
+  const planData = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan)
 
   return (
     <>
@@ -50,6 +60,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[#1a1d29]">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/Linked Logo.png"
+                  alt="Linked Logo"
+                  width={90}
+                  height={40}
+                  className="object-contain"
+                />
+              </Link>
 
               <Button
                 variant="ghost"
@@ -62,7 +81,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 p-4 sm:p-6">
+            <nav className="flex-1 p-4 sm:p-6 overflow-y-auto">
               <div className="space-y-2">
                 {navigationItems.map((item) => {
                   const isActive = pathname === item.href
@@ -95,14 +114,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="flex items-center gap-3 mb-4">
                 <ProfileDropdown />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white text-sm truncate">User</div>
-                  <div className="text-xs text-gray-400 truncate">user@example.com</div>
-                  <div className="text-xs text-[#00b4ff] font-medium">Free Plan</div>
+                  <div className="font-medium text-white text-sm truncate">
+                    {user?.name || "User"}
+                  </div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {user?.email || "user@example.com"}
+                  </div>
+                  <div className="text-xs text-[#00b4ff] font-medium">
+                    {planData?.name || "Free Plan"}
+                  </div>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => window.open("https://www.trustpilot.com", "_blank")}
                 className="w-full border-[#2d2f3e] text-gray-300 hover:bg-gradient-to-r hover:from-[#00b4ff] hover:to-[#ffb347] hover:text-white transition-all"
               >
                 📝 Leave a Review
