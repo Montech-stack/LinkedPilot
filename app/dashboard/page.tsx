@@ -34,6 +34,13 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useSession } from "next-auth/react";
 
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
   free: { maxPosts: 5, name: "Free Plan" },
@@ -58,6 +65,7 @@ const LENGTH_OPTIONS: LengthOption[] = [
 
 export default function Dashboard() {
   const router = useRouter();
+  const { data: session } = useSession(); // Get auth session
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -70,6 +78,10 @@ export default function Dashboard() {
   const [scheduledPost, setScheduledPost] = useState<GeneratedPost | null>(null);
   const [scheduledAtISO, setScheduledAtISO] = useState<string>("");
 
+  // New: User token balance and plan
+  const [userPlan, setUserPlan] = useState<UserPlan>("free");
+  const [tokensRemaining, setTokensRemaining] = useState(0);
+
   // Media upload
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -79,8 +91,26 @@ export default function Dashboard() {
   const [postingAllLoading, setPostingAllLoading] = useState(false);
 
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
-  const userPlan: UserPlan = "pro";
   const currentPlanLimit = PLAN_LIMITS[userPlan];
+
+  const userEmail = session?.user?.email || "guest@example.com"; // Use auth email or fallback
+
+  // Fetch user plan and tokens
+  useEffect(() => {
+    async function fetchUserStats() {
+      try {
+        const res = await fetch(`/api/user/stats?email=${encodeURIComponent(userEmail)}`);
+        if (!res.ok) throw new Error("Failed to fetch user stats");
+        const data = await res.json();
+        setUserPlan(data.plan || "free");
+        setTokensRemaining(data.tokensRemaining || 0);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load user plan");
+      }
+    }
+    if (userEmail) fetchUserStats();
+  }, [userEmail]);
 
   // Auto-resize textarea
   const autoResizeTextarea = useCallback(() => {
@@ -126,6 +156,7 @@ export default function Dashboard() {
       setGeneratedPosts(loaded);
     } catch (err) {
       console.error("Failed to parse saved state:", err);
+      localStorage.removeItem("linkedpilot_dashboard_state");
     }
   }, []);
 
@@ -173,6 +204,17 @@ export default function Dashboard() {
 
   const handleGeneratePosts = useCallback(async () => {
     if (!input.trim()) return toast.error("Enter a post idea first!");
+
+    // Estimate tokens needed (adjust based on your model's cost)
+    const tokenCostPerPost = postLength === "short" ? 100 : postLength === "medium" ? 200 : 300;
+    const totalTokensNeeded = postCount * tokenCostPerPost;
+
+    if (userPlan !== "enterprise" && tokensRemaining < totalTokensNeeded) {
+      toast.error("Insufficient tokens! Redirecting to billing...");
+      router.push("/billing");
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const newPosts = await generatePosts(input, tone, postCount, postLength);
@@ -180,12 +222,28 @@ export default function Dashboard() {
       const withIds = newPosts.map((p, i) => ({ ...p, id: baseId + i }));
       setGeneratedPosts((prev) => [...prev, ...withIds]);
       toast.success(`Generated ${withIds.length} post${withIds.length > 1 ? "s" : ""}!`);
+
+      // Deduct tokens (call backend to update)
+      if (userPlan !== "enterprise") {
+        await fetch("/api/deduct-tokens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usedTokens: totalTokensNeeded, email: userEmail }),
+        });
+        setTokensRemaining((prev) => prev - totalTokensNeeded);
+      }
     } catch {
       toast.error("Failed to generate posts");
     } finally {
       setIsGenerating(false);
     }
-  }, [input, tone, postCount, postLength, generatePosts, setIsGenerating]);
+  }, [input, tone, postCount, postLength, generatePosts, setIsGenerating, userPlan, tokensRemaining, router, userEmail]);
+
+  // Calculate if generate is disabled
+  const tokenCostPerPost = postLength === "short" ? 100 : postLength === "medium" ? 200 : 300;
+  const totalTokensNeeded = postCount * tokenCostPerPost;
+  const isOutOfTokens = userPlan !== "enterprise" && tokensRemaining < totalTokensNeeded;
+  const generateDisabled = !input.trim() || isGenerating;
 
   // Media upload
   const handleUploadClick = () => fileInputRef.current?.click();
@@ -439,14 +497,25 @@ export default function Dashboard() {
               {/* Generate Button + Trash (when posts exist) */}
               <motion.div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="flex items-center gap-3 col-span-1 sm:col-span-2 lg:col-span-1">
-                  <Button
-                    onClick={handleGeneratePosts}
-                    disabled={!input.trim() || isGenerating}
-                    className="flex-1 h-12 px-6 text-base font-semibold rounded-xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                    <span>Generate {postCount > 1 && `(${postCount})`}</span>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleGeneratePosts}
+                          disabled={!input.trim() || isGenerating}
+                          className="flex-1 h-12 px-6 text-base font-semibold rounded-xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                          <span>Generate {postCount > 1 && `(${postCount})`}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      {isOutOfTokens && (
+                        <TooltipContent>
+                          <p>Out of tokens. Upgrade to generate more.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {generatedPosts.length > 0 && (
                     <button

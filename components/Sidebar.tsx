@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Link2, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, Home } from "lucide-react"
+import { Link2, Settings2Icon, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, Home } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ const navigationItems = [
   { icon: Link2, label: "Links", href: "/links" },
   { icon: Target, label: "Viral Ideas", href: "/hooks" },
   { icon: Calendar, label: "Schedules", href: "/scheduled" },
+  { icon: Settings2Icon, label: "Automations", href: "/automations" },
   { icon: CreditCard, label: "Billing", href: "/billing" },
   { icon: HomeIcon, label: "HomePage", href: "/" },
 ]

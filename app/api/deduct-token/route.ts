@@ -1,0 +1,26 @@
+// api/deduct-tokens/route.ts
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import { User } from "@/models/User"; // Adjust path
+
+export async function POST(req: Request) {
+  const { usedTokens, email } = await req.json();
+
+  if (!email || typeof usedTokens !== 'number') {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  try {
+    await connectToDatabase();
+    const user = await User.findOneAndUpdate(
+      { email },
+      { $inc: { tokensRemaining: -usedTokens } },
+      { new: true }
+    );
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return NextResponse.json({ success: true, tokensRemaining: user.tokensRemaining });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Failed to deduct tokens" }, { status: 500 });
+  }
+}
