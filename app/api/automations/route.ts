@@ -32,9 +32,12 @@ export async function POST(req: Request) {
     }
     const userId = session.user.id;
     const body = await req.json();
-    const { title, type, isActive, lastRun, topic, frequency, tone, length, selectedAccounts, nextRun, count } = body;
+    const { title, type, isActive, lastRun, topic, postTime, tone, length, selectedAccounts, nextRun, count } = body;
     if (!title || !type) {
       return NextResponse.json({ error: "Title and type are required." }, { status: 400 });
+    }
+    if (type === 'content' && (!postTime || !/^\d{2}:\d{2}$/.test(postTime))) {
+      return NextResponse.json({ error: "Post time is required in HH:mm format." }, { status: 400 });
     }
     const record = await Automation.create({
       userId,
@@ -43,11 +46,11 @@ export async function POST(req: Request) {
       isActive: isActive ?? true,
       lastRun: lastRun && lastRun !== "Never" ? new Date(lastRun) : null,
       topic,
-      frequency,
+      postTime,
       tone,
       length,
       selectedAccounts: selectedAccounts ? selectedAccounts.map((id: string) => new mongoose.Types.ObjectId(id)) : [],
-      nextRun: nextRun ? new Date(nextRun) : new Date(),
+      nextRun: nextRun ? new Date(nextRun) : calculateNextRun(postTime),
       count: count ?? 0,
     });
     return NextResponse.json(record);
@@ -58,4 +61,68 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: "Failed to create automation." }, { status: 500 });
   }
+}
+
+export async function PUT(req: Request) {
+  try {
+    await connectToDatabase();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const userId = session.user.id;
+    const body = await req.json();
+    const { id, ...updates } = body;
+    if (!id) {
+      return NextResponse.json({ error: "ID is required." }, { status: 400 });
+    }
+    const automation = await Automation.findOne({ _id: id, userId });
+    if (!automation) {
+      return NextResponse.json({ error: "Automation not found." }, { status: 404 });
+    }
+    if (updates.postTime) {
+      updates.nextRun = calculateNextRun(updates.postTime)
+    }
+    Object.assign(automation, updates);
+    await automation.save();
+    return NextResponse.json(automation);
+  } catch (error) {
+    console.error("Error updating automation:", error);
+    return NextResponse.json({ error: "Failed to update automation." }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    await connectToDatabase();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const userId = session.user.id;
+    const body = await req.json();
+    const { id } = body;
+    if (!id) {
+      return NextResponse.json({ error: "ID is required." }, { status: 400 });
+    }
+    const result = await Automation.deleteOne({ _id: id, userId });
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: "Automation not found." }, { status: 404 });
+    }
+    return NextResponse.json({ message: "Automation deleted." });
+  } catch (error) {
+    console.error("Error deleting automation:", error);
+    return NextResponse.json({ error: "Failed to delete automation." }, { status: 500 });
+  }
+}
+
+// Helper to calculate nextRun based on postTime (daily, UTC)
+function calculateNextRun(postTime: string): Date {
+  const [hours, minutes] = postTime.split(':').map(Number);
+  const now = new Date();
+  const next = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0, 0);
+  if (next < now) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  return next;
 }

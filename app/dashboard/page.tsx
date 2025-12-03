@@ -373,14 +373,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#0F1116] text-white flex flex-col md:flex-row">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col">
         <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-10 w-full">
             <motion.div className="text-center mb-6 sm:mb-8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] bg-clip-text text-transparent mb-2">
+              <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent mb-2">
                 AI Content Studio
               </h1>
               <p className="text-gray-400 text-sm sm:text-base">
@@ -388,22 +388,22 @@ export default function Dashboard() {
               </p>
             </motion.div>
 
-            <div className="bg-[#1b1f2a] p-4 sm:p-6 rounded-2xl shadow-2xl border border-[#2c2f3a]">
+            <div className="bg-[#1A1B22] p-4 sm:p-6 rounded-2xl shadow-2xl border border-[#2A2A35]">
               {/* TOP BUTTON BAR – Compact for 320px */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 {/* Left: Tone / Length / Count */}
                 <div className="flex items-center gap-1.5">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633]" title="Tone">
-                        <Palette className="w-4 h-4 text-[#00FFFF]" />
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#14151B] border border-[#2A2A35] hover:bg-[#1f2633]" title="Tone">
+                        <Palette className="w-4 h-4 text-blue-500" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                    <PopoverContent className="w-56 bg-[#1A1B22] border border-[#2A2A35] rounded-xl text-white shadow-xl">
                       <div className="text-sm font-medium mb-2 text-gray-400">Select Tone</div>
                       {TONE_OPTIONS.map(t => (
                         <button key={t.value} onClick={() => setTone(t.value as PostTone)}
-                          className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#0077B5]/20 ${tone === t.value ? "text-[#0077B5] bg-[#0077B5]/10" : "text-gray-300"}`}>
+                          className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-blue-500/20 ${tone === t.value ? "text-blue-500 bg-blue-500/10" : "text-gray-300"}`}>
                           {t.label}
                         </button>
                       ))}
@@ -412,15 +412,15 @@ export default function Dashboard() {
 
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633]" title="Length">
-                        <Gauge className="w-4 h-4 text-[#FFA500]" />
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#14151B] border border-[#2A2A35] hover:bg-[#1f2633]" title="Length">
+                        <Gauge className="w-4 h-4 text-yellow-400" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                    <PopoverContent className="w-56 bg-[#1A1B22] border border-[#2A2A35] rounded-xl text-white shadow-xl">
                       <div className="text-sm font-medium mb-2 text-gray-400">Select Length</div>
                       {LENGTH_OPTIONS.map(l => (
                         <button key={l.value} onClick={() => setPostLength(l.value as PostLength)}
-                          className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-[#9333ea]/20 ${postLength === l.value ? "text-[#c084fc] bg-[#9333ea]/10" : "text-gray-300"}`}>
+                          className={`block w-full text-left px-3 py-2 rounded-lg hover:bg-yellow-400/20 ${postLength === l.value ? "text-yellow-400 bg-yellow-400/10" : "text-gray-300"}`}>
                           {l.label}
                         </button>
                       ))}
@@ -429,11 +429,11 @@ export default function Dashboard() {
 
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#161b23] border border-[#2c2f3a] hover:bg-[#1f2633]" title="Number of Posts">
-                        <SlidersHorizontal className="w-4 h-4 text-[#00FFFF]" />
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#14151B] border border-[#2A2A35] hover:bg-[#1f2633]" title="Number of Posts">
+                        <SlidersHorizontal className="w-4 h-4 text-blue-500" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-56 bg-[#1e2634] border border-[#2c2f3a] rounded-xl text-white shadow-xl">
+                    <PopoverContent className="w-56 bg-[#1A1B22] border border-[#2A2A35] rounded-xl text-white shadow-xl">
                       <div className="text-sm font-medium mb-2 text-gray-400">Number of Posts</div>
                       <div className="flex items-center justify-center gap-3">
                         <button onClick={() => setPostCount(Math.max(1, postCount - 1))} className="p-2 bg-[#11151c] rounded-md hover:bg-[#2a3242]"><Minus className="w-4 h-4" /></button>
@@ -448,7 +448,7 @@ export default function Dashboard() {
                 {/* Right: Upload + Post All */}
                 <div className="flex items-center gap-2">
                   <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
-                  <button onClick={handleUploadClick} title="Upload media" className="p-2 rounded-lg bg-[#11151c] border border-[#2c2f3a] hover:bg-[#23242C] transition-colors">
+                  <button onClick={handleUploadClick} title="Upload media" className="p-2 rounded-lg bg-[#14151B] border border-[#2A2A35] hover:bg-[#23242C] transition-colors">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5">
                       <path d="M12 3v12M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round"/>
                       <rect x="3" y="13" width="18" height="8" rx="2"/>
@@ -458,7 +458,7 @@ export default function Dashboard() {
                   <Button
                     onClick={handlePostAllClick}
                     disabled={postingAllLoading || (!input.trim() && generatedPosts.length === 0)}
-                    className="h-9 px-3.5 text-sm font-medium rounded-lg bg-orange-400 hover:bg-orange-500 disabled:opacity-50 flex items-center gap-1.5"
+                    className="h-9 px-3.5 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     {postingAllLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
                     <span className="hidden xs:inline">Post All</span>
@@ -468,7 +468,7 @@ export default function Dashboard() {
 
               {/* Uploaded Media Preview */}
               {uploadedMedia && (
-                <div className="mb-4 relative rounded-lg overflow-hidden border border-[#2c2f3a] bg-[#0f1317]">
+                <div className="mb-4 relative rounded-lg overflow-hidden border border-[#2A2A35] bg-[#14151B]">
                   <button onClick={removeUploadedMedia} className="absolute top-2 right-2 z-20 p-1 bg-black/40 hover:bg-black/60 rounded-full">
                     <X className="w-4 h-4" />
                   </button>
@@ -489,7 +489,7 @@ export default function Dashboard() {
                   placeholder="Describe your post idea..."
                   value={input}
                   onChange={handleInputChange}
-                  className="w-full bg-[#11151c] text-white placeholder-gray-500 border border-[#2c2f3a] focus:border-[#0077B5] focus:ring-2 focus:ring-[#0077B5]/50 rounded-xl p-4 min-h-[120px] max-h-96 resize-none shadow-inner text-sm sm:text-base leading-relaxed"
+                  className="w-full bg-[#14151B] text-white placeholder-gray-500 border border-[#2A2A35] focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 rounded-xl p-4 min-h-[120px] max-h-96 resize-none shadow-inner text-sm sm:text-base leading-relaxed"
                   style={{ overflowY: "scroll", paddingBottom: "2.5rem" }}
                 />
               </div>
@@ -503,9 +503,9 @@ export default function Dashboard() {
                         <Button
                           onClick={handleGeneratePosts}
                           disabled={!input.trim() || isGenerating}
-                          className="flex-1 h-12 px-6 text-base font-semibold rounded-xl bg-gradient-to-r from-[#00FFFF] via-[#00BFFF] to-[#FFA500] hover:opacity-90 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+                          className="flex-1 h-10 px-4 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 shadow-2xl disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                          {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                          {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                           <span>Generate {postCount > 1 && `(${postCount})`}</span>
                         </Button>
                       </TooltipTrigger>
@@ -520,10 +520,10 @@ export default function Dashboard() {
                   {generatedPosts.length > 0 && (
                     <button
                       onClick={clearAllPosts}
-                      className="p-3 bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                      className="p-2 bg-gray-600 hover:bg-gray-700 rounded-xl transition-colors"
                       title="Clear All Posts"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4 text-gray-300" />
                     </button>
                   )}
                 </div>
@@ -534,7 +534,7 @@ export default function Dashboard() {
             {/* Generated Posts */}
             {generatedPosts.length > 0 && (
               <motion.div className="mt-8 space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h2 className="text-xl sm:text-2xl font-bold text-white">Generated Posts ({generatedPosts.length})</h2>
+                <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Generated Posts ({generatedPosts.length})</h2>
                 {generatedPosts.map((post, index) => (
                   <PostCard
                     key={post.id}
@@ -560,13 +560,13 @@ export default function Dashboard() {
 
       {/* Scheduling Modal */}
       {scheduledPost && (
-        <div className="fixed bottom-4 right-4 bg-[#1b1f2a] border border-[#2c2f3a] rounded-xl shadow-xl p-4 z-50 w-[300px]">
-          <h3 className="font-semibold mb-2 text-white">Schedule Post</h3>
+        <div className="fixed bottom-4 right-4 bg-[#1A1B22] border border-[#2A2A35] rounded-xl shadow-xl p-4 z-50 w-[300px]">
+          <h3 className="font-semibold mb-2 bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Schedule Post</h3>
           <div className="text-xs text-gray-300 mb-2 line-clamp-3">{scheduledPost.content}</div>
-          <input type="datetime-local" value={scheduledAtISO} onChange={(e) => setScheduledAtISO(e.target.value)} className="w-full p-2 bg-[#11151c] border border-[#2c2f3a] rounded-lg text-gray-200 mb-3" />
+          <input type="datetime-local" value={scheduledAtISO} onChange={(e) => setScheduledAtISO(e.target.value)} className="w-full p-2 bg-[#14151B] border border-[#2A2A35] rounded-lg text-gray-200 mb-3" />
           <div className="flex justify-end gap-2">
             <button onClick={() => setScheduledPost(null)} className="px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600">Cancel</button>
-            <button onClick={saveScheduleToServer} className="px-3 py-1 rounded-md bg-[#0077B5] hover:bg-[#005885]">Save</button>
+            <button onClick={saveScheduleToServer} className="px-3 py-1 rounded-md bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600">Save</button>
           </div>
         </div>
       )}
@@ -574,14 +574,14 @@ export default function Dashboard() {
       {/* Post-to-All Confirmation Modal */}
       {postConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg bg-[#14151a] border border-[#2c2f3a] rounded-xl p-6 shadow-xl">
-            <h3 className="text-lg font-semibold mb-3">Post to all connected platforms</h3>
+          <div className="w-full max-w-lg bg-[#14151a] border border-[#2A2A35] rounded-xl p-6 shadow-xl">
+            <h3 className="text-lg font-semibold mb-3 bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Post to all connected platforms</h3>
             <p className="text-sm text-gray-300 mb-4">
-              This will post to all connected accounts. Manage them on the <button onClick={() => { setPostConfirmOpen(false); router.push("/links"); }} className="underline text-[#00BFFF] hover:text-[#00FFFF]">Links</button> page.
+              This will post to all connected accounts. Manage them on the <button onClick={() => { setPostConfirmOpen(false); router.push("/links"); }} className="underline text-blue-500 hover:text-yellow-400">Links</button> page.
             </p>
             <div className="mb-4">
               <div className="text-xs text-gray-400 mb-1">Preview</div>
-              <div className="bg-[#0f1317] p-3 rounded-md border border-[#2c2f3a] max-h-48 overflow-y-auto text-sm text-gray-200 whitespace-pre-wrap">
+              <div className="bg-[#0f1317] p-3 rounded-md border border-[#2A2A35] max-h-48 overflow-y-auto text-sm text-gray-200 whitespace-pre-wrap">
                 {input.trim() || generatedPosts.map(p => p.content).slice(0, 2).join("\n\n")}
                 {uploadedMedia && (
                   <div className="mt-3">
@@ -592,7 +592,7 @@ export default function Dashboard() {
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => setPostConfirmOpen(false)} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">Cancel</button>
-              <button onClick={confirmPostToAll} disabled={postingAllLoading} className="px-4 py-2 rounded-lg bg-[#0077B5] hover:bg-[#005885] flex items-center gap-2 disabled:opacity-50">
+              <button onClick={confirmPostToAll} disabled={postingAllLoading} className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 flex items-center gap-2 disabled:opacity-50">
                 {postingAllLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Confirm & Post</span>
               </button>

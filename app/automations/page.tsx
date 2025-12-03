@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +25,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+type UserPlan = "free" | "pro" | "enterprise";
 
 interface SocialAccount {
   _id: string;
@@ -44,62 +47,50 @@ interface Automation {
   lastRun: string;
   icon: any;
   topic?: string;
-  frequency?: "daily" | "weekly" | "monthly";
+  postTime?: string; // "HH:mm"
   tone?: "professional" | "friendly" | "casual" | "inspirational";
   length?: "short" | "medium" | "long";
   selectedAccounts?: string[];
   nextRun?: string;
   count?: number;
+  description?: string;
 }
 
-const initialAutomations: Automation[] = [
-  {
-    id: "1",
-    title: "Auto-Reply to DMs",
-    type: "response",
-    isActive: true,
-    lastRun: "2 mins ago",
-    icon: MessageSquare,
-  },
-  {
-    id: "2",
-    title: "Best Time Posting",
-    type: "schedule",
-    isActive: true,
-    lastRun: "1 hour ago",
-    icon: Clock,
-  },
-  {
-    id: "3",
-    title: "Weekly Analytics Report",
-    type: "analytics",
-    isActive: false,
-    lastRun: "3 days ago",
-    icon: BarChart,
-  },
-  {
-    id: "4",
-    title: "Cross-post to LinkedIn",
-    type: "crosspost",
-    isActive: true,
-    lastRun: "Yesterday",
-    icon: Share2,
-  },
-];
-
 export default function AutomationsPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [automations, setAutomations] = useState<Automation[]>(initialAutomations);
+  const [automations, setAutomations] = useState<Automation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
 
   // Form states
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
-  const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [postTime, setPostTime] = useState("09:00");
   const [tone, setTone] = useState<"professional" | "friendly" | "casual" | "inspirational">("professional");
   const [length, setLength] = useState<"short" | "medium" | "long">("medium");
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+
+  // Billing check
+  const [userPlan, setUserPlan] = useState<UserPlan>("free");
+  const userEmail = session?.user?.email || "guest@example.com";
+
+  useEffect(() => {
+    async function fetchUserStats() {
+      try {
+        const res = await fetch(`/api/user/stats?email=${encodeURIComponent(userEmail)}`);
+        if (!res.ok) throw new Error("Failed to fetch user stats");
+        const data = await res.json();
+        setUserPlan(data.plan || "free");
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load user plan");
+      }
+    }
+    if (userEmail) fetchUserStats();
+  }, [userEmail]);
 
   useEffect(() => {
     fetch("/api/social")
@@ -107,6 +98,48 @@ export default function AutomationsPage() {
       .then((data) => setConnectedAccounts(data))
       .catch((error) => console.error("Error fetching social accounts:", error));
   }, []);
+
+  useEffect(() => {
+    fetchAutomations();
+  }, []);
+
+  const fetchAutomations = async () => {
+    try {
+      const response = await fetch('/api/automations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch automations');
+      }
+      const data = await response.json();
+      const mapped = data.map((a: any) => ({
+        ...a,
+        id: a._id,
+        icon: getIcon(a.type),
+        lastRun: a.lastRun ? new Date(a.lastRun).toLocaleString() : "Never",
+        nextRun: a.nextRun ? new Date(a.nextRun).toLocaleString() : "Unknown",
+        description: a.type === "content" ? `Automated content daily at ${a.postTime} about ${a.topic}` : "",
+      }));
+      setAutomations(mapped);
+    } catch (error) {
+      toast.error("Failed to load automations");
+    }
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case "response":
+        return MessageSquare;
+      case "schedule":
+        return Clock;
+      case "analytics":
+        return BarChart;
+      case "crosspost":
+        return Share2;
+      case "content":
+        return Clock;
+      default:
+        return Clock;
+    }
+  };
 
   const toggleAccount = (id: string) => {
     setSelectedAccounts((prev) =>
@@ -116,7 +149,7 @@ export default function AutomationsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !topic.trim() || selectedAccounts.length === 0) {
+    if (!title || !topic.trim() || selectedAccounts.length === 0 || !postTime) {
       toast.error("Missing fields: Please fill in all required fields.");
       return;
     }
@@ -127,7 +160,7 @@ export default function AutomationsPage() {
       isActive: true,
       lastRun: "Never",
       topic,
-      frequency,
+      postTime,
       tone,
       length,
       selectedAccounts,
@@ -147,7 +180,15 @@ export default function AutomationsPage() {
       }
 
       const savedAutomation = await response.json();
-      setAutomations([...automations, { ...savedAutomation, icon: Clock }]);
+      const added = {
+        ...savedAutomation,
+        id: savedAutomation._id,
+        icon: Clock,
+        lastRun: "Never",
+        nextRun: new Date(savedAutomation.nextRun).toLocaleString(),
+        description: `Automated content daily at ${postTime} about ${topic}`,
+      };
+      setAutomations([...automations, added]);
       setIsDialogOpen(false);
       resetForm();
       toast.success("Automation created: Your new automation has been added.");
@@ -159,7 +200,7 @@ export default function AutomationsPage() {
   const resetForm = () => {
     setTitle("");
     setTopic("");
-    setFrequency("daily");
+    setPostTime("09:00");
     setTone("professional");
     setLength("medium");
     setSelectedAccounts([]);
@@ -177,6 +218,15 @@ export default function AutomationsPage() {
         return Instagram;
       default:
         return null;
+    }
+  };
+
+  const handleCreateClick = () => {
+    if (userPlan === "free") {
+      toast.error("Upgrade to a paid plan to create automations!");
+      router.push("/billing");
+    } else {
+      setIsDialogOpen(true);
     }
   };
 
@@ -207,148 +257,145 @@ export default function AutomationsPage() {
             </div>
 
             {/* Create Button */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  className="
-                    bg-gradient-to-r from-blue-500 to-yellow-500 text-white 
-                    hover:from-blue-600 hover:to-yellow-600 
-                    px-4 sm:px-5 h-10 rounded-xl
-                    w-full sm:w-auto shadow-lg
-                  "
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Automation
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] bg-[#1A1B22] border border-[#2A2A35] text-white">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Create New Automation</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6 py-4">
-                  <div>
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
-                      placeholder="e.g., Daily AI Tips"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="topic">Topic or Niche Description *</Label>
-                    <Textarea
-                      id="topic"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      className="bg-[#14151B] border-[#2A2A35] text-white focus:border-yellow-400"
-                      placeholder="Describe your topic or niche (e.g., AI tools for resumes, tech careers)"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Frequency *</Label>
-                    <Select value={frequency} onValueChange={(val) => setFrequency(val as any)}>
-                      <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Tone *</Label>
-                    <Select value={tone} onValueChange={(val) => setTone(val as any)}>
-                      <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-yellow-400">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
-                        <SelectItem value="professional">Professional</SelectItem>
-                        <SelectItem value="friendly">Friendly</SelectItem>
-                        <SelectItem value="casual">Casual</SelectItem>
-                        <SelectItem value="inspirational">Inspirational</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Length *</Label>
-                    <Select value={length} onValueChange={(val) => setLength(val as any)}>
-                      <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
-                        <SelectItem value="short">Short</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="long">Long</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Connected Accounts *</Label>
-                    <div className="space-y-2 mt-2">
-                      {connectedAccounts.length === 0 ? (
-                        <p className="text-gray-400 text-sm">No connected accounts. Please connect in settings.</p>
-                      ) : (
-                        connectedAccounts.map((account) => {
-                          const Logo = getPlatformLogo(account.platform);
-                          return (
-                            <div key={account._id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={account._id}
-                                checked={selectedAccounts.includes(account._id)}
-                                onCheckedChange={() => toggleAccount(account._id)}
-                              />
-                              <Label htmlFor={account._id} className="flex items-center gap-2 text-blue-300">
-                                {Logo && <Logo className="h-4 w-4 text-yellow-400" />}
-                                <span>{account.name}</span>
-                              </Label>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        resetForm();
-                      }}
-                      className="flex-1 border-blue-400 text-blue-400 hover:bg-blue-400/20"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-yellow-500 text-white hover:from-blue-600 hover:to-yellow-600"
-                    >
-                      Automate
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button
+              onClick={handleCreateClick}
+              className="
+                bg-gradient-to-r from-blue-500 to-yellow-500 text-white 
+                hover:from-blue-600 hover:to-yellow-600 
+                px-4 sm:px-5 h-10 rounded-xl
+                w-full sm:w-auto shadow-lg
+              "
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Automation
+            </Button>
           </div>
 
           {/* Automation List */}
           <div className="mt-8 grid gap-6">
             <div className="bg-[#1E1F25] border border-[#2E3038] rounded-2xl p-4 sm:p-5 shadow-lg">
-              <AutomationList automations={automations} setAutomations={setAutomations} />
+              <AutomationList automations={automations} setAutomations={setAutomations} connectedAccounts={connectedAccounts} fetchAutomations={fetchAutomations} />
             </div>
           </div>
         </motion.div>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-[#1A1B22] border border-[#2A2A35] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Create New Automation</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6 py-4">
+            <div>
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
+                placeholder="e.g., Daily AI Tips"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="topic">Topic or Niche Description *</Label>
+              <Textarea
+                id="topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="bg-[#14151B] border-[#2A2A35] text-white focus:border-yellow-400"
+                placeholder="Describe your topic or niche (e.g., AI tools for resumes, tech careers)"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="postTime">Post Time (daily at HH:mm UTC) *</Label>
+              <Input
+                id="postTime"
+                type="time"
+                value={postTime}
+                onChange={(e) => setPostTime(e.target.value)}
+                className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
+              />
+            </div>
+
+            <div>
+              <Label>Tone *</Label>
+              <Select value={tone} onValueChange={(val) => setTone(val as any)}>
+                <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-yellow-400">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="friendly">Friendly</SelectItem>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="inspirational">Inspirational</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Length *</Label>
+              <Select value={length} onValueChange={(val) => setLength(val as any)}>
+                <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
+                  <SelectItem value="short">Short</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="long">Long</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Connected Accounts *</Label>
+              <div className="space-y-2 mt-2">
+                {connectedAccounts.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No connected accounts. Please connect in settings.</p>
+                ) : (
+                  connectedAccounts.map((account) => {
+                    const Logo = getPlatformLogo(account.platform);
+                    return (
+                      <div key={account._id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={account._id}
+                          checked={selectedAccounts.includes(account._id)}
+                          onCheckedChange={() => toggleAccount(account._id)}
+                        />
+                        <Label htmlFor={account._id} className="flex items-center gap-2 text-blue-300">
+                          {Logo && <Logo className="h-4 w-4 text-yellow-400" />}
+                          <span>{account.name}</span>
+                        </Label>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}
+                className="flex-1 border-blue-400 text-blue-400 hover:bg-blue-400/20"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 bg-gradient-to-r from-blue-500 to-yellow-500 text-white hover:from-blue-600 hover:to-yellow-600"
+              >
+                Automate
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
