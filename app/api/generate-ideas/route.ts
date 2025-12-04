@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateContent } from '@/lib/gemini';
+import * as cheerio from "cheerio";
 
 export async function POST(request: Request) {
   try {
@@ -7,10 +8,39 @@ export async function POST(request: Request) {
     if (!input) {
       return NextResponse.json({ error: 'Missing required field: input' }, { status: 400 });
     }
+
+    // Fetch current trending topics for uniqueness
+    let trends = [];
+    try {
+      const trendsResponse = await fetch('https://getdaytrends.com/');
+      const trendsHtml = await trendsResponse.text();
+      const $ = cheerio.load(trendsHtml);
+      $('ol.trend-card__list li a').each((i, el) => {
+        if (i < 5) { // Top 5 trends
+          trends.push($(el).text().trim());
+        }
+      });
+    } catch (trendError) {
+      console.error("Failed to fetch trends:", trendError);
+      // Fallback: Use a default or skip
+    }
+
+    const trendsClause = trends.length > 0 
+      ? `To make these ideas unique and timely, cleverly incorporate one or more of these current trending topics where relevant: ${trends.join(', ')}. Blend them naturally into the hooks without forcing it.`
+      : '';
+
+    // Additional clause for extra uniqueness (avoids generic AI output)
+    const now = new Date();
+    const uniquenessClause = `Make each idea completely original by adding unexpected twists, personal anecdotes, or references to current events around ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Avoid common AI-generated patterns like overused phrases (e.g., 'delve into', 'unleash potential') or repetitive structures. If no trends are available, draw from random elements like a hypothetical user story or seasonal vibe to ensure diversity.`;
+
     const previousStr = previous.length > 0
       ? `Exclude these previous ideas: \n${previous.join('\n')}\n\n`
       : '';
+
     const prompt = `${previousStr}Generate 5 viral social media post ideas for the topic: "${input}". Optimize for maximum virality across platforms like LinkedIn, Twitter (X), Facebook, Instagram, and TikTok.
+
+${trendsClause}
+${uniquenessClause}
 
 Each idea should be a concise hook or title that's highly engaging and relatable, designed to go viral on every platform.
 - Incorporate psychological triggers like curiosity, urgency, FOMO, storytelling, or actionable insights.
@@ -28,6 +58,7 @@ Return a JSON array of 5 objects, each with:
 }
 
 Output only a valid JSON array, no other text.`;
+
     const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
     let cleanedContent = generatedContent
       .replace(/```json\n|\n```/g, '')

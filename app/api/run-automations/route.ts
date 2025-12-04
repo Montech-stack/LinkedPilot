@@ -6,6 +6,7 @@ import { addDays, addWeeks, addMonths } from "date-fns";
 import { generateContent } from "@/lib/gemini";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 
@@ -30,15 +31,40 @@ export async function GET(req: Request) {
     const now = new Date();
 
     // Fetch active content automations that are due
-    // If not cron, optionally filter by userId if automations are user-specific
-    // nextRun: { $lte: now } 
-    const query = isCron 
-      ? { type: "content", isActive: true}
-      : { type: "content", isActive: true,  userId }; // Assuming automations have a userId field
+    // Filter by nextRun <= now
+    const query = {
+      type: "content",
+      isActive: true,
+      nextRun: { $lte: now },
+      ...(isCron ? {} : { userId }) // Assuming automations have a userId field
+    };
 
     const dueAutomations = await Automation.find(query);
 
     for (const automation of dueAutomations) {
+      // Fetch current trending topics for uniqueness
+      let trends = [];
+      try {
+        const trendsResponse = await fetch('https://getdaytrends.com/');
+        const trendsHtml = await trendsResponse.text();
+        const $ = cheerio.load(trendsHtml);
+        $('ol.trend-card__list li a').each((i, el) => {
+          if (i < 5) { // Top 5 trends
+            trends.push($(el).text().trim());
+          }
+        });
+      } catch (trendError) {
+        console.error("Failed to fetch trends:", trendError);
+        // Fallback: Use a default or skip
+      }
+
+      const trendsClause = trends.length > 0 
+        ? `To make this post unique and timely, cleverly incorporate one or more of these current trending topics where relevant: ${trends.join(', ')}. Blend them naturally into the content without forcing it.`
+        : '';
+
+      // Additional clause for extra uniqueness (avoids generic AI output)
+      const uniquenessClause = `Make the post completely original by adding unexpected twists, personal anecdotes, or references to current events around ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Avoid common AI-generated patterns like overused phrases (e.g., 'delve into', 'unleash potential') or repetitive structures. If no trends are available, draw from random elements like a hypothetical user story or seasonal vibe to ensure diversity.`;
+
       // Generate content using your existing logic (count=1 per run)
       const { topic: idea, tone, length } = automation;
       const count = 1; // One post per scheduled run
@@ -46,6 +72,9 @@ export async function GET(req: Request) {
       const maxTokens = length === 'short' ? 200 : length === 'medium' ? 400 : 600;
 
       const prompt = `Generate ${count} highly engaging and relatable social media post(s) with a ${tone} tone based on the idea: "${idea}". Optimize for maximum virality across platforms like LinkedIn, Twitter (X), Facebook, Instagram, and TikTok, ensuring they can go viral on every platform.
+
+${trendsClause}
+${uniquenessClause}
 
 Each post should:
 - Be approximately ${wordCount} to fit platform limits (e.g., shorter for Twitter, more detailed for LinkedIn).
