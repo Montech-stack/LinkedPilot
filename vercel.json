@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/run-automations",
-      "schedule": "0 * * * *"  // Every hour
-    }
-  ]
-}
