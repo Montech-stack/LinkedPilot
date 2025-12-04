@@ -4,27 +4,39 @@ import SocialAccount from "@/models/SocialAccount";
 import { connectToDatabase } from "@/lib/mongodb";
 import { addDays, addWeeks, addMonths } from "date-fns";
 import { generateContent } from "@/lib/gemini";
-import { postToLinkedIn } from "@/lib/postToLinkedIn"; // Assuming this is exported from your posting lib
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  // Secure the endpoint (add VERCEL_CRON_SECRET to your env)
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.VERCEL_CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    // Secure the endpoint: Check for cron secret or valid session
+    const authHeader = req.headers.get("authorization");
+    const cronSecret = req.headers.get("x-cron-secret"); // Optional: if using X-Cron-Secret
+    const isCron = authHeader === `Bearer ${process.env.VERCEL_CRON_SECRET}` || cronSecret === process.env.VERCEL_CRON_SECRET;
+
+    let userId;
+    if (!isCron) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      }
+      userId = session.user.id;
+      // Optional: Add admin check if needed, e.g., if (session.user.role !== 'admin') { return unauthorized }
+    }
+
     await connectToDatabase();
     const now = new Date();
 
     // Fetch active content automations that are due
-    const dueAutomations = await Automation.find({
-      type: "content",
-      isActive: true,
-      nextRun: { $lte: now },
-    });
+    // If not cron, optionally filter by userId if automations are user-specific
+    // nextRun: { $lte: now } 
+    const query = isCron 
+      ? { type: "content", isActive: true}
+      : { type: "content", isActive: true,  userId }; // Assuming automations have a userId field
+
+    const dueAutomations = await Automation.find(query);
 
     for (const automation of dueAutomations) {
       // Generate content using your existing logic (count=1 per run)
@@ -50,8 +62,6 @@ Return a JSON array of ${count} objects, each with:
 {
   "id": string (format: "${Date.now()}-{index}/${count}", e.g., "1760048817326-0/6"),
   "content": string (the full post text, ready to share),
-  "engagement": "Very High" | "High" | "Medium" (estimated virality based on triggers and platform fit),
-  "score": number (70-95, reflecting quality, originality, and engagement potential)
 }
 
 Output only a valid JSON array—no other text. Ensure diversity and high viral potential in each post.`;
@@ -79,23 +89,41 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
         continue;
       }
 
-      // Post to each selected account
+      // Post to each selected account via /api/social/post
       let postSuccess = true;
       for (const accountId of automation.selectedAccounts) {
         const account = await SocialAccount.findById(accountId);
         if (account && account.connected) {
-          let posted;
-          if (account.platform.toLowerCase() === "linkedin") {
-            const memberId = account.linkedinId;
-            if (memberId) {
-              posted = await postToLinkedIn({ memberId, content, media: null, mediaType: null }); // Add media if needed later
-            }
+          // Conditional headers for dual auth
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+          };
+          if (isCron) {
+            headers['x-cron-secret'] = process.env.VERCEL_CRON_SECRET || ''; // Use lowercase for consistency
           } else {
-            // Add handlers for other platforms (e.g., postToX, postToFacebook) as you implement them
-            console.warn(`Platform ${account.platform} not yet supported`);
-            posted = false;
+            // Forward cookies to propagate session for non-cron calls
+            const cookie = req.headers.get('cookie');
+            if (cookie) {
+              headers['Cookie'] = cookie;
+            }
           }
-          if (!posted) postSuccess = false;
+
+          const postRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/social/post`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              platform: account.platform,
+              accountId: account._id,
+              content,
+              media: null,
+              mediaType: null
+            })
+          });
+
+          if (!postRes.ok) {
+            console.error(`Failed to post for account ${accountId}: ${postRes.statusText}`);
+            postSuccess = false;
+          }
         }
       }
 

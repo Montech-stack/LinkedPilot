@@ -12,17 +12,28 @@ export async function POST(req: Request) {
     await connectToDatabase();
     console.log("🟢 Connected to MongoDB");
 
-    const session = await getServerSession(authOptions);
-    console.log("🟡 Session userId:", session?.user?.id);
-    if (!session?.user?.id) {
-      console.log("❌ No session");
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // Check for cron secret first (bypass session if valid)
+    const cronSecret = req.headers.get("x-cron-secret"); // Case-insensitive, but match your fetch (use lowercase for consistency)
+    const isCron = cronSecret === process.env.VERCEL_CRON_SECRET;
+
+    let userId;
+    if (!isCron) {
+      // Fallback to session check for non-cron calls
+      const session = await getServerSession(authOptions);
+      console.log("🟡 Session userId:", session?.user?.id);
+      if (!session?.user?.id) {
+        console.log("❌ No session");
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      }
+      userId = session.user.id;
+    } else {
+      console.log("🟢 Cron secret validated - bypassing session check");
+      // For cron, handle as system-level (no userId required, or pass it in body if needed)
+      userId = null; // Adjust if you need to derive userId from body or elsewhere
     }
-    const userId = session.user.id;
 
     const body = await req.json();
     console.log("📥 POST body:", body);
-
     const { platform, accountId, content, media, mediaType } = body;
     console.log("🔹 Parsed:", { platform, accountId, content: content?.length || 0, hasMedia: !!media });
 
@@ -31,8 +42,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields: platform, accountId, or content" }, { status: 400 });
     }
 
-    const socialAccount = await SocialAccount.findOne({ _id: accountId, userId });
+    // Relax userId check for cron calls
+    const socialAccountQuery = userId ? { _id: accountId, userId } : { _id: accountId };
+    const socialAccount = await SocialAccount.findOne(socialAccountQuery);
     console.log("🔹 SocialAccount found:", !!socialAccount, socialAccount?.connected, socialAccount?.linkedinId, socialAccount);
+
     if (!socialAccount || !socialAccount.connected) {
       return NextResponse.json({ error: "Account not found or not connected" }, { status: 404 });
     }
@@ -51,6 +65,7 @@ export async function POST(req: Request) {
       console.log("❌ Unsupported platform:", platform);
       return NextResponse.json({ error: "Unsupported platform" }, { status: 400 });
     }
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("🔴 Error posting to social:", error);
