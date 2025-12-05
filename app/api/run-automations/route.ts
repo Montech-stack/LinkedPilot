@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     const query = {
       type: "content",
       isActive: true,
-      nextRun: { $lte: now },
+    //   nextRun: { $lte: now },
       ...(isCron ? {} : { userId }) // Assuming automations have a userId field
     };
 
