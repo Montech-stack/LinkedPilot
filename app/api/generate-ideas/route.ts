@@ -9,111 +9,153 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required field: input' }, { status: 400 });
     }
 
-    // Fetch current trending topics for uniqueness
-    let trends = [];
+    // Fetch trending topics
+    let trends: string[] = [];
     try {
       const trendsResponse = await fetch('https://getdaytrends.com/');
       const trendsHtml = await trendsResponse.text();
       const $ = cheerio.load(trendsHtml);
+
       $('ol.trend-card__list li a').each((i, el) => {
-        if (i < 5) { // Top 5 trends
-          trends.push($(el).text().trim());
-        }
+        if (i < 5) trends.push($(el).text().trim());
       });
-    } catch (trendError) {
-      console.error("Failed to fetch trends:", trendError);
-      // Fallback: Use a default or skip
+    } catch (err) {
+      console.error("Trend fetch failed:", err);
     }
 
-    const trendsClause = trends.length > 0 
-      ? `To make these ideas unique and timely, cleverly incorporate one or more of these current trending topics where relevant: ${trends.join(', ')}. Blend them naturally into the hooks without forcing it.`
-      : '';
+    const trendsClause =
+      trends.length > 0
+        ? `Blend in one or more of these trending topics ONLY if they naturally fit: ${trends.join(", ")}. Don’t force them—use them only if they elevate the hook.`
+        : "";
 
-    // Additional clause for extra uniqueness (avoids generic AI output)
-    const now = new Date();
-    const uniquenessClause = `Make each idea completely original by adding unexpected twists, personal anecdotes, or references to current events around ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Avoid common AI-generated patterns like overused phrases (e.g., 'delve into', 'unleash potential') or repetitive structures. If no trends are available, draw from random elements like a hypothetical user story or seasonal vibe to ensure diversity.`;
+    // Strong uniqueness clause — prevents generic AI content
+    const uniquenessClause = `
+Ensure the ideas are completely non-generic by:
+- Using short analogy-style references (e.g., "Like when Mr. Scofield tried X and accidentally discovered Y...").
+- Avoiding personal stories or fake claims.
+- Avoiding all corporate buzzwords like “delve”, “explore”, “unlock potential”, “navigate”, “leverage”.
+- Making each idea visually scroll-stopping, emotionally punchy, or curiosity-driven.
+- Using zero markdown formatting (no *, no **, no ###).
+- Varying pacing: some punchy, some mysterious, some contrarian, some story-style.
+    `;
 
-    const previousStr = previous.length > 0
-      ? `Exclude these previous ideas: \n${previous.join('\n')}\n\n`
-      : '';
+    const previousStr =
+      previous.length > 0
+        ? `Exclude these previous ideas entirely:\n${previous.join("\n")}\n\n`
+        : "";
 
-    const prompt = `${previousStr}Generate 5 viral social media post ideas for the topic: "${input}". Optimize for maximum virality across platforms like LinkedIn, Twitter (X), Facebook, Instagram, and TikTok.
+    const prompt = `
+${previousStr}
+Generate 5 viral social media content ideas for the topic: "${input}".
+Each idea must be platform-agnostic and optimized for virality across LinkedIn, Twitter/X, Instagram, TikTok, and Facebook.
 
 ${trendsClause}
 ${uniquenessClause}
 
-Each idea should be a concise hook or title that's highly engaging and relatable, designed to go viral on every platform.
-- Incorporate psychological triggers like curiosity, urgency, FOMO, storytelling, or actionable insights.
-- Vary structures: e.g., question-based, listicle, story, tip, or poll-style.
-- Keep ideas conversational and jargon-free. Avoid asterisks (*) or any markdown in the hooks.
-- Ensure diversity: Each idea must have a unique category from: "Controversial", "Question", "Story", "List", "Career Advice".
+CONTENT STRUCTURE FOR EACH IDEA:
+- Start with a single-sentence HOOK that is emotional, curiosity-based, or contrarian.
+- Each idea must belong to one of these categories (no repeats): Controversial, Question, Story, List, Career Advice.
+- Each hook must feel like something a top creator would actually post.
+- Hooks must feel *human*, not AI-generated.
+- No clichés, no TED-talk tone, no over-polished robotic structure.
 
-Return a JSON array of 5 objects, each with:
+STYLE REQUIREMENTS:
+- Analogy references allowed (e.g., “Think of it like a pilot trying to take off with half a runway…”).
+- Keep wording conversational and punchy.
+- No hashtags.
+- No emojis.
+- No markdown or special characters like (*) except normal punctuation.
+
+PSYCHOLOGY REQUIREMENTS:
+Integrate at least one of these into each idea:
+- Curiosity gap
+- Shock value or myth-busting
+- FOMO or urgency
+- Micro-storytelling
+- Pattern interrupt
+- Practicality or unexpected lesson
+
+RETURN FORMAT:
+Return ONLY a JSON array of 5 items. Each item must be:
+
 {
-  "category": string (one of: "Controversial", "Question", "Story", "List", "Career Advice"),
-  "hook": string (concise, viral-optimized hook/title),
-  "engagement": "Very High" | "High" | "Medium" (estimated virality),
-  "score": number (70-95, based on quality and potential),
+  "category": "Controversial" | "Question" | "Story" | "List" | "Career Advice",
+  "hook": "The viral-ready hook idea",
+  "engagement": "Very High" | "High" | "Medium",
+  "score": number between 70 and 95,
   "keywords": array of 3-5 relevant keywords
 }
 
-Output only a valid JSON array, no other text.`;
+Return ONLY the JSON array. No text outside JSON.
+`;
 
-    const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
+    const generatedContent = await generateContent(prompt, {
+      maxTokens: 3000,
+    });
+
     let cleanedContent = generatedContent
-      .replace(/```json\n|\n```/g, '')
-      .replace(/```/g, '')
+      .replace(/```json\n|\n```/g, "")
+      .replace(/```/g, "")
       .trim();
+
     let ideas;
     try {
       ideas = JSON.parse(cleanedContent);
-      if (!Array.isArray(ideas) || ideas.length === 0) {
-        throw new Error('Generated content is not a valid JSON array');
-      }
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Raw content:', cleanedContent);
-      // Attempt to fix truncated JSON
-      if (cleanedContent.endsWith('[') || cleanedContent.endsWith('{')) {
-        cleanedContent += ']}';
-      } else if (cleanedContent.includes('[') && !cleanedContent.endsWith(']')) {
-        cleanedContent = cleanedContent.replace(/,\s*$/, '') + ']';
+    } catch (err) {
+      console.error("JSON parse error:", err, "Raw:", cleanedContent);
+
+      // Attempt repair
+      if (cleanedContent.includes("[") && !cleanedContent.endsWith("]")) {
+        cleanedContent = cleanedContent.replace(/,\s*$/, "") + "]";
       }
       try {
         ideas = JSON.parse(cleanedContent);
-      } catch (secondParseError) {
-        console.error('Second parse attempt failed:', secondParseError);
-        // Fallback to manual parsing
-        ideas = cleanedContent.split('\n').filter(line => line.trim()).map((line, index) => ({
-          category: ['Controversial', 'Question', 'Story', 'List', 'Career Advice'][index % 5],
-          hook: line.includes('"hook":') ? JSON.parse(`{${line}}`).hook : `Default hook for ${input} #${index + 1}`,
-          engagement: 'Medium',
-          score: 80 + index,
-          keywords: input.split(' ').slice(0, 7),
-        }));
+      } catch {
+        // Fallback minimal ideas
+        ideas = Array(5)
+          .fill(null)
+          .map((_, i) => ({
+            category: ["Controversial", "Question", "Story", "List", "Career Advice"][i],
+            hook: `Default viral idea for ${input} #${i + 1}`,
+            engagement: "Medium",
+            score: 75 + i,
+            keywords: input.split(" ").slice(0, 5),
+          }));
       }
     }
-    // Validate and complete ideas
-    const validCategories = ['Controversial', 'Question', 'Story', 'List', 'Career Advice'];
-    const defaultKeywords = input.split(' ').slice(0, 7);
-    ideas = Array(5).fill(null).map((_, index) => {
-      const idea = ideas[index] || {};
-      return {
-        category: validCategories.includes(idea.category) ? idea.category : validCategories[index],
-        hook: idea.hook || `Default hook for ${input} #${index + 1}`,
-        engagement: ['Very High', 'High', 'Medium'].includes(idea.engagement) ? idea.engagement : 'Medium',
-        score: Math.min(95, Math.max(70, idea.score || 80 + index)),
-        keywords: Array.isArray(idea.keywords) && idea.keywords.length >= 5 ? idea.keywords.slice(0, 7) : defaultKeywords,
-      };
-    });
+
+    // Validate and normalize ideas
+    const categories = ["Controversial", "Question", "Story", "List", "Career Advice"];
+    const defaultKeywords = input.split(" ").slice(0, 5);
+
+    ideas = Array(5)
+      .fill(null)
+      .map((_, index) => {
+        const idea = ideas[index] || {};
+        return {
+          category: categories.includes(idea.category)
+            ? idea.category
+            : categories[index],
+          hook: idea.hook || `Default hook for ${input} #${index + 1}`,
+          engagement: ["Very High", "High", "Medium"].includes(idea.engagement)
+            ? idea.engagement
+            : "High",
+          score: Math.min(95, Math.max(70, idea.score || 80 + index)),
+          keywords: Array.isArray(idea.keywords) && idea.keywords.length >= 3
+            ? idea.keywords.slice(0, 5)
+            : defaultKeywords,
+        };
+      });
+
     return NextResponse.json({
       ideas,
       success: true,
     });
   } catch (error: any) {
-    console.error('Error generating ideas:', error.message, error.cause || '', 'Raw response:', error.response?.data || 'No response data');
+    console.error("Error generating ideas:", error.message, error?.response?.data || "");
     return NextResponse.json(
       { error: `Failed to generate ideas: ${error.message}` },
-      { status: error.message.includes('Rate limit') ? 429 : 500 }
+      { status: error.message.includes("Rate limit") ? 429 : 500 }
     );
   }
 }

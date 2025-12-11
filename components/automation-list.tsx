@@ -1,12 +1,10 @@
 "use client"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pause, Play, Edit, Trash } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
 import { MessageSquare, Linkedin,Twitter,Facebook, Instagram, Clock, BarChart, Share2 } from "lucide-react"
 import toast from "react-hot-toast"
 import {
@@ -28,7 +26,6 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-
 interface SocialAccount {
   _id: string;
   platform: string;
@@ -37,7 +34,6 @@ interface SocialAccount {
   connected: boolean;
   linkedinId?: string;
 }
-
 interface Automation {
   id: string
   title: string
@@ -53,8 +49,10 @@ interface Automation {
   selectedAccounts?: string[]
   nextRun?: string
   count?: number
+  automateImages?: boolean;
+  username?: string;
+  profileImageUrl?: string;
 }
-
 export function AutomationList({ automations, setAutomations, connectedAccounts, fetchAutomations }: { automations: Automation[], setAutomations: React.Dispatch<React.SetStateAction<Automation[]>>, connectedAccounts: SocialAccount[], fetchAutomations: () => void }) {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingAuto, setEditingAuto] = useState<Automation | null>(null)
@@ -64,12 +62,13 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
   const [tone, setTone] = useState<"professional" | "friendly" | "casual" | "inspirational">("professional")
   const [length, setLength] = useState<"short" | "medium" | "long">("medium")
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
-
+  const [automateImages, setAutomateImages] = useState(false);
+  const [username, setUsername] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
   const toggleAutomation = async (id: string) => {
     const auto = automations.find(a => a.id === id)
     if (!auto) return
     const newActive = !auto.isActive
-
     try {
       const response = await fetch('/api/automations', {
         method: 'PUT',
@@ -89,7 +88,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
       toast.error("Failed to update automation")
     }
   }
-
   const deleteAutomation = async (id: string) => {
     try {
       const response = await fetch('/api/automations', {
@@ -106,7 +104,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
       toast.error("Failed to delete automation")
     }
   }
-
   const openEdit = (auto: Automation) => {
     setEditingAuto(auto)
     setTitle(auto.title)
@@ -115,16 +112,27 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
     setTone(auto.tone || "professional")
     setLength(auto.length || "medium")
     setSelectedAccounts(auto.selectedAccounts || [])
+    setAutomateImages(auto.automateImages || false);
+    setUsername(auto.username || "");
+    setProfileImageUrl(auto.profileImageUrl || "");
     setEditDialogOpen(true)
   }
-
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProfileImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingAuto || !title || !topic.trim() || selectedAccounts.length === 0 || !postTime) {
       toast.error("Missing fields")
       return
     }
-
     const updates = {
       id: editingAuto.id,
       title,
@@ -133,8 +141,10 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
       tone,
       length,
       selectedAccounts,
+      automateImages,
+      username: automateImages ? username : null,
+      profileImageUrl: automateImages ? profileImageUrl : null,
     }
-
     try {
       const response = await fetch('/api/automations', {
         method: 'PUT',
@@ -156,13 +166,11 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
       toast.error("Failed to update automation")
     }
   }
-
   const toggleAccount = (id: string) => {
     setSelectedAccounts((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     )
   }
-
   const getPlatformLogo = (platform: string) => {
     switch (platform.toLowerCase()) {
       case "linkedin":
@@ -177,14 +185,13 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
         return null
     }
   }
-
   return (
     <>
     <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {automations.map((automation) => (
         <Card
           key={automation.id}
-          className="flex flex-col border border-[#2A2A35] bg-[#14151B] rounded-2xl 
+          className="flex flex-col border border-[#2A2A35] bg-[#14151B] rounded-2xl
           shadow-[0_0_15px_rgba(0,0,0,0.4)]
           hover:shadow-[0_0_25px_rgba(0,114,255,0.35),0_0_45px_rgba(255,215,0,0.25)]
           transition-all duration-300"
@@ -209,7 +216,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
                   <MoreHorizontal className="h-4 w-4 text-gray-300" />
                 </Button>
               </DropdownMenuTrigger>
-
               <DropdownMenuContent
                 align="end"
                 className="bg-[#1A1B22] border border-[#2A2A35]"
@@ -225,12 +231,10 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
                   )}
                   {automation.isActive ? "Pause" : "Resume"}
                 </DropdownMenuItem>
-
                 <DropdownMenuItem onClick={() => openEdit(automation)} className="text-white">
                   <Edit className="mr-2 h-4 w-4 text-[#0072FF]" />
                   Edit Configuration
                 </DropdownMenuItem>
-
                 <DropdownMenuItem onClick={() => deleteAutomation(automation.id)} className="text-red-400">
                   <Trash className="mr-2 h-4 w-4" />
                   Delete
@@ -238,9 +242,7 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               </DropdownMenuContent>
             </DropdownMenu>
             </div>
-
           </CardHeader>
-
           {/* CONTENT */}
           <CardContent className="flex flex-1 flex-col justify-between gap-4">
             <div>
@@ -263,10 +265,9 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
         </Card>
       ))}
     </div>
-
     {/* Edit Dialog */}
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-      <DialogContent className="sm:max-w-[600px] bg-[#1A1B22] border border-[#2A2A35] text-white">
+      <DialogContent className="sm:max-w-[600px] bg-[#1A1B22] border border-[#2A2A35] text-white overflow-y-auto max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">Edit Automation</DialogTitle>
         </DialogHeader>
@@ -281,7 +282,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               placeholder="e.g., Daily AI Tips"
             />
           </div>
-
           <div>
             <Label htmlFor="topic">Topic or Niche Description *</Label>
             <Textarea
@@ -292,7 +292,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               placeholder="Describe your topic or niche (e.g., AI tools for resumes, tech careers)"
             />
           </div>
-
           <div>
             <Label htmlFor="postTime">Post Time (daily at HH:mm UTC) *</Label>
             <Input
@@ -303,7 +302,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
             />
           </div>
-
           <div>
             <Label>Tone *</Label>
             <Select value={tone} onValueChange={(val) => setTone(val as any)}>
@@ -318,7 +316,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <Label>Length *</Label>
             <Select value={length} onValueChange={(val) => setLength(val as any)}>
@@ -332,7 +329,6 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <Label>Connected Accounts *</Label>
             <div className="space-y-2 mt-2">
@@ -358,7 +354,49 @@ export function AutomationList({ automations, setAutomations, connectedAccounts,
               )}
             </div>
           </div>
-
+          <div>
+            <Label>Automate Images</Label>
+            <Select value={automateImages ? 'yes' : 'no'} onValueChange={(val) => setAutomateImages(val === 'yes')}>
+              <SelectTrigger className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400 rounded-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1A1B22] border-[#2A2A35] text-white">
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {automateImages && (
+            <>
+              <div>
+                <Label htmlFor="username">Username *</Label>
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
+                  placeholder="e.g., Michael James"
+                />
+              </div>
+              <div>
+                <Label htmlFor="profileImage">Profile Image *</Label>
+                {profileImageUrl && (
+                  <img
+                    src={profileImageUrl}
+                    alt="Profile Preview"
+                    className="w-20 h-20 rounded-full mb-2"
+                  />
+                )}
+                <Input
+                  id="profileImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="bg-[#14151B] border-[#2A2A35] text-white focus:border-blue-400"
+                />
+              </div>
+            </>
+          )}
           <div className="flex gap-2">
             <DialogClose asChild>
               <Button type="button" variant="outline" className="flex-1 border-blue-400 text-blue-400 hover:bg-blue-400/20">

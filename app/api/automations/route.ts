@@ -32,12 +32,15 @@ export async function POST(req: Request) {
     }
     const userId = session.user.id;
     const body = await req.json();
-    const { title, type, isActive, lastRun, topic, postTime, tone, length, selectedAccounts, nextRun, count } = body;
+    const { title, type, isActive, lastRun, topic, postTime, tone, length, selectedAccounts, nextRun, count, automateImages, username, profileImageUrl } = body;
     if (!title || !type) {
       return NextResponse.json({ error: "Title and type are required." }, { status: 400 });
     }
     if (type === 'content' && (!postTime || !/^\d{2}:\d{2}$/.test(postTime))) {
       return NextResponse.json({ error: "Post time is required in HH:mm format." }, { status: 400 });
+    }
+    if (automateImages && (!username || !profileImageUrl)) {
+      return NextResponse.json({ error: "Username and profile image URL are required when automating images." }, { status: 400 });
     }
     const record = await Automation.create({
       userId,
@@ -52,6 +55,9 @@ export async function POST(req: Request) {
       selectedAccounts: selectedAccounts ? selectedAccounts.map((id: string) => new mongoose.Types.ObjectId(id)) : [],
       nextRun: nextRun ? new Date(nextRun) : calculateNextRun(postTime),
       count: count ?? 0,
+      automateImages: automateImages ?? false,
+      username,
+      profileImageUrl,
     });
     return NextResponse.json(record);
   } catch (error: any) {
@@ -82,6 +88,9 @@ export async function PUT(req: Request) {
     }
     if (updates.postTime) {
       updates.nextRun = calculateNextRun(updates.postTime)
+    }
+    if (updates.automateImages && (!updates.username || !updates.profileImageUrl)) {
+      return NextResponse.json({ error: "Username and profile image URL are required when automating images." }, { status: 400 });
     }
     Object.assign(automation, updates);
     await automation.save();

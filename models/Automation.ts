@@ -13,6 +13,9 @@ const automationSchema = new mongoose.Schema({
   selectedAccounts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SocialAccount' }],
   nextRun: { type: Date, default: null },
   count: { type: Number, default: 0 },
+  automateImages: { type: Boolean, default: false },
+  username: { type: String },
+  profileImageUrl: { type: String },
 }, { timestamps: true });
 
 export default mongoose.models.Automation || mongoose.model('Automation', automationSchema);

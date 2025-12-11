@@ -31,78 +31,116 @@ export async function postToLinkedIn({
   if (!media) {
     const postBody = {
       author: `urn:li:person:${memberId}`,
-      lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: { text: content },
-          shareMediaCategory: "NONE",
-        },
+      commentary: content,
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: []
       },
-      visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+      lifecycleState: "PUBLISHED",
+      isReshareDisabledByAuthor: false
     };
-    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+    const response = await fetch("https://api.linkedin.com/rest/posts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0",
+        "LinkedIn-Version": "202511" // Updated to latest active version
       },
       body: JSON.stringify(postBody),
     });
-    if (!response.ok) throw new Error("Failed to post text");
-    return { success: true, result: await response.json() };
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to post text: ${errorText}`);
+    }
+    const postId = response.headers.get("x-restli-id");
+    return { success: true, postId };
   }
-  // Media handling (image/video) - adapted from your code
-  const base64 = media.split(",")[1];
+  // Media handling (image/video)
+  let base64;
+  if (media.startsWith("data:")) {
+    base64 = media.split(",")[1];
+  } else {
+    base64 = media; // Assume pure base64 if no prefix
+  }
+  if (!base64) {
+    throw new Error("Invalid media format");
+  }
   const buffer = Buffer.from(base64, "base64");
-  const recipes = mediaType === "image" ? ["urn:li:digitalmediaRecipe:feedshare-image"] : ["urn:li:digitalmediaRecipe:feedshare-video"];
-  const registerRes = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      registerUploadRequest: {
-        recipes,
-        owner: `urn:li:person:${memberId}`,
-        serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
-      },
-    }),
-  });
-  if (!registerRes.ok) throw new Error("Failed to register upload");
-  const uploadInfo = await registerRes.json();
-  const uploadUrl = uploadInfo.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"].uploadUrl;
-  const asset = uploadInfo.value.asset;
-  const contentType = mediaType === "image" ? "image/jpeg" : "video/mp4";
-  const uploadResponse = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: buffer,
-  });
-  if (!uploadResponse.ok) throw new Error(`Failed to upload ${mediaType}`);
-  const postBody = {
-    author: `urn:li:person:${memberId}`,
-    lifecycleState: "PUBLISHED",
-    specificContent: {
-      "com.linkedin.ugc.ShareContent": {
-        shareCommentary: { text: content },
-        shareMediaCategory: mediaType.toUpperCase(),
-        media: [{ status: "READY", media: asset }],
-      },
-    },
-    visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
-  };
-  const linkedInResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+  const contentType = mediaType?.includes("image") ? "image/png" : "video/mp4"; // Adjust for video if needed
+
+  // Step 1: Initialize upload (v3 Images API)
+  const initializeRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
       "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": "202511" // Updated to latest active version
+    },
+    body: JSON.stringify({
+      initializeUploadRequest: {
+        owner: `urn:li:person:${memberId}`
+      }
+    }),
+  });
+  if (!initializeRes.ok) {
+    const errorText = await initializeRes.text();
+    throw new Error(`Failed to initialize upload: ${errorText}`);
+  }
+  const uploadInfo = await initializeRes.json();
+  const uploadUrl = uploadInfo.value.uploadUrl;
+  const assetUrn = uploadInfo.value.image; // urn:li:image:...
+
+  // Step 2: Upload media binary
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType
+    },
+    body: buffer,
+  });
+  if (!uploadResponse.ok) {
+    const errorText = await uploadResponse.text();
+    throw new Error(`Failed to upload ${mediaType}: ${errorText}`);
+  }
+
+  // Step 3: Create post with media (v3 Posts API)
+  const postBody = {
+    author: `urn:li:person:${memberId}`,
+    commentary: content,
+    visibility: "PUBLIC",
+    distribution: {
+      feedDistribution: "MAIN_FEED",
+      targetEntities: [],
+      thirdPartyDistributionChannels: []
+    },
+    content: {
+      media: {
+        id: assetUrn,
+        title: "Post Image",
+        altText: "Generated post image"
+      }
+    },
+    lifecycleState: "PUBLISHED",
+    isReshareDisabledByAuthor: false
+  };
+  const linkedInResponse = await fetch("https://api.linkedin.com/rest/posts", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": "202511" // Updated to latest active version
     },
     body: JSON.stringify(postBody),
   });
-  if (!linkedInResponse.ok) throw new Error("Failed to create post");
-  const result = await linkedInResponse.json();
-  return { success: true, postId: result.id, message: `Successfully posted ${mediaType} to LinkedIn!` };
+  if (!linkedInResponse.ok) {
+    const errorText = await linkedInResponse.text();
+    throw new Error(`Failed to create post: ${errorText}`);
+  }
+  const postId = linkedInResponse.headers.get("x-restli-id");
+  return { success: true, postId, message: `Successfully posted ${mediaType} to LinkedIn!` };
 }
