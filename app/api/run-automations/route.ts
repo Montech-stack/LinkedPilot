@@ -9,10 +9,19 @@ import { generateContent } from "@/lib/gemini";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import * as cheerio from "cheerio";
-import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
 import path from "path";
 
+// Dynamic import for canvas to avoid build-time issues
+let createCanvas: any, loadImage: any, registerFont: any;
+try {
+  const canvasModule = await import("canvas");
+  createCanvas = canvasModule.createCanvas;
+  loadImage = canvasModule.loadImage;
+  registerFont = canvasModule.registerFont;
+} catch (err) {
+  console.warn("Canvas module not available:", err);
+}
 
 export async function GET(req: Request) {
   try {
@@ -142,7 +151,7 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
         if (account && account.connected) {
           console.log(`Posting to account ${accountId}, platform: ${account.platform}`);
           let base64Image: string | null = null;
-          if (automation.automateImages) {
+          if (automation.automateImages && createCanvas) {
             console.log('Starting image generation');
             // Ensure /tmp directory exists
             fs.mkdirSync('/tmp', { recursive: true });
@@ -264,7 +273,7 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
             // Draw timestamp next to handle, aligned
             ctx.fillStyle = '#8b98a5';
             ctx.font = '14px Chirp';
-            const timestamp = '· ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }) + ' · Dec 9, 2025';
+            const timestamp = '· ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }) + ' · ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const handleWidth = ctx.measureText(`@${automation.username?.toLowerCase().replace(/\s/g, '') || 'user'}`).width;
             ctx.fillText(timestamp, usernameX + handleWidth + 10, profileY + 40);
             console.log('Drew timestamp');
