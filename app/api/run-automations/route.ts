@@ -10,7 +10,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import * as cheerio from "cheerio";
 import fs from "fs";
-import path from "path";
 
 // Dynamic import for canvas to avoid build-time issues
 let createCanvas: any, loadImage: any, registerFont: any;
@@ -118,10 +117,10 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
       const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
       console.log('Generated content:', generatedContent.substring(0, 200) + '...');
 
-      // Clean and parse (adapted from your generate route)
+      // Improved cleaning: Remove markdown wrappers, trim, and use regex to extract JSON if needed
       let cleanedContent = generatedContent
-        .replace(/```json\n|\n```/g, '')
-        .replace(/```/g, '')
+        .replace(/```json|```/g, '') // Remove ```json and ```
+        .replace(/^\s*[\r\n]/gm, '') // Remove empty lines
         .trim();
 
       let posts;
@@ -130,8 +129,21 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
         console.log('Parsed posts:', posts);
       } catch (error) {
         console.error('Failed to parse generated content:', error);
-        // Fallback handling (simplified)
-        posts = [{ content: `Generated post for "${idea}" in ${tone} tone (${wordCount}).`, hook: `Generated hook for "${idea}".` }];
+        // Regex fallback to extract JSON array from string
+        const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          try {
+            cleanedContent = jsonMatch[0];
+            posts = JSON.parse(cleanedContent);
+            console.log('Parsed with regex fallback:', posts);
+          } catch (regexError) {
+            console.error('Regex fallback failed:', regexError);
+          }
+        }
+        if (!posts) {
+          console.error('Raw generated content:', generatedContent);
+          posts = [{ content: `Generated post for "${idea}" in ${tone} tone (${wordCount}).`, hook: `Generated hook for "${idea}".` }];
+        }
       }
 
       const content = posts[0]?.content?.replace(/\*/g, '') || ''; // Get first (only) post content, remove asterisks
@@ -139,8 +151,8 @@ Output only a valid JSON array—no other text. Ensure diversity and high viral 
       console.log('Final content:', content.substring(0, 200) + '...');
       console.log('Hook for image:', hook);
 
-      if (!content) {
-        console.error(`Failed to generate content for automation ${automation._id}`);
+      if (!content || content.includes('Generated post for')) { // Check if fallback was used
+        console.error(`Failed to generate valid content for automation ${automation._id}`);
         continue;
       }
 
