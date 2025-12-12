@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import Automation from "@/models/Automation";
 import SocialAccount from "@/models/SocialAccount";
