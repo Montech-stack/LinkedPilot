@@ -13,7 +13,6 @@ import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
 import path from "path";
 
-export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
