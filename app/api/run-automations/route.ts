@@ -74,85 +74,206 @@ export async function GET(req: Request) {
         // Fallback: Use a default or skip
       }
 
-      const trendsClause = trends.length > 0 
-        ? `To make this post unique and timely, cleverly incorporate one or more of these current trending topics where relevant: ${trends.join(', ')}. Blend them naturally into the content without forcing it.`
+      const trendsClause = trends.length > 0
+        ? `When relevant, subtly blend one or more trending topics to increase freshness: ${trends.join(', ')}.`
         : '';
 
-      // Additional clause for extra uniqueness (avoids generic AI output)
-      const uniquenessClause = `Make the post completely original by adding unexpected twists, personal anecdotes, or references to current events around ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Avoid common AI-generated patterns like overused phrases (e.g., 'delve into', 'unleash potential') or repetitive structures. If no trends are available, draw from random elements like a hypothetical user story or seasonal vibe to ensure diversity.`;
+      const uniquenessClause = `
+Avoid ALL personal stories or personal experiences.
+Instead, rely ONLY on fictional analogy characters such as:
+
+- “Take Mr. Scofield…”
+- “Imagine Sarah, a designer drowning in tasks…”
+- “Think of Daniel, the guy who…”
+- “Picture Amara, who keeps restarting her goals…”
+- “Meet Tunde, who discovered a strange rule…”
+
+Use them to illustrate principles — NOT as real or personal events.
+Each story must feel like a simple fictional analogy, NOT a fake human experience or lie.
+
+Avoid clichés, avoid robotic phrasing, and avoid repetitive patterns.
+Include small twists, curiosity, and tension to keep the user reading.
+
+Date reference for freshness: ${now.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })}.
+`;
 
       // Generate content using your existing logic (count=1 per run)
       const { topic: idea, tone, length } = automation;
       const count = 1; // One post per scheduled run
       const wordCount = length === 'short' ? '50-100 words' : length === 'medium' ? '100-200 words' : '200-300 words';
-      const maxTokens = length === 'short' ? 200 : length === 'medium' ? 400 : 600;
 
-      const prompt = `Generate ${count} highly engaging and relatable social media post(s) with a ${tone} tone based on the idea: "${idea}". Optimize for maximum virality on LinkedIn according to 2024-2025 algorithm insights: Prioritize early engagement in the first 60 minutes with curiosity/contrarian hooks, dwell time through personal stories/proof, and comments via strong CTAs. Favor poll-style, carousel-idea, or text+image suggestions. Avoid promotional tone, external links in body, and generic/AI patterns. Use multiple short paragraphs for scannability, incorporate 3-8 relevant emojis strategically to enhance visual appeal and emotional connection without overkill.
+      // =====================================================
+      // 🔥 UPGRADED PROMPT — ANALOGIES + FICTIONAL CHARACTERS ONLY
+      // =====================================================
+      const prompt = `
+Generate ${count} fresh, original, deeply engaging LinkedIn post(s) using a ${tone} tone based on the idea: "${idea}".
 
+Your mission: **maximize LinkedIn virality in 2024–2025** using:
+- Analogy-driven storytelling (fictional characters only)
+- Curiosity hooks
+- Pattern interrupts
+- Emotional tension + payoff
+- Saveable insights
+- Comment-provoking CTAs
+- List styles, frameworks, and mini fictional scenarios
+
+STRICT RULES:
+
+1. **Hook Format**  
+   Start with a sharp, emotional, bold, contrarian, or curiosity hook.
+
+2. **Fictional Analogy Storytelling ONLY**  
+   No personal stories.  
+   No “I did this”.  
+   No “a friend of mine”.  
+   No fake “real human” examples.  
+   ONLY fictional analogy characters like:
+   - Mr. Scofield
+   - Sarah the overwhelmed designer
+   - Daniel the confused marketer
+   - Amara the persistent achiever
+   - Tunde the strategist  
+   These characters illustrate the idea — not real events.
+
+   Format:  
+   Character → struggle → insight → shift → actionable lesson.
+
+3. **Transformation**  
+   Show a clear mindset shift or discovery.
+
+4. **Create simple frameworks**  
+   Example:
+   - “The Scofield Method”
+   - “The Focus Ladder”
+   - “The 2-Minute Reset Rule”
+
+5. **Short Paragraphs**  
+   Maximize readability + dwell time.
+
+6. Actionable Value
+   Include 2–4 simple, practical action points that clearly stand out.
+   Use hyphens like this:
+   - Do this first…
+   - Then apply this…
+   - Finally adjust this…
+
+   Do NOT use numbered lists or asterisks.
+   ONLY use hyphens for bullet points.
+
+
+7. **Emotional Resonance**  
+   Use phrases like:
+   - “That’s when it hit him…”
+   - “She didn’t expect what happened next…”
+   - “That moment changed everything…”
+
+8. **Use 3–8 emojis naturally**  
+   Not spammy, not forced.
+
+9. **Strong CTA**  
+   Ask a comment-style question:
+   - “Which character are you today?”
+   - “What shift are you making next?”
+
+10. **Hashtags**  
+   Add 3–5 relevant hashtags at the bottom.
+
+STRUCTURE VARIATION ACROSS POSTS:
+- Analogy story posts
+- Listicle posts
+- Framework-based posts
+- Truth-bomb/contrarian posts
+- Question-first posts
+- Fictional micro-case-study posts
+- Poll-style concept posts (text only)
+
+LENGTH:  
+Each post must be ${wordCount}.  
+No markdown.  
+No asterisks.  
+No repetitive AI patterns.
+
+TRENDS:  
 ${trendsClause}
+
+UNIQUENESS:  
 ${uniquenessClause}
 
-Each post should:
-- Be approximately ${wordCount} (900-2100 chars for LinkedIn).
-- Start with a curiosity/contrarian/number-based hook (e.g., "You're doing X wrong—here's why" or "I analyzed 100 posts—top insight") to stop scrolls in the golden hour.
-- Build with a personal story/anecdote for relatability (1-2 paras, add proof like data/screenshots).
-- Provide 2-4 actionable insights/tips in bullets/lists for dwell time.
-- Use 3-8 relevant emojis for visual pop without overkill.
-- End with a strong CTA/question to spark comments (e.g., "What's your take? Comment below!" or "Comment 'GUIDE' for free template").
-- Include 3-5 targeted hashtags at end.
-- Vary structures for uniqueness: e.g., question-based, listicle, story, tip, quote, or poll-style.
-- Keep language conversational, relatable, and jargon-free unless topic-specific. Do not use asterisks (*) for emphasis or any purpose in the content—use emojis or rephrase instead.
-- Ensure professional yet engaging tone for LinkedIn.
-
-Return a JSON array of ${count} objects, each with:
-{
-  "id": string (format: "${Date.now()}-{index}/${count}", e.g., "1760048817326-0/6"),
-  "content": string (the full post text, ready to share),
-  "hook": string (the powerful opening hook, which is the first sentence or phrase),
-}
-
-Output only a valid JSON array—no other text. Ensure diversity and high viral potential in each post.`;
+OUTPUT FORMAT:  
+Return ONLY valid JSON array with ${count} objects:
+[
+  {
+    "id": "timestamp-index/${count}",
+    "content": "full post text"
+  }
+]
+    `;
 
       console.log('Generating content with prompt length:', prompt.length);
       const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
       console.log('Generated content:', generatedContent.substring(0, 200) + '...');
 
-      // Improved cleaning: Remove markdown wrappers, trim, and use regex to extract JSON if needed
+      // Remove code fences
       let cleanedContent = generatedContent
-        .replace(/```json|```/g, '') // Remove ```json and ```
-        .replace(/^\s*[\r\n]/gm, '') // Remove empty lines
+        .replace(/```json\n|\n```/g, '')
+        .replace(/```/g, '')
         .trim();
 
       let posts;
+
       try {
         posts = JSON.parse(cleanedContent);
-        console.log('Parsed posts:', posts);
-      } catch (error) {
-        console.error('Failed to parse generated content:', error);
-        // Regex fallback to extract JSON array from string
-        const jsonMatch = cleanedContent.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          try {
-            cleanedContent = jsonMatch[0];
-            posts = JSON.parse(cleanedContent);
-            console.log('Parsed with regex fallback:', posts);
-          } catch (regexError) {
-            console.error('Regex fallback failed:', regexError);
-          }
+
+        if (!Array.isArray(posts) || !posts.every(p => p.id && p.content)) {
+          throw new Error('Invalid post format');
         }
-        if (!posts) {
-          console.error('Raw generated content:', generatedContent);
-          posts = [{ content: `Generated post for "${idea}" in ${tone} tone (${wordCount}).`, hook: `Generated hook for "${idea}".` }];
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Raw:', cleanedContent);
+
+        // Soft repair attempt
+        if (cleanedContent.endsWith('[') || cleanedContent.endsWith('{')) {
+          cleanedContent += ']}';
+        } else if (cleanedContent.includes('[') && !cleanedContent.endsWith(']')) {
+          cleanedContent = cleanedContent.replace(/,\s*$/, '') + ']';
+        }
+
+        try {
+          posts = JSON.parse(cleanedContent);
+        } catch (secondError) {
+          console.error('Second parse fail:', secondError);
+
+          // Fallback posts
+          posts = Array.from({ length: count }, (_, index) => ({
+            id: `${Date.now()}-${index}/${count}`,
+            content: `Default generated post for: ${idea}.`
+          }));
         }
       }
 
-      const content = posts[0]?.content?.replace(/\*/g, '') || ''; // Get first (only) post content, remove asterisks
-      const hook = posts[0]?.hook || content.split('.')[0].trim() + '.'; // Use hook if available, fallback to first sentence
+      const timestamp = Date.now();
+
+      // Cleanup
+      posts = Array.from({ length: count }, (_, index) => {
+        const post = posts[index] || {};
+        let content = post.content || `Default content for: ${idea}.`;
+        content = content.replace(/\*/g, '');
+        return {
+          id: post.id || `${timestamp}-${index}/${count}`,
+          content
+        };
+      });
+
+      const content = posts[0]?.content || ''; // Get first (only) post content
+      const hook = content.split('.')[0].trim() + '.'; // Fallback to first sentence since hook is not in output
       console.log('Final content:', content.substring(0, 200) + '...');
       console.log('Hook for image:', hook);
 
-      if (!content || content.includes('Generated post for')) { // Check if fallback was used
-        console.error(`Failed to generate valid content for automation ${automation._id}`);
+      if (!content) {
+        console.error(`Failed to generate content for automation ${automation._id}`);
         continue;
       }
 

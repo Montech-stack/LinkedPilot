@@ -10,27 +10,21 @@ import {
   ArrowRight,
   Zap,
   Edit3,
-  Facebook, 
+  Facebook,
   Instagram,
-  Youtube,
   Share2,
   Users,
   Globe,
   Mic,
-  Lightbulb,
   Settings,
   ChevronDown,
   Github,
   Twitter,
   Linkedin,
   Check,
-  Sparkles,
   Star,
-  Camera,
   Calendar,
-  Clock,
   BarChart2,
-  LogIn,
   Layout,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -46,18 +40,27 @@ export default function LandingPage() {
   const { data: session } = useSession()
   const router = useRouter()
 
-  // Brand colors
-  const electricBlue = "#00A8FF"
-  const orangeGold = "#FFB347"
+  // Softer brand colors
+  const softBlue = "#4DA3FF"
+  const warmGold = "#F5B96A"
 
-  const fadeIn = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6 } }
+  const fadeIn = {
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6 },
+  }
 
   const pricing = [
     {
       name: "Starter",
       price: "$0",
       period: "/month",
-      bullets: ["1 connected account", "20 scheduled posts / month", "AI post ideas", "Email support"],
+      bullets: [
+        "1 platform connection",
+        "AI content ideas",
+        "Basic automation",
+        "Community support",
+      ],
       cta: "Get Started",
       popular: false,
     },
@@ -65,7 +68,12 @@ export default function LandingPage() {
       name: "Pro",
       price: "$29",
       period: "/month",
-      bullets: ["5 connected accounts", "Unlimited scheduling", "Viral post generator", "Analytics & drafts"],
+      bullets: [
+        "Multi-platform posting",
+        "Advanced AI writing",
+        "Automation workflows",
+        "Analytics & drafts",
+      ],
       cta: "Start Free Trial",
       popular: true,
     },
@@ -73,170 +81,160 @@ export default function LandingPage() {
       name: "Agency",
       price: "$99",
       period: "/month",
-      bullets: ["Team seats & permissions", "Brand voice training", "Priority support", "Custom integrations"],
+      bullets: [
+        "Team collaboration",
+        "Brand voice training",
+        "Client workspaces",
+        "Priority support",
+      ],
       cta: "Contact Sales",
       popular: false,
     },
   ]
 
   const handlePrimaryAction = () => {
-    if (session) {
-      router.push("/dashboard")
-    } else {
+    if (session) router.push("/dashboard")
+    else {
       setAuthMode("signup")
       setAuthOpen(true)
     }
   }
 
-  const handleSecondaryAction = () => {
-    if (session) {
-      router.push("/links")
-    } else {
-      setAuthMode("login")
-      setAuthOpen(true)
-    }
-  }
-
   return (
-    <div className="bg-gradient-to-br from-[#0f0f10] via-[#0b1220] to-[#0a1a2a] text-white min-h-screen">
+    <div className="bg-gradient-to-br from-[#0e0e11] via-[#0b0f16] to-[#0a1220] text-white min-h-screen">
       <Navbar />
 
-      {/* Hero - CENTER ALIGNED */}
-      <header className="relative overflow-hidden pt-20 pb-12 px-6 sm:px-8 lg:px-16">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#041022] via-transparent to-[#001428] opacity-60"></div>
-          <div className="absolute -left-36 -top-40 w-96 h-96 rounded-full" style={{ background: `radial-gradient(circle at 30% 30%, ${electricBlue}22, transparent 25%)` }} />
-          <div className="absolute -right-36 -bottom-40 w-96 h-96 rounded-full" style={{ background: `radial-gradient(circle at 70% 70%, ${orangeGold}22, transparent 25%)` }} />
-        </div>
-
+      {/* HERO */}
+      <header className="pt-20 pb-12 px-6 lg:px-16">
         <div className="max-w-5xl mx-auto text-center">
-          <motion.div className="relative z-10" {...fadeIn}>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Link. Create. Schedule.{" "}
-              <span className="block mt-2" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, WebkitBackgroundClip: 'text', color: 'transparent' }}>
-                Go Viral Everywhere
+          <motion.div {...fadeIn}>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              Create in seconds.
+              <span
+                className="block mt-2"
+                style={{
+                  background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
+                  WebkitBackgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                Automate & Scale.
               </span>
             </h1>
-
-            <p className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg lg:text-xl">
-              Linked is an AI-powered social media manager that writes platform-optimized posts, schedules them across all your networks, and automatically tunes for virality — so you stay consistent and grow your audience.
+            <p className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg">
+              CONAI is an AI-powered content creation and automation platform.
+              Generate ideas, write high-performing content, and automate
+              publishing across platforms — without burnout.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                onClick={handlePrimaryAction} 
-                className="px-8 py-4 rounded-full text-base font-semibold shadow-2xl transform hover:scale-[1.03] transition-all" 
-                style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={handlePrimaryAction}
+                className="px-8 py-4 rounded-full font-semibold"
+                style={{
+                  background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
+                  color: "#0b0f16",
+                }}
               >
-                {session ? (
-                  <>
-                    <Layout className="mr-2 w-5 h-5" />
-                    Go to Dashboard
-                  </>
-                ) : (
-                  <>
-                    Try Linked — Free Trial
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </>
-                )}
+                {session ? "Go to Dashboard" : "Start Free"}
+                <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
-              {!session ? (
-                <Link href="#how-it-works">
-                  <Button variant="ghost" className="px-6 py-4 rounded-full border border-white/10 text-white/90 hover:bg-white/5">
-                    Learn how it works
-                  </Button>
-                </Link>
-              ) : (
-                <Button 
-                  onClick={handleSecondaryAction}
-                  variant="ghost" 
-                  className="px-6 py-4 rounded-full border border-white/10 text-white/90 hover:bg-white/5"
+              <Link href="#how-it-works">
+                <Button
+                  variant="ghost"
+                  className="px-6 py-4 rounded-full border border-white/10"
                 >
-                  <Share2 className="mr-2 w-4 h-4" />
-                  Manage Accounts
+                  See how it works
                 </Button>
-              )}
+              </Link>
             </div>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-gray-400">
+            <div className="mt-8 flex justify-center gap-6 text-sm text-gray-400">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                <span>Trusted by 2,500+ creators</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <Linkedin className="w-5 h-5 text-white/60 hover:text-white transition-colors cursor-pointer" />
-                <Twitter className="w-5 h-5 text-white/60 hover:text-white transition-colors cursor-pointer" />
-                <Globe className="w-5 h-5 text-white/60 hover:text-white transition-colors cursor-pointer" />
-                <Facebook className="w-5 h-5 text-white/60 hover:text-white transition-colors cursor-pointer" />
-                <Instagram className="w-5 h-5 text-white/60 hover:text-white transition-colors cursor-pointer" />
+                Trusted by modern creators & teams
               </div>
             </div>
           </motion.div>
         </div>
       </header>
 
-      {/* How it works */}
-      <section id="how-it-works" className="px-6 sm:px-8 lg:px-16 py-12">
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
-          <div className="inline-block px-3 py-1 rounded-full text-sm font-medium" style={{ background: `linear-gradient(90deg, ${electricBlue}22, ${orangeGold}22)` , color: electricBlue}}>
-            How it works
-          </div>
-          <h2 className="text-3xl font-bold mt-4 mb-3">From idea to multi-platform post in 3 effortless steps</h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">Connect any social account, generate platform-optimized variations, and schedule to post automatically at the best times for virality.</p>
+          <h2 className="text-3xl font-bold mb-3">
+            From idea to published — automatically
+          </h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            CONAI removes friction from content creation and distribution.
+          </p>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div className="p-6 rounded-2xl bg-[#071526] border border-[#11202a] text-center" whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
-            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` }}>
-              <Share2 className="w-6 h-6 text-[#071127]" />
-            </div>
-            <h3 className="font-semibold mb-2 text-lg">Connect Platforms</h3>
-            <p className="text-gray-400">Link accounts across LinkedIn, X, Instagram, TikTok, Facebook and more — manage everything from one dashboard.</p>
-          </motion.div>
-
-          <motion.div className="p-6 rounded-2xl bg-[#071526] border border-[#11202a] text-center" whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
-            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` }}>
-              <Zap className="w-6 h-6 text-[#071127]" />
-            </div>
-            <h3 className="font-semibold mb-2 text-lg">Create Viral Posts</h3>
-            <p className="text-gray-400">AI crafts engaging hooks, platform-tailored captions, and image suggestions proven to drive shares and comments.</p>
-          </motion.div>
-
-          <motion.div className="p-6 rounded-2xl bg-[#071526] border border-[#11202a] text-center" whileHover={{ y: -8 }} transition={{ duration: 0.3 }}>
-            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` }}>
-              <Calendar className="w-6 h-6 text-[#071127]" />
-            </div>
-            <h3 className="font-semibold mb-2 text-lg">Automate Scheduling</h3>
-            <p className="text-gray-400">Pick the best windows or let Linked auto-schedule for optimal reach, repeatedly posting across platforms with one click.</p>
-          </motion.div>
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {[
+            {
+              icon: Share2,
+              title: "Connect platforms",
+              desc: "Link LinkedIn, X, Instagram and more in one dashboard.",
+            },
+            {
+              icon: Zap,
+              title: "Create with AI",
+              desc: "Generate hooks, posts, and variations aligned to each platform.",
+            },
+            {
+              icon: Calendar,
+              title: "Automate publishing",
+              desc: "Schedule or auto-run workflows that post consistently.",
+            },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ y: -6 }}
+              className="p-6 rounded-2xl bg-[#0f1626] border border-white/5 text-center"
+            >
+              <div
+                className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
+                }}
+              >
+                <item.icon className="w-6 h-6 text-[#0b0f16]" />
+              </div>
+              <h3 className="font-semibold mb-2">{item.title}</h3>
+              <p className="text-gray-400 text-sm">{item.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="px-6 sm:px-8 lg:px-16 py-12">
+      {/* FEATURES */}
+      <section className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
-          <h2 className="text-3xl font-bold mb-3">All the tools you need to win attention</h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">Viral post generation • Multi-account scheduling • Brand voice learning • Analytics that tell a story</p>
+          <h2 className="text-3xl font-bold mb-3">
+            Built for serious content operators
+          </h2>
+          <p className="text-gray-400">
+            Creation, automation, and insight — in one system.
+          </p>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[{ icon: Zap, title: "Viral Post Generator", desc: "Smart hooks, captions, and variants tailored per platform." },
-            { icon: BarChart2, title: "Smart Analytics", desc: "Engagement predictions, best time suggestions, and growth KPIs." },
-            { icon: Users, title: "Multi-Account Sync", desc: "Manage teams, permissions and multiple brand accounts." },
-            { icon: Mic, title: "Brand Voice Training", desc: "Upload sample posts and the AI will learn your tone and cadence." },
-            { icon: Edit3, title: "One-click Variants", desc: "Generate caption/image variations that match each platform's style." },
-            { icon: Settings, title: "Integrations & API", desc: "Connect analytics, CRMs and custom workflows with our API." }
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {[
+            { icon: Edit3, title: "AI Writing Engine", desc: "Hooks, threads, carousels, and captions." },
+            { icon: BarChart2, title: "Performance Insights", desc: "Understand what content actually works." },
+            { icon: Users, title: "Team Workflows", desc: "Collaborate, approve, and ship faster." },
+            { icon: Mic, title: "Brand Voice Memory", desc: "Train AI on your tone and style." },
+            { icon: Settings, title: "Automation Rules", desc: "Trigger posts based on time or logic." },
+            { icon: Globe, title: "Multi-Platform Native", desc: "One idea, adapted everywhere." },
           ].map((f, i) => (
-            <motion.div 
-              key={i} 
-              className="p-6 rounded-2xl bg-[#071526] border border-[#11202a] shadow-lg hover:border-[#00A8FF]/30 transition-colors" 
-              whileHover={{ y: -6 }} 
-              transition={{ duration: 0.3 }}
+            <motion.div
+              key={i}
+              whileHover={{ y: -6 }}
+              className="p-6 rounded-2xl bg-[#0f1626] border border-white/5"
             >
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-3" style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` }}>
-                <f.icon className="w-5 h-5 text-[#071127]" />
-              </div>
+              <f.icon className="w-6 h-6 mb-3 text-[var(--accent)]" />
               <h3 className="font-semibold mb-2">{f.title}</h3>
               <p className="text-gray-400 text-sm">{f.desc}</p>
             </motion.div>
@@ -244,172 +242,85 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="px-6 sm:px-8 lg:px-16 py-12">
+      {/* PRICING */}
+      <section id="pricing" className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
-          <h2 className="text-3xl font-bold mb-2">Pricing built for creators & teams</h2>
-          <p className="text-gray-300">Start free — scale when you grow. Annual discounts and agency plans available.</p>
+          <h2 className="text-3xl font-bold mb-2">Simple pricing</h2>
+          <p className="text-gray-400">Scale when it makes sense.</p>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {pricing.map((p, i) => (
-            <motion.div 
-              key={i} 
-              className={`p-6 rounded-2xl border ${p.popular ? "ring-2 ring-[#00A8FF] scale-105 shadow-2xl" : "border-[#11202a]"} bg-[#071526]`} 
-              whileHover={{ y: -6 }} 
-              transition={{ duration: 0.3 }}
+            <div
+              key={i}
+              className={`p-6 rounded-2xl bg-[#0f1626] border ${
+                p.popular ? "border-yellow-400/40" : "border-white/5"
+              }`}
             >
-              {p.popular && <div className="mb-3 text-sm font-medium" style={{ color: orangeGold }}>⭐ Most popular</div>}
               <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
-              <div className="flex items-end gap-2 mb-4">
-                <div className="text-3xl font-bold">{p.price}</div>
-                <div className="text-sm text-gray-400">{p.period}</div>
+              <div className="text-3xl font-bold mb-4">
+                {p.price}
+                <span className="text-sm text-gray-400">{p.period}</span>
               </div>
-              <ul className="mb-6 space-y-3 text-gray-300 text-sm">
+              <ul className="space-y-3 text-sm text-gray-300 mb-6">
                 {p.bullets.map((b, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-r from-[#00A8FF] to-[#FFB347] flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-[#071127]" />
-                    </div>
-                    <div>{b}</div>
+                  <li key={idx} className="flex gap-2">
+                    <Check className="w-4 h-4 text-yellow-400" />
+                    {b}
                   </li>
                 ))}
               </ul>
-              <Button 
-                onClick={handlePrimaryAction} 
-                className={`w-full py-3 rounded-full font-semibold transition-all`} 
-                style={{ 
-                  background: p.popular ? `linear-gradient(90deg, ${electricBlue}, ${orangeGold})` : 'transparent', 
-                  color: p.popular ? '#071127' : 'white', 
-                  border: p.popular ? 'none' : '1px solid rgba(255,255,255,0.1)' 
+              <Button
+                onClick={handlePrimaryAction}
+                className="w-full"
+                style={{
+                  background: p.popular
+                    ? `linear-gradient(90deg, ${warmGold}, ${softBlue})`
+                    : "transparent",
+                  border: p.popular ? "none" : "1px solid rgba(255,255,255,0.1)",
                 }}
               >
-                {session ? "Go to Dashboard" : p.cta}
+                {p.cta}
               </Button>
-            </motion.div>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="px-6 sm:px-8 lg:px-16 py-12">
-        <div className="max-w-6xl mx-auto text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Loved by creators</h2>
-          <p className="text-gray-300">Real growth stories from users who scaled with Linked.</p>
-        </div>
-        <div className="max-w-4xl mx-auto">
-          <TestimonialCarousel />
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="px-6 sm:px-8 lg:px-16 py-12">
-        <div className="max-w-4xl mx-auto text-center mb-8">
-          <h2 className="text-3xl font-bold">Frequently asked</h2>
-          <p className="text-gray-300">Everything you need to know about platform support, billing and data.</p>
-        </div>
-        <div className="max-w-4xl mx-auto space-y-4">
-          {[{ q: "Which platforms can I connect?", a: "Linked supports LinkedIn, X, Instagram, TikTok, Facebook, and any platform with posting APIs. We regularly add more integrations." },
-            { q: "Can it post automatically at best times?", a: "Yes — Linked can auto-schedule at predicted high-engagement windows or use your custom schedule." },
-            { q: "Is my content private?", a: "Absolutely. We use encrypted storage for credentials and give you full control of access and exportable data." }
-          ].map((f, i) => (
-            <motion.div 
-              key={i} 
-              className="p-5 rounded-xl bg-[#071526] border border-[#11202a] hover:border-[#00A8FF]/30 transition-colors" 
-              whileHover={{ y: -4 }} 
-              transition={{ duration: 0.2 }}
-            >
-              <button className="w-full text-left flex items-center justify-between" onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}>
-                <div className="font-semibold">{f.q}</div>
-                <ChevronDown className={`w-6 h-6 text-[#00A8FF] transition-transform duration-300 ${expandedFaq === i ? 'rotate-180' : ''}`} />
-              </button>
-              {expandedFaq === i && (
-                <motion.p 
-                  className="mt-3 text-gray-300 text-sm" 
-                  initial={{ opacity: 0, height: 0 }} 
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {f.a}
-                </motion.p>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="px-6 sm:px-8 lg:px-16 py-12">
-        <div className="max-w-4xl mx-auto bg-gradient-to-br from-[#06101a] to-[#08182a] p-10 rounded-3xl text-center border border-[#11202a] shadow-2xl">
-          <Image src="/Linked Logo.png" alt="Linked logo" width={64} height={64} className="mx-auto mb-4" />
-          <h2 className="text-2xl lg:text-3xl font-bold mb-3">
-            {session ? "Welcome back! Ready to create?" : "Your brand, amplified across every platform"}
-          </h2>
-          <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-            {session 
-              ? "Jump back into your dashboard and continue growing your audience across all platforms."
-              : "Start creating viral posts and schedule with confidence. Let Linked handle the posting so you can focus on impact."
-            }
+      {/* TESTIMONIALS */}
+      <section className="px-6 lg:px-16 py-12">
+        <div className="max-w-4xl mx-auto text-center mb-6">
+          <h2 className="text-3xl font-bold">What users say</h2>
+          <p className="text-gray-400">
+            Teams replacing scattered tools with CONAI.
           </p>
+        </div>
+        <TestimonialCarousel />
+      </section>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={handlePrimaryAction}
-              className="px-8 py-4 rounded-full text-base font-semibold"
-              style={{ background: `linear-gradient(90deg, ${electricBlue}, ${orangeGold})`, color: '#071127' }}
-            >
-              {session ? (
-                <>
-                  <Layout className="mr-2 w-5 h-5" />
-                  Go to Dashboard
-                </>
-              ) : (
-                "Start Free Trial"
-              )}
-            </Button>
-            {!session && (
-              <Link href="#pricing">
-                <Button
-                  variant="ghost"
-                  className="px-8 py-4 rounded-full border border-white/10 text-white/90 hover:bg-white/5"
-                >
-                  View Pricing
-                </Button>
-              </Link>
-            )}
-          </div>
+      {/* CTA */}
+      <section className="px-6 lg:px-16 py-12">
+        <div className="max-w-4xl mx-auto p-10 rounded-3xl bg-[#0f1626] border border-white/5 text-center">
+          <h2 className="text-3xl font-bold mb-4">
+            Build content systems, not stress
+          </h2>
+          <p className="text-gray-400 mb-6">
+            Let CONAI handle creation and automation while you focus on growth.
+          </p>
+          <Button
+            onClick={handlePrimaryAction}
+            className="px-10 py-4 rounded-full"
+            style={{
+              background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
+              color: "#0b0f16",
+            }}
+          >
+            Start Free
+          </Button>
         </div>
       </section>
 
-      {/* Auth Modal */}
-      <AuthModal
-        open={authOpen}
-        onOpenChange={setAuthOpen}
-        mode={authMode}
-      />
-
-      {/* Footer */}
-      <footer className="px-6 sm:px-8 lg:px-16 py-8 border-t border-[#0f1720]">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/Linked Logo.png"
-              alt="Linked logo"
-              width={64}
-              height={64}
-            />
-            <div className="text-xs text-gray-400">Link. Create. Schedule - Go Viral Everywhere</div>
-          </div>
-
-          <div className="text-sm text-gray-400">© {new Date().getFullYear()} Linked. All rights reserved.</div>
-
-          <div className="flex items-center gap-4">
-            <Linkedin className="w-5 h-5 text-white/60 hover:text-white cursor-pointer transition-colors" />
-            <Twitter className="w-5 h-5 text-white/60 hover:text-white cursor-pointer transition-colors" />
-            <Github className="w-5 h-5 text-white/60 hover:text-white cursor-pointer transition-colors" />
-          </div>
-        </div>
-      </footer>
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} mode={authMode} />
     </div>
   )
 }

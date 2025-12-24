@@ -229,6 +229,27 @@ export default function AutomationsPage() {
       setIsDialogOpen(true);
     }
   };
+  const handleRunAutomations = async () => {
+    if (userPlan === "free") {
+      toast.error("Upgrade to a paid plan to run automations!");
+      router.push("/billing");
+      return;
+    }
+    try {
+      const response = await fetch('/api/run-automations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to run automations');
+      }
+      toast.success("Automations run successfully");
+      // Optionally refresh the automations list after running
+      fetchAutomations();
+    } catch (error) {
+      toast.error("Failed to run automations");
+    }
+  };
   return (
     <div className="min-h-screen bg-[#0F1116] text-white flex">
       {/* Sidebar */}
@@ -252,19 +273,32 @@ export default function AutomationsPage() {
                 Create and manage automated workflows for your social accounts.
               </p>
             </div>
-            {/* Create Button */}
-            <Button
-              onClick={handleCreateClick}
-              className="
-                bg-gradient-to-r from-blue-500 to-yellow-500 text-white
-                hover:from-blue-600 hover:to-yellow-600
-                px-4 sm:px-5 h-10 rounded-xl
-                w-full sm:w-auto shadow-lg
-              "
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Automation
-            </Button>
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                onClick={handleCreateClick}
+                className="
+                  bg-gradient-to-r from-blue-500 to-yellow-500 text-white
+                  hover:from-blue-600 hover:to-yellow-600
+                  px-4 sm:px-5 h-10 rounded-xl
+                  w-full sm:w-auto shadow-lg
+                "
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Automation
+              </Button>
+              <Button
+                onClick={handleRunAutomations}
+                className="
+                  bg-gradient-to-r from-green-500 to-blue-500 text-white
+                  hover:from-green-600 hover:to-blue-600
+                  px-4 sm:px-5 h-10 rounded-xl
+                  w-full sm:w-auto shadow-lg
+                "
+              >
+                Run Automations
+              </Button>
+            </div>
           </div>
           {/* Automation List */}
           <div className="mt-8 grid gap-6">
