@@ -133,7 +133,7 @@ export default function LandingPage() {
                   color: "#1a1a1a",
                 }}
               >
-                Access Post Studio
+                Access Content Studio
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
