@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState } from "react"
-import Image from "next/image"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
@@ -10,22 +9,13 @@ import {
   ArrowRight,
   Zap,
   Edit3,
-  Facebook,
-  Instagram,
   Share2,
   Users,
-  Globe,
   Mic,
-  Settings,
-  ChevronDown,
-  Github,
-  Twitter,
-  Linkedin,
-  Check,
   Star,
   Calendar,
   BarChart2,
-  Layout,
+  Check,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/Navbar"
@@ -33,14 +23,12 @@ import TestimonialCarousel from "@/components/TestimonialCarousel"
 import { AuthModal } from "@/components/auth-modal"
 
 export default function LandingPage() {
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(0)
   const [authOpen, setAuthOpen] = useState(false)
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login")
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup")
 
   const { data: session } = useSession()
   const router = useRouter()
 
-  // Brand colors
   const softBlue = "#4DA3FF"
   const warmGold = "#F5B96A"
 
@@ -52,42 +40,43 @@ export default function LandingPage() {
 
   const pricing = [
     {
-      name: "Starter",
+      name: "Free",
       price: "$0",
       period: "/month",
       bullets: [
-        "Connect 1 platform",
-        "AI-powered content ideas",
-        "Basic automation tools",
-        "Community support forum",
+        "Create LinkedIn posts with AI",
+        "Basic viral formats",
+        "1 platform connection",
+        "Community support",
       ],
-      cta: "Get Started Free",
+      cta: "Start Free",
       popular: false,
     },
     {
-      name: "Pro",
+      name: "Creator",
       price: "$29",
       period: "/month",
       bullets: [
-        "Unlimited platform connections",
-        "Advanced AI content generation",
-        "Full automation workflows",
-        "In-depth analytics & draft management",
+        "Unlimited LinkedIn post generation",
+        "Advanced viral hooks & formats",
+        "Tone matching (sound like you)",
+        "Content optimized for reach & leads",
+        "Draft & post management",
       ],
-      cta: "Start 14-Day Free Trial",
+      cta: "Generate My First Post",
       popular: true,
     },
     {
-      name: "Agency",
+      name: "Teams",
       price: "$99",
       period: "/month",
       bullets: [
-        "Team collaboration features",
+        "Team & client workspaces",
         "Custom brand voice training",
-        "Multi-client workspaces",
-        "Priority 24/7 support",
+        "Collaboration tools",
+        "Priority support",
       ],
-      cta: "Contact Sales Team",
+      cta: "Contact Sales",
       popular: false,
     },
   ]
@@ -105,11 +94,11 @@ export default function LandingPage() {
       <Navbar />
 
       {/* HERO */}
-      <header className="pt-20 pb-12 px-6 lg:px-16">
+      <header className="pt-20 pb-14 px-6 lg:px-16">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div {...fadeIn}>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Amplify Your Reach.
+              Turn Ideas Into High-Engagement
               <span
                 className="block mt-2"
                 style={{
@@ -118,12 +107,21 @@ export default function LandingPage() {
                   color: "transparent",
                 }}
               >
-                Automate Success.
+                LinkedIn Posts — In Minutes
               </span>
             </h1>
-            <p className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg">
-              LinkedPilot is your ultimate LinkedIn and social media growth engine. Effortlessly create captivating content, automate smart posting, and generate high-quality leads – all driven by cutting-edge AI.
+
+            <p className="text-gray-300 max-w-3xl mx-auto mb-6 text-lg">
+              Write LinkedIn content that gets noticed, builds authority, and
+              brings inbound opportunities — without spending hours writing.
             </p>
+
+            <ul className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg space-y-2">
+              <li>✅ Go from rough idea → ready-to-post content</li>
+              <li>✅ Use proven formats that trigger reach & engagement</li>
+              <li>✅ Sound human — not generic AI</li>
+              <li>✅ Stay consistent even on busy weeks</li>
+            </ul>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -134,7 +132,7 @@ export default function LandingPage() {
                   color: "#1a1a1a",
                 }}
               >
-                {session ? "Enter Dashboard" : "Launch Your Free Trial"}
+                Generate My First Post Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
@@ -143,48 +141,45 @@ export default function LandingPage() {
                   variant="ghost"
                   className="px-6 py-4 rounded-full border border-white/10"
                 >
-                  Explore Features
+                  See How It Works
                 </Button>
               </Link>
             </div>
 
-            <div className="mt-8 flex justify-center gap-6 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                Empowering creators, marketers, and teams to thrive online
-              </div>
-            </div>
+            <p className="text-xs text-gray-400 mt-4">
+              No credit card • Takes under 60 seconds
+            </p>
           </motion.div>
         </div>
       </header>
 
       {/* HOW IT WORKS */}
-      <section id="how-it-works" className="px-6 lg:px-16 py-12">
+      <section id="how-it-works" className="px-6 lg:px-16 py-14">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            From Inspiration to Impact – Fully Automated
+            From Idea to Published Post in 3 Steps
           </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            LinkedPilot transforms your social strategy, saving time while delivering measurable growth.
+          <p className="text-gray-400">
+            No prompt engineering. No learning curve.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[
             {
-              icon: Share2,
-              title: "Unified Platform Connections",
-              desc: "Seamlessly integrate LinkedIn, X, Instagram, and beyond in a single, powerful dashboard.",
-            },
-            {
               icon: Zap,
-              title: "AI-Powered Content Magic",
-              desc: "Craft irresistible hooks, posts, and formats optimized for each platform's unique audience.",
+              title: "Drop Your Idea",
+              desc: "A thought, lesson, or experience — messy is fine.",
             },
             {
-              icon: Calendar,
-              title: "Intelligent Automation",
-              desc: "Schedule strategically or let AI maintain consistent, high-engagement posting.",
+              icon: Edit3,
+              title: "Choose a Proven Format",
+              desc: "Educational, storytelling, authority, or viral hook.",
+            },
+            {
+              icon: Share2,
+              title: "Post & Grow",
+              desc: "Publish instantly or save drafts for later.",
             },
           ].map((item, i) => (
             <motion.div
@@ -208,24 +203,48 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURES */}
-      <section className="px-6 lg:px-16 py-12">
+      <section className="px-6 lg:px-16 py-14">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            Engineered for Ambitious Growth
+            Built to Grow Your LinkedIn Presence
           </h2>
           <p className="text-gray-400">
-            Essential tools to ideate, automate, and scale your online presence effortlessly.
+            Not just writing — real visibility and engagement.
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[
-            { icon: Edit3, title: "Sophisticated AI Creation", desc: "Generate hooks, threads, carousels, and captions that captivate and convert." },
-            { icon: BarChart2, title: "Data-Driven Insights", desc: "Analyze performance to refine and amplify what truly resonates." },
-            { icon: Users, title: "Seamless Team Collaboration", desc: "Work together efficiently to brainstorm, review, and deploy content." },
-            { icon: Mic, title: "Personalized Voice Adaptation", desc: "Train AI to match your brand's unique tone and personality." },
-            { icon: Settings, title: "Custom Automation Flows", desc: "Build rules for intelligent, context-aware content distribution." },
-            { icon: Globe, title: "Platform-Specific Optimization", desc: "Transform one core idea into tailored content for every channel." },
+            {
+              icon: Zap,
+              title: "High-Engagement Post Generator",
+              desc: "Posts optimized for likes, comments, and profile views.",
+            },
+            {
+              icon: Star,
+              title: "Viral Hook Engine",
+              desc: "First lines engineered to stop the scroll in seconds.",
+            },
+            {
+              icon: Mic,
+              title: "Tone Matching",
+              desc: "Bold, professional, casual — always sounds like you.",
+            },
+            {
+              icon: Calendar,
+              title: "Effortless Consistency",
+              desc: "Never run out of content ideas again.",
+            },
+            {
+              icon: BarChart2,
+              title: "Growth Optimization",
+              desc: "Designed for reach, engagement, and inbound leads.",
+            },
+            {
+              icon: Users,
+              title: "Lead-Driven Content",
+              desc: "Turn visibility into conversations and opportunities.",
+            },
           ].map((f, i) => (
             <motion.div
               key={i}
@@ -241,10 +260,12 @@ export default function LandingPage() {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" className="px-6 lg:px-16 py-12">
+      <section id="pricing" className="px-6 lg:px-16 py-16">
         <div className="max-w-6xl mx-auto text-center mb-10">
-          <h2 className="text-3xl font-bold mb-2">Transparent Pricing</h2>
-          <p className="text-gray-400">Select the perfect plan to fuel your growth journey.</p>
+          <h2 className="text-3xl font-bold mb-2">Simple Pricing</h2>
+          <p className="text-gray-400">
+            Start free. Upgrade when LinkedIn starts working for you.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -255,11 +276,15 @@ export default function LandingPage() {
                 p.popular ? "border-blue-500/40" : "border-white/5"
               }`}
             >
+              {p.popular && (
+                <p className="text-xs text-blue-400 mb-2">Most Popular</p>
+              )}
               <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
               <div className="text-3xl font-bold mb-4">
                 {p.price}
                 <span className="text-sm text-gray-400">{p.period}</span>
               </div>
+
               <ul className="space-y-3 text-sm text-gray-300 mb-6">
                 {p.bullets.map((b, idx) => (
                   <li key={idx} className="flex gap-2">
@@ -268,6 +293,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+
               <Button
                 onClick={handlePrimaryAction}
                 className="w-full"
@@ -275,7 +301,9 @@ export default function LandingPage() {
                   background: p.popular
                     ? `linear-gradient(90deg, ${warmGold}, ${softBlue})`
                     : "transparent",
-                  border: p.popular ? "none" : "1px solid rgba(255,255,255,0.1)",
+                  border: p.popular
+                    ? "none"
+                    : "1px solid rgba(255,255,255,0.1)",
                   color: p.popular ? "#1a1a1a" : "#ffffff",
                 }}
               >
@@ -287,24 +315,25 @@ export default function LandingPage() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="px-6 lg:px-16 py-12">
+      <section className="px-6 lg:px-16 py-14">
         <div className="max-w-4xl mx-auto text-center mb-6">
-          <h2 className="text-3xl font-bold">Success Stories From Users</h2>
+          <h2 className="text-3xl font-bold">Trusted by Growing Creators</h2>
           <p className="text-gray-400">
-            Discover how LinkedPilot is revolutionizing social media management.
+            Most users publish their first post in under 5 minutes.
           </p>
         </div>
         <TestimonialCarousel />
       </section>
 
-      {/* CTA */}
-      <section className="px-6 lg:px-16 py-12">
+      {/* FINAL CTA */}
+      <section className="px-6 lg:px-16 py-16">
         <div className="max-w-4xl mx-auto p-10 rounded-3xl bg-[#282828] border border-white/5 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Elevate Your Social Strategy Today
+            Your Next LinkedIn Post Is One Prompt Away
           </h2>
           <p className="text-gray-400 mb-6">
-            Join the ranks of successful professionals using LinkedPilot to craft irresistible content, automate intelligently, and attract premium leads – effortlessly.
+            Every day you don’t post, you lose visibility.
+            LinkedPilot helps you show up consistently.
           </p>
           <Button
             onClick={handlePrimaryAction}
@@ -314,8 +343,11 @@ export default function LandingPage() {
               color: "#1a1a1a",
             }}
           >
-            Begin Your Journey Now
+            Create My First LinkedIn Post
           </Button>
+          <p className="text-xs text-gray-500 mt-4">
+            No credit card • Just results
+          </p>
         </div>
       </section>
 
