@@ -40,7 +40,7 @@ export default function LandingPage() {
   const { data: session } = useSession()
   const router = useRouter()
 
-  // Softer brand colors
+  // Brand colors
   const softBlue = "#4DA3FF"
   const warmGold = "#F5B96A"
 
@@ -56,12 +56,12 @@ export default function LandingPage() {
       price: "$0",
       period: "/month",
       bullets: [
-        "1 platform connection",
-        "AI content ideas",
-        "Basic automation",
-        "Community support",
+        "Connect 1 platform",
+        "AI-powered content ideas",
+        "Basic automation tools",
+        "Community support forum",
       ],
-      cta: "Get Started",
+      cta: "Get Started Free",
       popular: false,
     },
     {
@@ -69,12 +69,12 @@ export default function LandingPage() {
       price: "$29",
       period: "/month",
       bullets: [
-        "Multi-platform posting",
-        "Advanced AI writing",
-        "Automation workflows",
-        "Analytics & drafts",
+        "Unlimited platform connections",
+        "Advanced AI content generation",
+        "Full automation workflows",
+        "In-depth analytics & draft management",
       ],
-      cta: "Start Free Trial",
+      cta: "Start 14-Day Free Trial",
       popular: true,
     },
     {
@@ -82,12 +82,12 @@ export default function LandingPage() {
       price: "$99",
       period: "/month",
       bullets: [
-        "Team collaboration",
-        "Brand voice training",
-        "Client workspaces",
-        "Priority support",
+        "Team collaboration features",
+        "Custom brand voice training",
+        "Multi-client workspaces",
+        "Priority 24/7 support",
       ],
-      cta: "Contact Sales",
+      cta: "Contact Sales Team",
       popular: false,
     },
   ]
@@ -101,7 +101,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#0e0e11] via-[#0b0f16] to-[#0a1220] text-white min-h-screen">
+    <div className="bg-[#1a1a1a] text-white min-h-screen">
       <Navbar />
 
       {/* HERO */}
@@ -109,7 +109,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <motion.div {...fadeIn}>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Create in seconds.
+              Amplify Your Reach.
               <span
                 className="block mt-2"
                 style={{
@@ -118,13 +118,11 @@ export default function LandingPage() {
                   color: "transparent",
                 }}
               >
-                Automate & Scale.
+                Automate Success.
               </span>
             </h1>
             <p className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg">
-              CONAI is an AI-powered content creation and automation platform.
-              Generate ideas, write high-performing content, and automate
-              publishing across platforms — without burnout.
+              LinkedPilot is your ultimate LinkedIn and social media growth engine. Effortlessly create captivating content, automate smart posting, and generate high-quality leads – all driven by cutting-edge AI.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -133,10 +131,10 @@ export default function LandingPage() {
                 className="px-8 py-4 rounded-full font-semibold"
                 style={{
                   background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
-                  color: "#0b0f16",
+                  color: "#1a1a1a",
                 }}
               >
-                {session ? "Go to Dashboard" : "Start Free"}
+                {session ? "Enter Dashboard" : "Launch Your Free Trial"}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
@@ -145,7 +143,7 @@ export default function LandingPage() {
                   variant="ghost"
                   className="px-6 py-4 rounded-full border border-white/10"
                 >
-                  See how it works
+                  Explore Features
                 </Button>
               </Link>
             </div>
@@ -153,7 +151,7 @@ export default function LandingPage() {
             <div className="mt-8 flex justify-center gap-6 text-sm text-gray-400">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                Trusted by modern creators & teams
+                Empowering creators, marketers, and teams to thrive online
               </div>
             </div>
           </motion.div>
@@ -164,10 +162,10 @@ export default function LandingPage() {
       <section id="how-it-works" className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            From idea to published — automatically
+            From Inspiration to Impact – Fully Automated
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            CONAI removes friction from content creation and distribution.
+            LinkedPilot transforms your social strategy, saving time while delivering measurable growth.
           </p>
         </div>
 
@@ -175,24 +173,24 @@ export default function LandingPage() {
           {[
             {
               icon: Share2,
-              title: "Connect platforms",
-              desc: "Link LinkedIn, X, Instagram and more in one dashboard.",
+              title: "Unified Platform Connections",
+              desc: "Seamlessly integrate LinkedIn, X, Instagram, and beyond in a single, powerful dashboard.",
             },
             {
               icon: Zap,
-              title: "Create with AI",
-              desc: "Generate hooks, posts, and variations aligned to each platform.",
+              title: "AI-Powered Content Magic",
+              desc: "Craft irresistible hooks, posts, and formats optimized for each platform's unique audience.",
             },
             {
               icon: Calendar,
-              title: "Automate publishing",
-              desc: "Schedule or auto-run workflows that post consistently.",
+              title: "Intelligent Automation",
+              desc: "Schedule strategically or let AI maintain consistent, high-engagement posting.",
             },
           ].map((item, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -6 }}
-              className="p-6 rounded-2xl bg-[#0f1626] border border-white/5 text-center"
+              className="p-6 rounded-2xl bg-[#282828] border border-white/5 text-center"
             >
               <div
                 className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center"
@@ -200,7 +198,7 @@ export default function LandingPage() {
                   background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
                 }}
               >
-                <item.icon className="w-6 h-6 text-[#0b0f16]" />
+                <item.icon className="w-6 h-6 text-[#1a1a1a]" />
               </div>
               <h3 className="font-semibold mb-2">{item.title}</h3>
               <p className="text-gray-400 text-sm">{item.desc}</p>
@@ -213,28 +211,28 @@ export default function LandingPage() {
       <section className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            Built for serious content operators
+            Engineered for Ambitious Growth
           </h2>
           <p className="text-gray-400">
-            Creation, automation, and insight — in one system.
+            Essential tools to ideate, automate, and scale your online presence effortlessly.
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[
-            { icon: Edit3, title: "AI Writing Engine", desc: "Hooks, threads, carousels, and captions." },
-            { icon: BarChart2, title: "Performance Insights", desc: "Understand what content actually works." },
-            { icon: Users, title: "Team Workflows", desc: "Collaborate, approve, and ship faster." },
-            { icon: Mic, title: "Brand Voice Memory", desc: "Train AI on your tone and style." },
-            { icon: Settings, title: "Automation Rules", desc: "Trigger posts based on time or logic." },
-            { icon: Globe, title: "Multi-Platform Native", desc: "One idea, adapted everywhere." },
+            { icon: Edit3, title: "Sophisticated AI Creation", desc: "Generate hooks, threads, carousels, and captions that captivate and convert." },
+            { icon: BarChart2, title: "Data-Driven Insights", desc: "Analyze performance to refine and amplify what truly resonates." },
+            { icon: Users, title: "Seamless Team Collaboration", desc: "Work together efficiently to brainstorm, review, and deploy content." },
+            { icon: Mic, title: "Personalized Voice Adaptation", desc: "Train AI to match your brand's unique tone and personality." },
+            { icon: Settings, title: "Custom Automation Flows", desc: "Build rules for intelligent, context-aware content distribution." },
+            { icon: Globe, title: "Platform-Specific Optimization", desc: "Transform one core idea into tailored content for every channel." },
           ].map((f, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -6 }}
-              className="p-6 rounded-2xl bg-[#0f1626] border border-white/5"
+              className="p-6 rounded-2xl bg-[#282828] border border-white/5"
             >
-              <f.icon className="w-6 h-6 mb-3 text-[var(--accent)]" />
+              <f.icon className="w-6 h-6 mb-3 text-blue-500" />
               <h3 className="font-semibold mb-2">{f.title}</h3>
               <p className="text-gray-400 text-sm">{f.desc}</p>
             </motion.div>
@@ -245,16 +243,16 @@ export default function LandingPage() {
       {/* PRICING */}
       <section id="pricing" className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto text-center mb-10">
-          <h2 className="text-3xl font-bold mb-2">Simple pricing</h2>
-          <p className="text-gray-400">Scale when it makes sense.</p>
+          <h2 className="text-3xl font-bold mb-2">Transparent Pricing</h2>
+          <p className="text-gray-400">Select the perfect plan to fuel your growth journey.</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {pricing.map((p, i) => (
             <div
               key={i}
-              className={`p-6 rounded-2xl bg-[#0f1626] border ${
-                p.popular ? "border-yellow-400/40" : "border-white/5"
+              className={`p-6 rounded-2xl bg-[#282828] border ${
+                p.popular ? "border-blue-500/40" : "border-white/5"
               }`}
             >
               <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
@@ -265,7 +263,7 @@ export default function LandingPage() {
               <ul className="space-y-3 text-sm text-gray-300 mb-6">
                 {p.bullets.map((b, idx) => (
                   <li key={idx} className="flex gap-2">
-                    <Check className="w-4 h-4 text-yellow-400" />
+                    <Check className="w-4 h-4 text-blue-500" />
                     {b}
                   </li>
                 ))}
@@ -278,6 +276,7 @@ export default function LandingPage() {
                     ? `linear-gradient(90deg, ${warmGold}, ${softBlue})`
                     : "transparent",
                   border: p.popular ? "none" : "1px solid rgba(255,255,255,0.1)",
+                  color: p.popular ? "#1a1a1a" : "#ffffff",
                 }}
               >
                 {p.cta}
@@ -290,9 +289,9 @@ export default function LandingPage() {
       {/* TESTIMONIALS */}
       <section className="px-6 lg:px-16 py-12">
         <div className="max-w-4xl mx-auto text-center mb-6">
-          <h2 className="text-3xl font-bold">What users say</h2>
+          <h2 className="text-3xl font-bold">Success Stories From Users</h2>
           <p className="text-gray-400">
-            Teams replacing scattered tools with CONAI.
+            Discover how LinkedPilot is revolutionizing social media management.
           </p>
         </div>
         <TestimonialCarousel />
@@ -300,22 +299,22 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="px-6 lg:px-16 py-12">
-        <div className="max-w-4xl mx-auto p-10 rounded-3xl bg-[#0f1626] border border-white/5 text-center">
+        <div className="max-w-4xl mx-auto p-10 rounded-3xl bg-[#282828] border border-white/5 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Build content systems, not stress
+            Elevate Your Social Strategy Today
           </h2>
           <p className="text-gray-400 mb-6">
-            Let CONAI handle creation and automation while you focus on growth.
+            Join the ranks of successful professionals using LinkedPilot to craft irresistible content, automate intelligently, and attract premium leads – effortlessly.
           </p>
           <Button
             onClick={handlePrimaryAction}
             className="px-10 py-4 rounded-full"
             style={{
               background: `linear-gradient(90deg, ${warmGold}, ${softBlue})`,
-              color: "#0b0f16",
+              color: "#1a1a1a",
             }}
           >
-            Start Free
+            Begin Your Journey Now
           </Button>
         </div>
       </section>

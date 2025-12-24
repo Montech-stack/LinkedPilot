@@ -211,82 +211,84 @@ export default function ViralIdeasLibrary() {
       <div className="flex-1 flex flex-col">
         <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
-          <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="text-3xl font-extrabold mb-2 bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">
-              Viral Ideas Library
-            </h1>
-            <p className="text-gray-400 text-sm sm:text-base">Generate multi-platform content ideas</p>
-          </motion.div>
-
-          <motion.div className="bg-[#1A1B22] p-4 rounded-2xl shadow-2xl border border-[#2A2A35] mb-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Textarea
-              placeholder="Enter your topic or niche..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              className="min-h-[100px] bg-[#14151B] text-white border border-[#2A2A35] rounded-xl p-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400"
-            />
-
-            <div className="flex gap-2 mt-3 justify-start">
-              <Button size="icon" onClick={handleSave} className="bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 rounded-xl p-2">
-                <Save size={20} />
-              </Button>
-              <Button size="icon" onClick={handleClear} className="bg-gray-700 hover:bg-gray-600 rounded-xl p-2">
-                <X size={20} />
-              </Button>
-              <Button
-                onClick={() => handleGenerate(false)}
-                disabled={isGenerating || !userInput.trim()}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 text-white font-semibold py-2 px-4 rounded-xl text-sm"
-              >
-                {isGenerating ? "Generating..." : "Generate Top 5 Ideas"}
-              </Button>
-            </div>
-          </motion.div>
-
-          {processedIdeas.length > 0 && (
-            <motion.div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-              {processedIdeas.map((idea) => (
-                <motion.div key={idea.id} className="bg-[#14151B] rounded-2xl p-3 border border-[#2A2A35] shadow-lg hover:shadow-xl transition-all duration-200 relative">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-500 rounded-full text-xs font-medium truncate">
-                      {idea.category}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getEngagementColor(idea.engagement)}`}>
-                      {idea.engagement} Engagement
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getScoreColor(idea.score)}`}>
-                      {idea.score}/100
-                    </span>
-                  </div>
-
-                  <p
-                    onClick={() => handleIdeaClick(idea.hook)}
-                    className="text-sm sm:text-base font-medium text-gray-100 mb-2 cursor-pointer hover:text-blue-500"
-                  >
-                    {idea.hook}
-                  </p>
-
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {idea.keywords.map((k, idx) => (
-                      <span key={idx} className="text-xs text-gray-400 bg-gray-800/50 px-2 py-0.5 rounded">
-                        {k}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <Button size="icon" variant="ghost" onClick={() => copyIdea(idea.hook)} className="text-gray-400 hover:text-white">
-                      <Copy size={16} />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => deleteIdea(idea.id)} className="text-gray-400 hover:text-gray-300">
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 lg:p-10">
+            <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-3xl font-extrabold mb-2 bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">
+                Viral Ideas Library
+              </h1>
+              <p className="text-gray-400 text-sm sm:text-base">Generate multi-platform content ideas</p>
             </motion.div>
-          )}
+
+            <motion.div className="bg-[#1A1B22] p-4 rounded-2xl shadow-2xl border border-[#2A2A35] mb-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <Textarea
+                placeholder="Enter your topic or niche..."
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                className="min-h-[100px] bg-[#14151B] text-white border border-[#2A2A35] rounded-xl p-3 text-sm sm:text-base resize-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400"
+              />
+
+              <div className="flex gap-2 mt-3 justify-start">
+                <Button size="icon" onClick={handleSave} className="bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 rounded-xl p-2">
+                  <Save size={20} />
+                </Button>
+                <Button size="icon" onClick={handleClear} className="bg-gray-700 hover:bg-gray-600 rounded-xl p-2">
+                  <X size={20} />
+                </Button>
+                <Button
+                  onClick={() => handleGenerate(false)}
+                  disabled={isGenerating || !userInput.trim()}
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-yellow-500 hover:from-blue-600 hover:to-yellow-600 text-white font-semibold py-2 px-4 rounded-xl text-sm"
+                >
+                  {isGenerating ? "Generating..." : "Generate Top 5 Ideas"}
+                </Button>
+              </div>
+            </motion.div>
+
+            {processedIdeas.length > 0 && (
+              <motion.div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {processedIdeas.map((idea) => (
+                  <motion.div key={idea.id} className="bg-[#14151B] rounded-2xl p-3 border border-[#2A2A35] shadow-lg hover:shadow-xl transition-all duration-200 relative">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 bg-blue-500/20 text-blue-500 rounded-full text-xs font-medium truncate">
+                        {idea.category}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getEngagementColor(idea.engagement)}`}>
+                        {idea.engagement} Engagement
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getScoreColor(idea.score)}`}>
+                        {idea.score}/100
+                      </span>
+                    </div>
+
+                    <p
+                      onClick={() => handleIdeaClick(idea.hook)}
+                      className="text-sm sm:text-base font-medium text-gray-100 mb-2 cursor-pointer hover:text-blue-500"
+                    >
+                      {idea.hook}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {idea.keywords.map((k, idx) => (
+                        <span key={idx} className="text-xs text-gray-400 bg-gray-800/50 px-2 py-0.5 rounded">
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2 mt-2">
+                      <Button size="icon" variant="ghost" onClick={() => copyIdea(idea.hook)} className="text-gray-400 hover:text-white">
+                        <Copy size={16} />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => deleteIdea(idea.id)} className="text-gray-400 hover:text-gray-300">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </div>
