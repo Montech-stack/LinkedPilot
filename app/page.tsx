@@ -133,7 +133,7 @@ export default function LandingPage() {
                   color: "#1a1a1a",
                 }}
               >
-                Generate My First Post Free
+                Generate My First Post 
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
