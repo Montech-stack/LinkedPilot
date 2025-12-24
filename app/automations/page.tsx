@@ -236,10 +236,7 @@ export default function AutomationsPage() {
       return;
     }
     try {
-      const response = await fetch('/api/run-automations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch('/api/run-automations');
       if (!response.ok) {
         throw new Error('Failed to run automations');
       }
