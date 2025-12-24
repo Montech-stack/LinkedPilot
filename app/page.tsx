@@ -121,6 +121,7 @@ export default function LandingPage() {
               <li>✅ Use proven formats that trigger reach & engagement</li>
               <li>✅ Sound human — not generic AI</li>
               <li>✅ Stay consistent even on busy weeks</li>
+              <li>✅ Automated Lead Generation</li>
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
