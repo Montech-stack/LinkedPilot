@@ -10,6 +10,15 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Linked - AI Automated Social Media Manager",
   description: "Link. Create. Schedule - Go Viral Everywhere",
+
+  icons: {
+    icon: [
+      {
+        url: "/Linked logo.png",
+        type: "image/svg+xml",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
