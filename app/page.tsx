@@ -16,6 +16,7 @@ import {
   Calendar,
   BarChart2,
   Check,
+  Globe, // Added for "all platforms" feel
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Navbar from "@/components/Navbar"
@@ -44,7 +45,7 @@ export default function LandingPage() {
       price: "$0",
       period: "/month",
       bullets: [
-        "Create LinkedIn posts with AI",
+        "Create social posts with AI",
         "Basic viral formats",
         "1 platform connection",
         "Community support",
@@ -57,10 +58,10 @@ export default function LandingPage() {
       price: "$29",
       period: "/month",
       bullets: [
-        "Unlimited LinkedIn post generation",
-        "Advanced viral hooks & formats",
+        "Unlimited cross-platform generation",
+        "Multi-platform optimization",
         "Tone matching (sound like you)",
-        "Content optimized for reach & leads",
+        "Advanced viral hooks & formats",
         "Draft & post management",
       ],
       cta: "Generate My First Post",
@@ -73,7 +74,7 @@ export default function LandingPage() {
       bullets: [
         "Team & client workspaces",
         "Custom brand voice training",
-        "Collaboration tools",
+        "Unified social analytics",
         "Priority support",
       ],
       cta: "Contact Sales",
@@ -107,21 +108,21 @@ export default function LandingPage() {
                   color: "transparent",
                 }}
               >
-                LinkedIn Posts — In Minutes
+                Content 
               </span>
             </h1>
 
             <p className="text-gray-300 max-w-3xl mx-auto mb-6 text-lg">
-              Write LinkedIn content that gets noticed, builds authority, and
-              brings inbound opportunities — without spending hours writing.
+              Write content that gets noticed, builds authority, and
+              scales your presence across all socials — without spending hours writing.
             </p>
 
             <ul className="text-gray-300 max-w-3xl mx-auto mb-8 text-lg space-y-2">
-              <li>✅ Go from rough idea → ready-to-post content</li>
-              <li>✅ Use proven formats that trigger reach & engagement</li>
-              <li>✅ Sound human — not generic AI</li>
-              <li>✅ Stay consistent even on busy weeks</li>
-              <li>✅ Automated Lead Generation</li>
+              <li>✅ From rough idea → platform-optimized content</li>
+              <li>✅ Reach your audience on LinkedIn, X, and more</li>
+              <li>✅ Sound human — never generic AI</li>
+              <li>✅ Stay consistent across all your channels</li>
+              <li>✅ Automated growth & lead generation</li>
             </ul>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -133,7 +134,7 @@ export default function LandingPage() {
                   color: "#1a1a1a",
                 }}
               >
-                Access Content Studio
+                Access Maxis Studio
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
 
@@ -158,10 +159,10 @@ export default function LandingPage() {
       <section id="how-it-works" className="px-6 lg:px-16 py-14">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            From Idea to Published Post in 3 Steps
+            From Idea to Global Post in 3 Steps
           </h2>
           <p className="text-gray-400">
-            No prompt engineering. No learning curve.
+            One workflow for all your social channels.
           </p>
         </div>
 
@@ -170,17 +171,17 @@ export default function LandingPage() {
             {
               icon: Zap,
               title: "Drop Your Idea",
-              desc: "A thought, lesson, or experience — messy is fine.",
+              desc: "A thought, lesson, or experience — Maxis handles the rest.",
             },
             {
-              icon: Edit3,
-              title: "Choose a Proven Format",
-              desc: "Educational, storytelling, authority, or viral hook.",
+              icon: Globe,
+              title: "Select Your Platforms",
+              desc: "Tailor the same idea for LinkedIn, X, or Instagram instantly.",
             },
             {
               icon: Share2,
               title: "Post & Grow",
-              desc: "Publish instantly or save drafts for later.",
+              desc: "Publish across your network or save for later.",
             },
           ].map((item, i) => (
             <motion.div
@@ -207,10 +208,10 @@ export default function LandingPage() {
       <section className="px-6 lg:px-16 py-14">
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">
-            Built to Grow Your LinkedIn Presence
+            Built to Scale Your Digital Brand
           </h2>
           <p className="text-gray-400">
-            Not just writing — real visibility and engagement.
+            Multi-platform intelligence. Real visibility.
           </p>
         </div>
 
@@ -218,33 +219,33 @@ export default function LandingPage() {
           {[
             {
               icon: Zap,
-              title: "High-Engagement Post Generator",
-              desc: "Posts optimized for likes, comments, and profile views.",
+              title: "Omni-Channel Generator",
+              desc: "Posts optimized for the specific algorithms of each platform.",
             },
             {
               icon: Star,
-              title: "Viral Hook Engine",
-              desc: "First lines engineered to stop the scroll in seconds.",
+              title: "The Hook Lab",
+              desc: "First lines engineered to stop the scroll on any device.",
             },
             {
               icon: Mic,
-              title: "Tone Matching",
-              desc: "Bold, professional, casual — always sounds like you.",
+              title: "Universal Tone Matching",
+              desc: "Your unique voice, adapted for professional or casual sites.",
             },
             {
               icon: Calendar,
-              title: "Effortless Consistency",
-              desc: "Never run out of content ideas again.",
+              title: "Global Content Calendar",
+              desc: "Plan and visualize your entire social strategy in one place.",
             },
             {
               icon: BarChart2,
-              title: "Growth Optimization",
-              desc: "Designed for reach, engagement, and inbound leads.",
+              title: "Cross-Platform Insights",
+              desc: "Understand what works best for your specific audience.",
             },
             {
               icon: Users,
-              title: "Lead-Driven Content",
-              desc: "Turn visibility into conversations and opportunities.",
+              title: "Lead-Gen Focused",
+              desc: "Turn social impressions into actual business opportunities.",
             },
           ].map((f, i) => (
             <motion.div
@@ -265,7 +266,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto text-center mb-10">
           <h2 className="text-3xl font-bold mb-2">Simple Pricing</h2>
           <p className="text-gray-400">
-            Start free. Upgrade when LinkedIn starts working for you.
+            Start free. Upgrade as your reach expands.
           </p>
         </div>
 
@@ -318,9 +319,9 @@ export default function LandingPage() {
       {/* TESTIMONIALS */}
       <section className="px-6 lg:px-16 py-14">
         <div className="max-w-4xl mx-auto text-center mb-6">
-          <h2 className="text-3xl font-bold">Trusted by Growing Creators</h2>
+          <h2 className="text-3xl font-bold">Trusted by Global Creators</h2>
           <p className="text-gray-400">
-            Most users publish their first post in under 5 minutes.
+            Join thousands of users scaling their brand with Maxis.
           </p>
         </div>
         <TestimonialCarousel />
@@ -330,11 +331,10 @@ export default function LandingPage() {
       <section className="px-6 lg:px-16 py-16">
         <div className="max-w-4xl mx-auto p-10 rounded-3xl bg-[#282828] border border-white/5 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Your Next LinkedIn Post Is One Prompt Away
+            Your Viral Strategy Starts Here
           </h2>
           <p className="text-gray-400 mb-6">
-            Every day you don’t post, you lose visibility.
-            LinkedPilot helps you show up consistently.
+            Stop guessing what works. Use Maxis to dominate your niche across every platform.
           </p>
           <Button
             onClick={handlePrimaryAction}
@@ -344,10 +344,10 @@ export default function LandingPage() {
               color: "#1a1a1a",
             }}
           >
-            Create My First LinkedIn Post
+            Start Creating with Maxis
           </Button>
           <p className="text-xs text-gray-500 mt-4">
-            No credit card • Just results
+            No credit card • Unlimited possibilities
           </p>
         </div>
       </section>
