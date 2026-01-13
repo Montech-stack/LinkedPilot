@@ -107,7 +107,7 @@ export default function Navbar() {
                   onClick={openTryLinked}
                   className="bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white shadow-md hover:opacity-90 transition"
                 >
-                  Try Linked
+                  Try Maxis
                 </Button>
               </>
             )}

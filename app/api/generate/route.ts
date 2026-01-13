@@ -56,7 +56,6 @@ Date reference for freshness: ${now.toLocaleDateString('en-US', {
 Generate ${count} fresh, original, deeply engaging LinkedIn post(s) using a ${tone} tone based on the idea: "${idea}".
 
 Your mission: **maximize LinkedIn virality in 2024–2025** using:
-- Analogy-driven storytelling (fictional characters only)
 - Curiosity hooks
 - Pattern interrupts
 - Emotional tension + payoff
@@ -111,7 +110,6 @@ STRICT RULES:
    Add 3–5 relevant hashtags at the bottom.
 
 STRUCTURE VARIATION ACROSS POSTS:
-- Analogy story posts
 - Listicle posts
 - Framework-based posts
 - Truth-bomb/contrarian posts
