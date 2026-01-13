@@ -41,7 +41,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
-import PresetsPanel from "@/components/PresetsPanel";
 import { useContentPresetStore, PRESETS } from "@/lib/content-preset-store"; // Import the store
 
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
@@ -312,8 +311,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Insert Presets Panel here */}
-              <PresetsPanel />
 
               {/* Textarea */}
               <div className="relative mb-4 mt-4">
