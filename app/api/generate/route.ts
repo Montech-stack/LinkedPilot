@@ -94,8 +94,7 @@ STRICT RULES:
 
 7. **Emotional Resonance**  
    Use phrases like:
-   - “That’s when it hit him…”
-   - “She didn’t expect what happened next…”
+
    - “That moment changed everything…”
 
 8. **Use 3–8 emojis naturally**  
@@ -114,7 +113,6 @@ STRUCTURE VARIATION ACROSS POSTS:
 - Framework-based posts
 - Truth-bomb/contrarian posts
 - Question-first posts
-- Fictional micro-case-study posts
 - Poll-style concept posts (text only)
 
 LENGTH:  
