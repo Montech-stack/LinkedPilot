@@ -50,7 +50,7 @@ Date reference for freshness: ${now.toLocaleDateString('en-US', {
         : '200-300 words';
 
     // =====================================================
-    // 🔥 UPGRADED PROMPT — ANALOGIES + FICTIONAL CHARACTERS ONLY
+    // 🔥 UPGRADED PROMPT
     // =====================================================
     const prompt = `
 Generate ${count} fresh, original, deeply engaging LinkedIn post(s) using a ${tone} tone based on the idea: "${idea}".
@@ -61,7 +61,7 @@ Your mission: **maximize LinkedIn virality in 2024–2025** using:
 - Emotional tension + payoff
 - Saveable insights
 - Comment-provoking CTAs
-- List styles, frameworks, and mini fictional scenarios
+- List styles and frameworks
 
 STRICT RULES:
 
@@ -102,7 +102,6 @@ STRICT RULES:
 
 9. **Strong CTA**  
    Ask a comment-style question:
-   - “Which character are you today?”
    - “What shift are you making next?”
 
 10. **Hashtags**  
