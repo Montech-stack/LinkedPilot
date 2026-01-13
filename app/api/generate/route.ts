@@ -31,17 +31,6 @@ export async function POST(request: Request) {
     const now = new Date();
 
     const uniquenessClause = `
-Avoid ALL personal stories or personal experiences.
-Instead, rely ONLY on fictional analogy characters such as:
-
-- “Take Mr. Scofield…”
-- “Imagine Sarah, a designer drowning in tasks…”
-- “Think of Daniel, the guy who…”
-- “Picture Amara, who keeps restarting her goals…”
-- “Meet Tunde, who discovered a strange rule…”
-
-Use them to illustrate principles — NOT as real or personal events.
-Each story must feel like a simple fictional analogy, NOT a fake human experience or lie.
 
 Avoid clichés, avoid robotic phrasing, and avoid repetitive patterns.
 Include small twists, curiosity, and tension to keep the user reading.
@@ -80,21 +69,6 @@ STRICT RULES:
 1. **Hook Format**  
    Start with a sharp, emotional, bold, contrarian, or curiosity hook.
 
-2. **Fictional Analogy Storytelling ONLY**  
-   No personal stories.  
-   No “I did this”.  
-   No “a friend of mine”.  
-   No fake “real human” examples.  
-   ONLY fictional analogy characters like:
-   - Mr. Scofield
-   - Sarah the overwhelmed designer
-   - Daniel the confused marketer
-   - Amara the persistent achiever
-   - Tunde the strategist  
-   These characters illustrate the idea — not real events.
-
-   Format:  
-   Character → struggle → insight → shift → actionable lesson.
 
 3. **Transformation**  
    Show a clear mindset shift or discovery.
