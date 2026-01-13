@@ -12,7 +12,6 @@ import {
   Trash2,
   Share2,
   X,
-  Sparkles // Added for Presets icon
 } from "lucide-react";
 import MobileHeader from "@/components/MobileHeader";
 import Sidebar from "@/components/Sidebar";
@@ -42,6 +41,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
+import { PresetsPanel } from "@/components/PresetsPanel";
+import { useContentPresetStore, PRESETS } from "@/lib/content-preset-store"; // Import the store
 
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
   free: { maxPosts: 5, name: "Free Plan" },
@@ -64,14 +65,6 @@ const LENGTH_OPTIONS: LengthOption[] = [
   { value: "long", label: "Long" },
 ];
 
-// --- NEW: CONTENT PRESETS DATA ---
-const CONTENT_PRESETS = [
-  { label: "Personal Story", icon: "📖", prompt: "Write a vulnerable post about a failure I experienced in my career and the 3 key lessons I learned from it." },
-  { label: "Actionable Tips", icon: "💡", prompt: "Give me 5 actionable tips for [Insert Topic] that someone can implement in less than 10 minutes." },
-  { label: "Controversial Take", icon: "🔥", prompt: "Share a contrarian opinion about [Insert Industry] that challenges the status quo, and explain why." },
-  { label: "Case Study", icon: "📈", prompt: "Break down a recent success story where we achieved [Result] by focusing on [Strategy]." },
-];
-
 export default function Dashboard() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -91,9 +84,6 @@ export default function Dashboard() {
   const [userPlan, setUserPlan] = useState<UserPlan>("free");
   const [tokensRemaining, setTokensRemaining] = useState(0);
 
-  // New state for Presets Popover
-  const [presetsOpen, setPresetsOpen] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [uploadedMedia, setUploadedMedia] = useState<string | null>(null);
@@ -104,15 +94,6 @@ export default function Dashboard() {
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
   const currentPlanLimit = PLAN_LIMITS[userPlan];
   const userEmail = session?.user?.email || "guest@example.com";
-
-  // --- NEW: APPLY PRESET HANDLER ---
-  const applyPreset = (prompt: string) => {
-    setInput(prompt);
-    setPresetsOpen(false);
-    toast.success("Preset applied!");
-    // Focus textarea after short delay to allow popover to close
-    setTimeout(() => textareaRef.current?.focus(), 100);
-  };
 
   // Fetch user stats
   useEffect(() => {
@@ -224,6 +205,23 @@ export default function Dashboard() {
     setGeneratedPosts(prev => prev.map(p => (p.id === id ? { ...p, media, mediaType } : p)));
   };
 
+  // Auto-apply selected presets to input
+  useEffect(() => {
+    const unsubscribe = useContentPresetStore.subscribe(
+      (state) => state.selectedPresets,
+      (selected) => {
+        const allPresets = [...PRESETS, ...useContentPresetStore.getState().customPresets];
+        const prompts = selected.map((id) => allPresets.find((p) => p.id === id)?.promptSnippet || "");
+        setInput(prompts.join("\n\n"));
+        if (selected.length > 0) {
+          toast.success(`Applied ${selected.length} content preset${selected.length > 1 ? "s" : ""}!`);
+          textareaRef.current?.focus();
+        }
+      }
+    );
+    return unsubscribe;
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0F1116] text-white flex flex-col md:flex-row">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -241,36 +239,9 @@ export default function Dashboard() {
             </motion.div>
 
             <div className="bg-[#1A1B22] p-4 sm:p-6 rounded-2xl shadow-2xl border border-[#2A2A35]">
-              {/* TOP BUTTON BAR */}
+              {/* TOP BUTTON BAR - Removed the presets popover button */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-1.5">
-                  {/* --- NEW: PRESETS POPOVER --- */}
-                  <Popover open={presetsOpen} onOpenChange={setPresetsOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#14151B] border border-[#2A2A35] hover:bg-[#1f2633]" title="Content Presets">
-                        <Sparkles className="w-4 h-4 text-purple-400" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 bg-[#1A1B22] border border-[#2A2A35] rounded-xl text-white shadow-xl p-2">
-                      <div className="text-[11px] font-bold uppercase tracking-wider mb-2 px-2 text-gray-500">Magic Presets</div>
-                      <div className="space-y-1">
-                        {CONTENT_PRESETS.map((p) => (
-                          <button
-                            key={p.label}
-                            onClick={() => applyPreset(p.prompt)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-purple-500/10 text-left transition-colors group"
-                          >
-                            <span className="text-lg">{p.icon}</span>
-                            <div className="flex flex-col">
-                              <span className="text-xs font-semibold text-gray-200 group-hover:text-purple-400">{p.label}</span>
-                              <span className="text-[10px] text-gray-500 line-clamp-1">{p.prompt}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
                   {/* TONE POPOVER */}
                   <Popover>
                     <PopoverTrigger asChild>
@@ -341,11 +312,14 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Insert Presets Panel here */}
+              <PresetsPanel />
+
               {/* Textarea */}
-              <div className="relative mb-4">
+              <div className="relative mb-4 mt-4">
                 <textarea
                   ref={textareaRef}
-                  placeholder="Describe your post idea or use a magic preset..."
+                  placeholder="Describe your post idea or use a content preset..."
                   value={input}
                   onChange={handleInputChange}
                   className="w-full bg-[#14151B] text-white placeholder-gray-500 border border-[#2A2A35] focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 rounded-xl p-4 min-h-[140px] max-h-96 resize-none shadow-inner text-sm sm:text-base leading-relaxed transition-all"
