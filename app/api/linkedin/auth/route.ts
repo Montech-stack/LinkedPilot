@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       httpOnly: true,
       maxAge: 60 * 10, // 10 minutes
     })
-  }
+  } 
 
   return response
 }
