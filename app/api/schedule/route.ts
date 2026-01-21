@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ScheduledPost from "@/models/ScheduledPost";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const mode = searchParams.get("mode");
+
     await connectToDatabase();
 
-    const posts = await ScheduledPost.find({ posted: false }).sort({
-      scheduledAt: 1,
+    let query = {};
+    if (mode !== "all") {
+      const showHistory = searchParams.get("history") === "true";
+      query = { posted: showHistory };
+    }
+
+    const posts = await ScheduledPost.find(query).sort({
+      scheduledAt: 1, // Sort ascending by date
     });
 
     return NextResponse.json(posts);

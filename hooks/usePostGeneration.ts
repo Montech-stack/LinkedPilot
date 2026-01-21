@@ -9,7 +9,7 @@ export function usePostGeneration() {
 
   const generatePosts = useCallback(async (
     idea: string,
-    tone: string,
+    platforms: string[],
     count: number,
     length: string
   ): Promise<GeneratedPost[]> => {
@@ -29,7 +29,7 @@ export function usePostGeneration() {
         },
         body: JSON.stringify({
           idea,
-          tone,
+          platforms,
           length,
           count,
         }),
@@ -48,9 +48,10 @@ export function usePostGeneration() {
         throw new Error('Invalid response format: Expected posts array');
       }
 
-      return data.posts.map((post: { content: string }, index: number) => ({
+      return data.posts.map((post: { content: string; platform?: string }, index: number) => ({
         id: `post-${Date.now()}-${index}`,
         content: post.content,
+        platform: post.platform,
         engagement: ['Low', 'Medium', 'High', 'Very High'][Math.floor(Math.random() * 4)],
         score: Math.floor(Math.random() * 26) + 70,
       })) as GeneratedPost[];

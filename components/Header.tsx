@@ -3,6 +3,7 @@ import React from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import { HeaderProps } from "../types"
+import { ThemeToggle } from "./theme-toggle"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -12,13 +13,13 @@ const fadeInUp = {
 
 const Header: React.FC<HeaderProps> = ({ showBackButton, onBack, onMenuClick }) => (
   <motion.header
-    className="sticky top-0 z-40 flex items-center justify-between p-4 bg-[#2d3748] border-b border-[#374151] backdrop-blur-md shadow-xl"
+    className="sticky top-0 z-40 flex items-center justify-between p-4 bg-background/80 border-b border-border backdrop-blur-md shadow-sm"
     {...fadeInUp}
   >
     {showBackButton ? (
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300 px-3 py-2 rounded-lg"
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-300 px-3 py-2 rounded-lg"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Generator
@@ -26,21 +27,24 @@ const Header: React.FC<HeaderProps> = ({ showBackButton, onBack, onMenuClick }) 
     ) : (
       <button
         onClick={onMenuClick}
-        className="lg:hidden text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-lg"
+        className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-lg"
       >
         <Sparkles className="w-6 h-6" />
       </button>
     )}
-    
+
     <div className="flex items-center gap-2">
-      <div className="w-8 h-8 bg-[#0077B5] rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-lg">
-        LP
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-border">
+        <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
       </div>
-      <span className="font-semibold text-[#0077B5] hidden sm:block">LinkedPilot</span>
+      <span className="font-bold text-lg text-foreground hidden sm:block">Maxis</span>
     </div>
-    
-    <div className="w-8 h-8 bg-gray-600 rounded-full"></div>
-  </motion.header>
+
+    <div className="flex items-center gap-4">
+      <ThemeToggle />
+      <div className="w-8 h-8 bg-muted rounded-full"></div>
+    </div>
+  </motion.header >
 )
 
 export default Header

@@ -1,98 +1,138 @@
 // lib/content-preset-store.ts
-import { create } from 'zustand';
-import { Preset } from '@/types'; // Assume you add this or define inline
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const PRESETS: Preset[] = [
-  {
-    id: 'personal-story',
-    name: 'Personal Story',
-    subtitle: 'Share vulnerable experiences',
-    thumbnail: '📖', // Using emoji as thumbnail
-    promptSnippet: 'Write a vulnerable post about a failure I experienced in my career and the 3 key lessons I learned from it.',
-    description: 'Craft engaging personal narratives that connect with your audience on a deeper level.',
-    category: 'Storytelling',
-  },
-  {
-    id: 'actionable-tips',
-    name: 'Actionable Tips',
-    subtitle: 'Practical quick wins',
-    thumbnail: '💡',
-    promptSnippet: 'Give me 5 actionable tips for [Insert Topic] that someone can implement in less than 10 minutes.',
-    description: 'Provide bite-sized, implementable advice to help your audience achieve immediate results.',
-    category: 'Educational',
-  },
-  {
-    id: 'controversial-take',
-    name: 'Controversial Take',
-    subtitle: 'Challenge the status quo',
-    thumbnail: '🔥',
-    promptSnippet: 'Share a contrarian opinion about [Insert Industry] that challenges the status quo, and explain why.',
-    description: 'Spark discussions with bold, thought-provoking opinions that stand out in feeds.',
-    category: 'Opinion',
-  },
-  {
-    id: 'case-study',
-    name: 'Case Study',
-    subtitle: 'Break down successes',
-    thumbnail: '📈',
-    promptSnippet: 'Break down a recent success story where we achieved [Result] by focusing on [Strategy].',
-    description: 'Showcase real-world examples and strategies to demonstrate expertise and value.',
-    category: 'Business',
-  },
-];
-
-export interface Preset {
-  id: string;
-  name: string;
-  subtitle: string;
-  thumbnail: string; // Can be emoji or image URL
-  promptSnippet: string;
-  description: string;
-  category?: string;
+export interface ContentPreset {
+  id: string
+  name: string              // e.g. "Thought Leadership", "Quick Tips"
+  description: string       // one-sentence explanation
+  promptSnippet: string     // text appended to final prompt
+  category?: string         // "Storytelling", "Educational", "Engagement", "Custom"
 }
 
-interface ContentPresetStore {
-  selectedPresets: string[];
-  togglePreset: (id: string) => void;
-  advancedMode: boolean;
-  setAdvancedMode: (mode: boolean) => void;
-  customPresets: Preset[];
-  addCustomPreset: (preset: Preset) => void;
-  removeCustomPreset: (id: string) => void;
-  isPresetsExpanded: boolean;
-  setPresetsExpanded: (expanded: boolean) => void;
-  isPresetsFullscreen: boolean;
-  setPresetsFullscreen: (fullscreen: boolean) => void;
-  presetOrder: string[];
-  reorderPresets: (order: string[]) => void;
+export const PRESETS: ContentPreset[] = [
+  {
+    id: "thought-leadership",
+    name: "Thought Leadership",
+    description: "Deep insights & expert opinions",
+    promptSnippet: "Write in confident thought-leadership tone, share original strategic insight, position author as industry expert",
+    category: "Authority",
+  },
+  {
+    id: "quick-tips",
+    name: "Quick Tips",
+    description: "Numbered actionable advice",
+    promptSnippet: "Format as concise numbered list of 5–7 practical, immediately implementable tips",
+    category: "Educational",
+  },
+  {
+    id: "personal-story",
+    name: "Personal Story",
+    description: "Relatable anecdote + lessons",
+    promptSnippet: "Start with short vulnerable personal story or failure, extract 2–3 clear lessons, close with inspiring takeaway",
+    category: "Storytelling",
+  },
+  {
+    id: "controversial-take",
+    name: "Bold Opinion",
+    description: "Provocative view that sparks debate",
+    promptSnippet: "Share strong, slightly controversial opinion on [topic], support with clear reasoning, invite discussion",
+    category: "Engagement",
+  },
+  {
+    id: "case-study",
+    name: "Mini Case Study",
+    description: "Before → Strategy → Result",
+    promptSnippet: "Structure as mini case study: challenge → key decision/strategy → measurable result + lesson",
+    category: "Proof",
+  },
+  {
+    id: "question-hook",
+    name: "Question Hook",
+    description: "Engage with powerful question",
+    promptSnippet: "Start with thought-provoking question that challenges reader assumptions, then deliver value",
+    category: "Engagement",
+  },
+  {
+    id: "list-post",
+    name: "List Format",
+    description: "Numbered or bulleted value",
+    promptSnippet: "Write in numbered list format, each point clear, actionable and valuable",
+    category: "Educational",
+  },
+  {
+    id: "behind-scenes",
+    name: "Behind the Scenes",
+    description: "Show the real process",
+    promptSnippet: "Share transparent behind-the-scenes look at process, challenges and decisions",
+    category: "Authenticity",
+  },
+]
+
+interface ContentPresetState {
+  selectedPresets: string[]
+  advancedMode: boolean           // true = multi-select, false = single-select
+  customPresets: ContentPreset[]
+  isPresetsExpanded: boolean
+  presetOrder: string[]
+
+  togglePreset: (id: string) => void
+  setAdvancedMode: (mode: boolean) => void
+  addCustomPreset: (preset: ContentPreset) => void
+  removeCustomPreset: (id: string) => void
+  setPresetsExpanded: (expanded: boolean) => void
+  reorderPresets: (order: string[]) => void
 }
 
-export const useContentPresetStore = create<ContentPresetStore>((set, get) => ({
-  selectedPresets: [],
-  togglePreset: (id) => set((state) => {
-    if (!state.advancedMode) {
-      return {
-        selectedPresets: state.selectedPresets.includes(id) ? [] : [id],
-      };
-    } else {
-      return {
-        selectedPresets: state.selectedPresets.includes(id)
-          ? state.selectedPresets.filter((p) => p !== id)
-          : [...state.selectedPresets, id],
-      };
+export const useContentPresetStore = create<ContentPresetState>()(
+  persist(
+    (set, get) => ({
+      selectedPresets: [],
+      advancedMode: true,
+      customPresets: [],
+      isPresetsExpanded: false,
+      presetOrder: PRESETS.map(p => p.id),
+
+      togglePreset: (id) =>
+        set(state => {
+          if (!state.advancedMode) {
+            // single select
+            return { selectedPresets: state.selectedPresets.includes(id) ? [] : [id] }
+          }
+          // multi select
+          return {
+            selectedPresets: state.selectedPresets.includes(id)
+              ? state.selectedPresets.filter(p => p !== id)
+              : [...state.selectedPresets, id]
+          }
+        }),
+
+      setAdvancedMode: mode => set({ advancedMode: mode }),
+
+      addCustomPreset: preset =>
+        set(state => ({
+          customPresets: [...state.customPresets, preset],
+          presetOrder: [preset.id, ...state.presetOrder]
+        })),
+
+      removeCustomPreset: id =>
+        set(state => ({
+          customPresets: state.customPresets.filter(p => p.id !== id),
+          selectedPresets: state.selectedPresets.filter(p => p !== id),
+          presetOrder: state.presetOrder.filter(p => p !== id)
+        })),
+
+      setPresetsExpanded: expanded => set({ isPresetsExpanded: expanded }),
+
+      reorderPresets: order => set({ presetOrder: order }),
+    }),
+    {
+      name: 'maxis-content-presets',
+      partialize: state => ({
+        customPresets: state.customPresets,
+        presetOrder: state.presetOrder,
+        advancedMode: state.advancedMode
+      })
     }
-  }),
-  advancedMode: false, // Default to single select for content creation
-  setAdvancedMode: (mode) => set({ advancedMode: mode }),
-  customPresets: [],
-  addCustomPreset: (preset) => set((state) => ({ customPresets: [...state.customPresets, preset] })),
-  removeCustomPreset: (id) => set((state) => ({
-    customPresets: state.customPresets.filter((p) => p.id !== id),
-  })),
-  isPresetsExpanded: true,
-  setPresetsExpanded: (expanded) => set({ isPresetsExpanded: expanded }),
-  isPresetsFullscreen: false,
-  setPresetsFullscreen: (fullscreen) => set({ isPresetsFullscreen: fullscreen }),
-  presetOrder: PRESETS.map((p) => p.id),
-  reorderPresets: (order) => set({ presetOrder: order }),
-}));
+  )
+)

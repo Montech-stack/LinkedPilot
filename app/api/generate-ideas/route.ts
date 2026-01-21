@@ -4,7 +4,7 @@ import * as cheerio from "cheerio";
 
 export async function POST(request: Request) {
   try {
-    const { input, previous = [] } = await request.json();
+    const { input, previous = [], tone, audience } = await request.json();
     if (!input) {
       return NextResponse.json({ error: 'Missing required field: input' }, { status: 400 });
     }
@@ -25,18 +25,18 @@ export async function POST(request: Request) {
 
     const trendsClause =
       trends.length > 0
-        ? `Blend in one or more of these trending topics ONLY if they naturally fit: ${trends.join(", ")}. Don’t force them—use them only if they elevate the hook.`
+        ? `Blend in one or more of these trending topics ONLY if they naturally fit: ${trends.join(", ")}.`
         : "";
 
-    // Strong uniqueness clause — prevents generic AI content
+    // Refined uniqueness clause
     const uniquenessClause = `
 Ensure the ideas are completely non-generic by:
-- Using short analogy-style references (e.g., "Like when Mr. Scofield tried X and accidentally discovered Y...").
+- Using short analogy-style references.
 - Avoiding personal stories or fake claims.
-- Avoiding all corporate buzzwords like “delve”, “explore”, “unlock potential”, “navigate”, “leverage”.
-- Making each idea visually scroll-stopping, emotionally punchy, or curiosity-driven.
-- Using zero markdown formatting (no *, no **, no ###).
-- Varying pacing: some punchy, some mysterious, some contrarian, some story-style.
+- Avoiding corporate buzzwords.
+- Making each idea visually scroll-stopping.
+- Using zero markdown formatting.
+- Varying pacing.
     `;
 
     const previousStr =
@@ -44,9 +44,15 @@ Ensure the ideas are completely non-generic by:
         ? `Exclude these previous ideas entirely:\n${previous.join("\n")}\n\n`
         : "";
 
+    const audienceStr = audience ? `TARGET AUDIENCE: ${audience}. tailored specifically for their pain points and language.` : "TARGET AUDIENCE: General professional audience.";
+    const toneStr = tone ? `TONE: ${tone}.` : "TONE: Contrarian and bold.";
+
     const prompt = `
 ${previousStr}
 Generate 5 viral social media content ideas for the topic: "${input}".
+${audienceStr}
+${toneStr}
+
 Each idea must be platform-agnostic and optimized for virality across LinkedIn, Twitter/X, Instagram, TikTok, and Facebook.
 
 ${trendsClause}
@@ -64,29 +70,29 @@ STYLE REQUIREMENTS:
 - Keep wording conversational and punchy.
 - No hashtags.
 - No emojis.
-- No markdown or special characters like (*) except normal punctuation.
+- No markdown or special characters like(*) except normal punctuation.
 
 PSYCHOLOGY REQUIREMENTS:
 Integrate at least one of these into each idea:
-- Curiosity gap
-- Shock value or myth-busting
-- FOMO or urgency
-- Micro-storytelling
-- Pattern interrupt
-- Practicality or unexpected lesson
+    - Curiosity gap
+      - Shock value or myth - busting
+        - FOMO or urgency
+          - Micro - storytelling
+          - Pattern interrupt
+            - Practicality or unexpected lesson
 
 RETURN FORMAT:
-Return ONLY a JSON array of 5 items. Each item must be:
+Return ONLY a JSON array of 5 items.Each item must be:
 
-{
-  "category": "Controversial" | "Question" | "Story" | "List" | "Career Advice",
-  "hook": "The viral-ready hook idea",
-  "engagement": "Very High" | "High" | "Medium",
-  "score": number between 70 and 95,
-  "keywords": array of 3-5 relevant keywords
-}
+    {
+      "category": "Controversial" | "Question" | "Story" | "List" | "Career Advice",
+        "hook": "The viral-ready hook idea",
+          "engagement": "Very High" | "High" | "Medium",
+            "score": number between 70 and 95,
+              "keywords": array of 3 - 5 relevant keywords
+    }
 
-Return ONLY the JSON array. No text outside JSON.
+Return ONLY the JSON array.No text outside JSON.
 `;
 
     const generatedContent = await generateContent(prompt, {

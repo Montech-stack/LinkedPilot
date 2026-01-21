@@ -1,9 +1,10 @@
 "use client"
 
-import { Menu } from "lucide-react"
+import { Menu, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/ProfileDropdown"
-import Image from "next/image"
+import Link from "next/link"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface MobileHeaderProps {
   onMenuClick: () => void
@@ -11,33 +12,36 @@ interface MobileHeaderProps {
 
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-3 py-2 h-12 bg-gradient-to-br from-[#0b0b0c]/80 via-[#0d1118]/70 to-[#0d1b2a]/70 border-b border-[#1a1d29]/50 backdrop-blur-sm shadow-md lg:hidden">
-      
-      {/* Menu Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onMenuClick}
-        className="text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-      >
-        <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-      </Button>
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-16 bg-background/80 backdrop-blur-md border-b border-gold/20 lg:hidden shadow-sm shadow-gold/5 transition-all duration-300">
 
-      {/* Logo */}
-      <div className="flex-1 flex">
-        <Image
-          src="/Linked Logo.png"
-          alt="Linked Logo"
-          width={45}
-          height={35}
-          className="object-contain"
-        />
-      </div>
+        {/* Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMenuClick}
+          className="text-muted-foreground hover:text-gold transition-colors -ml-2"
+        >
+          <Menu className="w-6 h-6" />
+        </Button>
 
-      {/* Profile */}
-      <div className="flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8">
-        <ProfileDropdown />
-      </div>
-    </header>
+        {/* Brand */}
+        <Link href="/dashboard" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-gold/30 group-hover:border-gold/60 transition-colors bg-gold/5">
+            <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+          </div>
+          <span className="font-bold text-lg text-foreground tracking-tight group-hover:text-gold transition-colors">Maxis</span>
+        </Link>
+
+        {/* Profile & Theme */}
+        <div className="flex items-center justify-end gap-2">
+          <ThemeToggle />
+          <ProfileDropdown />
+        </div>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-16 w-full lg:hidden flex-shrink-0" />
+    </>
   )
 }

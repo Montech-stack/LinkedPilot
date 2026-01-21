@@ -4,14 +4,14 @@ import * as cheerio from "cheerio";
 
 export async function POST(request: Request) {
   try {
-    const { idea, tone, length, count } = await request.json();
+    const { idea, platforms = ["LinkedIn"], length, count } = await request.json();
 
-    if (!idea || !tone || !length || !count) {
+    if (!idea || !length || !count) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Fetch trending topics
-    let trends = [];
+    let trends: string[] = [];
     try {
       const trendsResponse = await fetch('https://getdaytrends.com/');
       const trendsHtml = await trendsResponse.text();
@@ -25,118 +25,63 @@ export async function POST(request: Request) {
     }
 
     const trendsClause = trends.length > 0
-      ? `When relevant, subtly blend one or more trending topics to increase freshness: ${trends.join(', ')}.`
+      ? `When relevant, you may subtly reference these trending topics: ${trends.join(', ')}.`
       : '';
 
     const now = new Date();
 
-    const uniquenessClause = `
-
-Avoid clichés, avoid robotic phrasing, and avoid repetitive patterns.
-Include small twists, curiosity, and tension to keep the user reading.
-
-Date reference for freshness: ${now.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    })}.
-`;
-
     const wordCount =
       length === 'short'
-        ? '50-100 words'
+        ? 'Brief (under 280 chars for Twitter, under 100 words for others)'
         : length === 'medium'
-        ? '100-200 words'
-        : '200-300 words';
+          ? 'Medium length (100-200 words)'
+          : 'Long form (200-400 words)';
+
+    // Join platforms for the general context, but we will iterate in the prompt
+    const platformList = Array.isArray(platforms) ? platforms : [platforms];
+    const platformNames = platformList.join(', ');
 
     // =====================================================
-    // 🔥 UPGRADED PROMPT
+    // 🔥 UPGRADED PROMPT FOR MULTI-PLATFORM
     // =====================================================
     const prompt = `
-Generate ${count} fresh, original, deeply engaging LinkedIn post(s) using a ${tone} tone based on the idea: "${idea}".
+Generate ${count} distinct social media post(s) for EACH of the following platforms: ${platformNames}.
+Based on the idea: "${idea}".
 
-Your mission: **maximize LinkedIn virality in 2024–2025** using:
-- Curiosity hooks
-- Pattern interrupts
-- Emotional tension + payoff
-- Saveable insights
-- Comment-provoking CTAs
-- List styles and frameworks
+TOTAL POSTS TO GENERATE per platform: ${count}. (If 2 platforms and count 1, generate 1 for each).
 
-STRICT RULES:
+Your mission: **maximize engagement and virality** specific to each platform's culture in 2024–2025.
 
-1. **Hook Format**  
-   Start with a sharp, emotional, bold, contrarian, or curiosity hook.
+PLATFORM SPECIFIC INSTRUCTIONS:
+- **LinkedIn**: Professional, value-driven, storytelling, "bro-etry" usage if effective, clear takeaways.
+- **Twitter / X**: If length is 'short', standard tweet. If 'medium' or 'long', create a **THREAD**. For threads, separate tweets with "---". Tone: Punchy, contrarian, high-signal.
+- **Instagram**: Visual-first captions, engaging hooks, use of emojis, "Link in bio" CTA.
+- **Facebook**: Conversational, community-focused, storytelling.
 
+GENERAL RULES:
+1. **Hook**: Start with a scroll-stopping hook.
+2. **Value**: Provide actionable insight or emotional resonance.
+3. **Structure**: Use short paragraphs and white space.
+4. **Dates**: Today is ${now.toLocaleDateString()}.
+5. **Trends**: ${trendsClause}
 
-3. **Transformation**  
-   Show a clear mindset shift or discovery.
+LENGTH: ${wordCount}.
 
-4. **Create simple frameworks**  
-   Example:
-   - “The Scofield Method”
-   - “The Focus Ladder”
-   - “The 2-Minute Reset Rule”
+OUTPUT FORMAT:
+Return a valid JSON array of objects. Each object must have:
+- "id": A unique string ID.
+- "platform": The platform name (e.g. "LinkedIn", "Twitter").
+- "content": The full post text.
+- "note": A short note on why this works for this platform.
 
-5. **Short Paragraphs**  
-   Maximize readability + dwell time.
-
-6. Actionable Value
-   Include 2–4 simple, practical action points that clearly stand out.
-   Use hyphens like this:
-   - Do this first…
-   - Then apply this…
-   - Finally adjust this…
-
-   Do NOT use numbered lists or asterisks.
-   ONLY use hyphens for bullet points.
-
-
-7. **Emotional Resonance**  
-   Use phrases like:
-
-   - “That moment changed everything…”
-
-8. **Use 3–8 emojis naturally**  
-   Not spammy, not forced.
-
-9. **Strong CTA**  
-   Ask a comment-style question:
-   - “What shift are you making next?”
-
-10. **Hashtags**  
-   Add 3–5 relevant hashtags at the bottom.
-
-STRUCTURE VARIATION ACROSS POSTS:
-- Listicle posts
-- Framework-based posts
-- Truth-bomb/contrarian posts
-- Question-first posts
-- Poll-style concept posts (text only)
-
-LENGTH:  
-Each post must be ${wordCount}.  
-No markdown.  
-No asterisks.  
-No repetitive AI patterns.
-
-TRENDS:  
-${trendsClause}
-
-UNIQUENESS:  
-${uniquenessClause}
-
-OUTPUT FORMAT:  
-Return ONLY valid JSON array with ${count} objects:
+Example JSON:
 [
-  {
-    "id": "timestamp-index/${count}",
-    "content": "full post text"
-  }
+  { "id": "1", "platform": "Twitter", "content": "Hook... \n\nBody...", "note": "Thread structure used" },
+  { "id": "2", "platform": "LinkedIn", "content": "Hook... \n\nBody...", "note": "Professional formatting" }
 ]
     `;
 
-    const generatedContent = await generateContent(prompt, { maxTokens: 3000 });
+    const generatedContent = await generateContent(prompt, { maxTokens: 4000 });
 
     // Remove code fences
     let cleanedContent = generatedContent
@@ -144,47 +89,38 @@ Return ONLY valid JSON array with ${count} objects:
       .replace(/```/g, '')
       .trim();
 
-    let posts;
+    let posts: any[];
 
     try {
       posts = JSON.parse(cleanedContent);
 
-      if (!Array.isArray(posts) || !posts.every(p => p.id && p.content)) {
-        throw new Error('Invalid post format');
+      if (!Array.isArray(posts)) {
+        throw new Error('Invalid post format: not an array');
       }
     } catch (parseError) {
       console.error('JSON parse error:', parseError, 'Raw:', cleanedContent);
-
-      // Soft repair attempt
-      if (cleanedContent.endsWith('[') || cleanedContent.endsWith('{')) {
-        cleanedContent += ']}';
-      } else if (cleanedContent.includes('[') && !cleanedContent.endsWith(']')) {
-        cleanedContent = cleanedContent.replace(/,\s*$/, '') + ']';
-      }
-
-      try {
-        posts = JSON.parse(cleanedContent);
-      } catch (secondError) {
-        console.error('Second parse fail:', secondError);
-
-        // Fallback posts
-        posts = Array.from({ length: count }, (_, index) => ({
-          id: `${Date.now()}-${index}/${count}`,
-          content: `Default generated post for: ${idea}.`
-        }));
+      // Simple repair
+      if (cleanedContent.indexOf('[') !== -1 && cleanedContent.lastIndexOf(']') !== -1) {
+        const sub = cleanedContent.substring(cleanedContent.indexOf('['), cleanedContent.lastIndexOf(']') + 1);
+        try { posts = JSON.parse(sub); } catch (e) { throw new Error("Failed to parse AI response"); }
+      } else {
+        throw new Error("Failed to parse AI response");
       }
     }
 
     const timestamp = Date.now();
 
-    // Cleanup
-    posts = Array.from({ length: count }, (_, index) => {
-      const post = posts[index] || {};
-      let content = post.content || `Default content for: ${idea}.`;
-      content = content.replace(/\*/g, '');
+    // Sanitize and ID
+    posts = posts.map((post, index) => {
+      // Clean content
+      let content = post.content || "";
+      // Strip asterisks if they are excessive, but bolding is okay.
+      // Actually Markdown is good.
       return {
-        id: post.id || `${timestamp}-${index}/${count}`,
-        content
+        id: post.id || `${timestamp}-${index}`,
+        platform: post.platform || "Unknown",
+        content: content,
+        note: post.note
       };
     });
 
@@ -196,7 +132,7 @@ Return ONLY valid JSON array with ${count} objects:
 
     return NextResponse.json(
       { error: `Failed to generate post: ${errorMessage}` },
-      { status: errorMessage.includes('Rate limit') ? 429 : 500 }
+      { status: 500 }
     );
   }
 }

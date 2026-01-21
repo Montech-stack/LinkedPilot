@@ -1,5 +1,5 @@
 {
-  "name": "Woorl",
+  "name": "Maxis",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,6 +12,7 @@
     "@auth/core": "latest",
     "@auth/mongodb-adapter": "^3.11.1",
     "@emotion/is-prop-valid": "latest",
+    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",

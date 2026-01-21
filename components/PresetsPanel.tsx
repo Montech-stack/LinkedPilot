@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import type React from "react"
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Check,
   Info,
@@ -13,20 +13,20 @@ import {
   Minimize2,
   Search,
   X,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { useContentPresetStore, PRESETS } from "@/lib/content-preset-store"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { useState, useRef, useMemo } from "react"
-import { toast } from "sonner"
+  ArrowLeft,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useContentPresetStore, PRESETS } from "@/lib/content-preset-store";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import toast from "react-hot-toast";
 
-function PresetsPanel() {
+export default function PresetsPanel() {
   const {
     selectedPresets,
     togglePreset,
@@ -37,612 +37,497 @@ function PresetsPanel() {
     removeCustomPreset,
     isPresetsExpanded,
     setPresetsExpanded,
-    isPresetsFullscreen,
-    setPresetsFullscreen,
     presetOrder,
-    reorderPresets,
-  } = useContentPresetStore()
+  } = useContentPresetStore();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [newPresetName, setNewPresetName] = useState("")
-  const [newPresetSubtitle, setNewPresetSubtitle] = useState("")
-  const [newPresetSnippet, setNewPresetSnippet] = useState("")
-  const [newPresetDescription, setNewPresetDescription] = useState("")
-  const [newPresetThumbnail, setNewPresetThumbnail] = useState<string>("")
-  const [draggedItem, setDraggedItem] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [snippet, setSnippet] = useState("");
+  const [desc, setDesc] = useState("");
+  const [category, setCategory] = useState("Custom");
+  const [search, setSearch] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
 
-  const allPresets = [...customPresets, ...PRESETS]
+  // Fetch presets on mount
+  useEffect(() => {
+    async function fetchPresets() {
+      try {
+        const res = await fetch("/api/presets");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            data.forEach((p: any) => {
+              const exists = customPresets.find(cp => cp.id === p._id || cp.id === p.id);
+              if (!exists) {
+                // Map _id to id if necessary
+                addCustomPreset({ ...p, id: p._id || p.id });
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchPresets();
+  }, []);
 
-  const filteredPresets = useMemo(() => {
-    if (!searchQuery.trim()) return allPresets
-    const query = searchQuery.toLowerCase()
-    return allPresets.filter(
-      (preset) =>
-        preset.name.toLowerCase().includes(query) ||
-        preset.subtitle.toLowerCase().includes(query) ||
-        preset.description.toLowerCase().includes(query) ||
-        preset.category?.toLowerCase().includes(query) ||
-        preset.promptSnippet.toLowerCase().includes(query),
-    )
-  }, [searchQuery])
+  const all = [...customPresets, ...PRESETS];
 
-  const sortedPresets = filteredPresets.sort((a, b) => {
-    const aIndex = presetOrder.indexOf(a.id)
-    const bIndex = presetOrder.indexOf(b.id)
-    if (aIndex === -1) return 1
-    if (bIndex === -1) return -1
-    return aIndex - bIndex
-  })
+  const filtered = useMemo(() => {
+    if (!search.trim()) return all;
+    const q = search.toLowerCase();
+    return all.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.promptSnippet.toLowerCase().includes(q) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    );
+  }, [search, all]);
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const sorted = filtered.sort((a, b) => {
+    const ai = presetOrder.indexOf(a.id);
+    const bi = presetOrder.indexOf(b.id);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file")
-      return
+  const create = async () => {
+    if (!name.trim() || !snippet.trim()) {
+      toast.error("Name & prompt snippet required");
+      return;
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setNewPresetThumbnail(event.target?.result as string)
+    try {
+      const res = await fetch("/api/presets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: desc.trim(),
+          promptSnippet: snippet.trim(),
+          category: category.trim() || "Custom",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      const newPreset = await res.json();
+      const presetObj = { ...newPreset, id: newPreset._id };
+
+      addCustomPreset(presetObj);
+      toast.success("Style created successfully");
+
+      setName("");
+      setSnippet("");
+      setDesc("");
+      setCategory("Custom");
+      setDialogOpen(false);
+    } catch (err) {
+      toast.error("Failed to create preset");
     }
-    reader.readAsDataURL(file)
-  }
+  };
 
-  const handleCreatePreset = () => {
-    if (!newPresetName.trim() || !newPresetSnippet.trim()) {
-      toast.error("Please fill in name and prompt snippet")
-      return
+  const remove = async (id: string) => {
+    const isLocal = id.startsWith("custom-");
+    try {
+      if (!isLocal) {
+        await fetch(`/api/presets/${id}`, { method: "DELETE" });
+      }
+      removeCustomPreset(id);
+      toast.success("Removed");
+    } catch (e) {
+      toast.error("Failed to delete");
     }
+  };
 
-    const newPreset = {
-      id: `custom-${Date.now()}`,
-      name: newPresetName,
-      subtitle: newPresetSubtitle || "Custom preset",
-      thumbnail: newPresetThumbnail || "/custom-preset.jpg",
-      promptSnippet: newPresetSnippet,
-      description: newPresetDescription || "Custom user-created preset",
-      category: "Custom",
-    }
-
-    addCustomPreset(newPreset)
-    reorderPresets([newPreset.id, ...presetOrder])
-    toast.success("Custom preset created!")
-
-    setNewPresetName("")
-    setNewPresetSubtitle("")
-    setNewPresetSnippet("")
-    setNewPresetDescription("")
-    setNewPresetThumbnail("")
-    setIsDialogOpen(false)
-  }
-
-  const handleDragStart = (e: React.DragEvent<HTMLButtonElement>, id: string) => {
-    e.dataTransfer.setData("text/plain", id)
-    setDraggedItem(id)
-  }
-
-  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent<HTMLButtonElement>, targetId: string) => {
-    e.preventDefault()
-    const draggedId = e.dataTransfer.getData("text/plain")
-    if (draggedId) {
-      const newOrder = presetOrder.filter((id) => id !== draggedId)
-      const targetIndex = newOrder.indexOf(targetId)
-      newOrder.splice(targetIndex + 1, 0, draggedId)
-      reorderPresets(newOrder)
-    }
-    setDraggedItem(null)
-  }
-
-  const PresetCard = ({ preset }: { preset: (typeof PRESETS)[0] }) => {
-    const isSelected = selectedPresets.includes(preset.id)
-    const order = selectedPresets.indexOf(preset.id) + 1
-    const isCustom = preset.id.startsWith("custom-")
+  const Card = ({ p }: { p: typeof PRESETS[number] }) => {
+    const selected = selectedPresets.includes(p.id);
+    const custom = !PRESETS.find(pr => pr.id === p.id);
 
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            draggable
-            onDragStart={(e) => handleDragStart(e, preset.id)}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, preset.id)}
-            onClick={() => togglePreset(preset.id)}
+            onClick={() => togglePreset(p.id)}
             className={cn(
-              "group relative",
-              "rounded-lg border-2 transition-all",
-              draggedItem === preset.id ? "opacity-50" : "",
-              isSelected ? "gradient-border shadow-lg" : "border-border hover:border-muted-foreground",
+              "group relative flex flex-col items-start text-left gap-2 p-3.5 rounded-xl border transition-all duration-200 w-full h-full",
+              selected
+                ? "border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]"
+                : "border-border/40 hover:border-border/80 hover:bg-[#1f2128] bg-[#16171d]"
             )}
           >
-            <div className="aspect-square rounded-t-md overflow-hidden bg-secondary relative">
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity">
-                <GripHorizontal className="w-5 h-5 text-white" />
-              </div>
-              <img
-                src={preset.thumbnail || "/placeholder.svg"}
-                alt={preset.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="flex w-full items-start justify-between gap-2">
+              <span className={cn("font-semibold text-sm leading-tight", selected ? "text-blue-200" : "text-gray-200")}>
+                {p.name}
+              </span>
+              {selected && (
+                <div className="bg-blue-500 rounded-full p-0.5 shadow-sm">
+                  <Check className="h-2.5 w-2.5 text-white" />
+                </div>
+              )}
             </div>
 
-            <div className="p-2 bg-card rounded-b-md">
-              <p className="text-xs font-medium text-balance leading-tight">{preset.name}</p>
-              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{preset.subtitle}</p>
-              {preset.category && (
-                <Badge variant="secondary" className="text-[9px] mt-1 px-1 py-0">
-                  {preset.category}
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {p.description}
+            </p>
+
+            <div className="mt-auto pt-2 w-full flex items-center justify-between">
+              {p.category && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-[#2A2A35] text-gray-400 hover:bg-[#32323f]">
+                  {p.category}
                 </Badge>
               )}
             </div>
 
-            {isSelected && (
-              <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-r from-[var(--gradient-orange)] to-[var(--gradient-blue)] flex items-center justify-center shadow-lg">
-                {advancedMode && order > 0 ? (
-                  <span className="text-xs font-bold text-white">{order}</span>
-                ) : (
-                  <Check className="w-3.5 h-3.5 text-white" />
-                )}
-              </div>
-            )}
-
-            {isCustom && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeCustomPreset(preset.id)
-                  toast.success("Custom preset removed")
+            {custom && (
+              <div
+                onClick={e => {
+                  e.stopPropagation();
+                  remove(p.id);
                 }}
-                className="absolute top-2 left-2 w-5 h-5 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 p-1 rounded-md hover:bg-red-500/20 text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <Trash2 className="w-3 h-3 text-white" />
-              </button>
-            )}
-
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-5 h-5 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                <Info className="w-3 h-3 text-white" />
+                <Trash2 className="h-3.5 w-3.5" />
               </div>
-            </div>
+            )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-xs">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold">{preset.name}</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">{preset.description}</p>
-            <div className="pt-2 border-t border-border">
-              <p className="text-[10px] text-muted-foreground mb-1">Adds to prompt:</p>
-              <code className="text-[10px] bg-secondary px-2 py-1 rounded block">{preset.promptSnippet}</code>
-            </div>
+        <TooltipContent side="bottom" className="max-w-xs text-xs bg-[#1A1B22] border-[#2A2A35] p-3 shadow-xl">
+          <p className="font-semibold mb-1 text-gray-200">{p.name}</p>
+          <p className="text-gray-400 mb-2">{p.description}</p>
+          <div className="pt-2 border-t border-[#2A2A35]">
+            <p className="text-[10px] text-blue-400 mb-1 font-medium">✨ Adds to prompt:</p>
+            <code className="text-[10px] text-gray-300 bg-[#2A2A35] px-1.5 py-1 rounded break-words block">
+              {p.promptSnippet}
+            </code>
           </div>
         </TooltipContent>
       </Tooltip>
-    )
-  }
+    );
+  };
 
-  if (isPresetsFullscreen) {
+  if (fullscreen) {
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <div className="h-full flex flex-col">
-          {/* Fullscreen Header */}
-          <div className="border-b border-border p-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-semibold gradient-text">All Content Presets</h2>
-                <Badge variant="secondary">{sortedPresets.length} available</Badge>
-                <Badge variant="outline">{selectedPresets.length} selected</Badge>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search presets..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-9"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-                    </button>
-                  )}
-                </div>
-
-                <Button variant="outline" size="sm" onClick={() => setPresetsFullscreen(false)} className="gap-2">
-                  <Minimize2 className="w-4 h-4" />
-                  Collapse
-                </Button>
-              </div>
-            </div>
+      <TooltipProvider>
+        <div className="fixed inset-0 z-50 bg-[#0F1116] flex flex-col animate-in fade-in duration-200">
+          <div className="flex items-center justify-between p-4 border-b border-[#2A2A35] bg-[#1A1B22]">
+            <button
+              onClick={() => setFullscreen(false)}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Editor</span>
+            </button>
+            <h2 className="font-semibold text-lg text-white">Preset Library</h2>
+            <div className="w-20" />
           </div>
 
-          {/* Fullscreen Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="max-w-7xl mx-auto">
-              <TooltipProvider delayDuration={300}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {/* Custom Preset Button First */}
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                      <button className="rounded-lg border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 aspect-square min-h-[140px]">
-                        <Plus className="w-8 h-8 text-primary" />
-                        <span className="text-sm font-medium text-primary">Create Custom</span>
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Create Custom Preset</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="preset-name">Preset Name</Label>
-                          <Input
-                            id="preset-name"
-                            placeholder="e.g., Motivational Quote"
-                            value={newPresetName}
-                            onChange={(e) => setNewPresetName(e.target.value)}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="preset-subtitle">Subtitle (optional)</Label>
-                          <Input
-                            id="preset-subtitle"
-                            placeholder="e.g., Inspiring content"
-                            value={newPresetSubtitle}
-                            onChange={(e) => setNewPresetSubtitle(e.target.value)}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="preset-snippet">Prompt Snippet</Label>
-                          <Textarea
-                            id="preset-snippet"
-                            placeholder="e.g., inspirational tone, engaging narrative, positive message"
-                            value={newPresetSnippet}
-                            onChange={(e) => setNewPresetSnippet(e.target.value)}
-                            className="min-h-[80px]"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="preset-description">Description (optional)</Label>
-                          <Textarea
-                            id="preset-description"
-                            placeholder="Describe what this preset does..."
-                            value={newPresetDescription}
-                            onChange={(e) => setNewPresetDescription(e.target.value)}
-                            className="min-h-[60px]"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Thumbnail (optional)</Label>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleThumbnailUpload}
-                            className="hidden"
-                            id="preset-thumbnail"
-                          />
-                          {newPresetThumbnail ? (
-                            <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                              <img
-                                src={newPresetThumbnail || "/placeholder.svg"}
-                                alt="Thumbnail"
-                                className="w-full h-full object-cover"
-                              />
-                              <button
-                                onClick={() => setNewPresetThumbnail("")}
-                                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-white" />
-                              </button>
-                            </div>
-                          ) : (
-                            <label
-                              htmlFor="preset-thumbnail"
-                              className="flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-border hover:border-chart-1 hover:bg-secondary/50 transition-colors cursor-pointer"
-                            >
-                              <Plus className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">Upload thumbnail</span>
-                            </label>
-                          )}
-                        </div>
-
-                        <Button onClick={handleCreatePreset} className="w-full">
-                          Create Preset
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* All Presets */}
-                  {sortedPresets.map((preset) => (
-                    <PresetCard key={preset.id} preset={preset} />
-                  ))}
+          <div className="p-6 overflow-y-auto flex-1">
+            <div className="max-w-6xl mx-auto space-y-6">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="relative w-full sm:w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <Input
+                    placeholder="Search all presets..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-10 bg-[#16171d] border-[#2A2A35]"
+                  />
                 </div>
-
-                {sortedPresets.length === 0 && searchQuery && (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">No presets found for "{searchQuery}"</p>
-                    <Button variant="link" onClick={() => setSearchQuery("")} className="mt-2">
-                      Clear search
-                    </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-[#16171d] rounded-lg border border-[#2A2A35] p-0.5">
+                    <button
+                      onClick={() => setAdvancedMode(false)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                        !advancedMode ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-200"
+                      )}
+                    >
+                      Single Select
+                    </button>
+                    <button
+                      onClick={() => setAdvancedMode(true)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                        advancedMode ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-200"
+                      )}
+                    >
+                      Multi Select
+                    </button>
                   </div>
-                )}
-              </TooltipProvider>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button className="rounded-xl border border-dashed border-[#2A2A35] hover:border-blue-500/50 hover:bg-blue-500/50 transition-all flex flex-col items-center justify-center py-8 gap-3 group h-full min-h-[160px]">
+                      <div className="h-12 w-12 rounded-full bg-[#2A2A35] flex items-center justify-center group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+                        <Plus className="h-6 w-6" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-400 group-hover:text-blue-300">Create New Style</span>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-[#1A1B22] border-[#2A2A35] text-white">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg font-bold">New Content Style</DialogTitle>
+                      <p className="text-sm text-gray-400">Define a reusable style or instruction for your AI posts.</p>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Style Name</Label>
+                        <Input
+                          placeholder="e.g. 'Thought Leadership'"
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          className="bg-[#14151B] border-[#2A2A35]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Prompt Instructions</Label>
+                        <Textarea
+                          placeholder="How should the AI write?"
+                          value={snippet}
+                          onChange={e => setSnippet(e.target.value)}
+                          className="min-h-[100px] text-sm bg-[#14151B] border-[#2A2A35]"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Description</Label>
+                          <Input placeholder="Optional" value={desc} onChange={e => setDesc(e.target.value)} className="bg-[#14151B] border-[#2A2A35]" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Category</Label>
+                          <Input placeholder="Custom" value={category} onChange={e => setCategory(e.target.value)} className="bg-[#14151B] border-[#2A2A35]" />
+                        </div>
+                      </div>
+                      <Button onClick={create} className="w-full mt-2 bg-blue-600 hover:bg-blue-700">Save Style</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {sorted.map(p => (
+                  <div key={p.id} className="min-h-[160px]">
+                    <Card p={p} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )
+      </TooltipProvider>
+    );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 mt-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium gradient-text">Content Presets</h3>
+          <h3 className="text-sm font-semibold text-gray-200">Content Presets</h3>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-6 w-6 text-gray-400 hover:text-white"
             onClick={() => setPresetsExpanded(!isPresetsExpanded)}
           >
-            {isPresetsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isPresetsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPresetsFullscreen(true)}>
-            <Maximize2 className="w-4 h-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-gray-400 hover:text-white"
+            onClick={() => setFullscreen(true)}
+          >
+            <Maximize2 className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {selectedPresets.length} selected
-          </Badge>
-          <button
-            onClick={() => setAdvancedMode(!advancedMode)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {advancedMode ? "Multi-select" : "Single-select"}
-          </button>
+
+        <div className="flex items-center gap-3">
+          {selectedPresets.length > 0 && (
+            <Badge className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30">
+              {selectedPresets.length} selected
+            </Badge>
+          )}
+          <div className="flex items-center bg-[#1A1B22] rounded-lg border border-[#2A2A35] p-0.5">
+            <button
+              onClick={() => setAdvancedMode(false)}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-medium rounded-md transition-all",
+                !advancedMode ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-200"
+              )}
+            >
+              Single
+            </button>
+            <button
+              onClick={() => setAdvancedMode(true)}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-medium rounded-md transition-all",
+                advancedMode ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-200"
+              )}
+            >
+              Multi
+            </button>
+          </div>
         </div>
       </div>
 
-      <TooltipProvider delayDuration={300}>
+      <div className="relative group">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+        <Input
+          placeholder="Search styles..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9 h-9 text-sm bg-[#16171d] border-[#2A2A35] focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 rounded-lg"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1">
+            <X className="h-3 w-3 text-gray-500 hover:text-gray-300" />
+          </button>
+        )}
+      </div>
+
+      <TooltipProvider>
         {!isPresetsExpanded ? (
-          // Collapsed: Horizontal scroll view
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-thin">
-            {/* Custom Preset Button First */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <button className="flex-shrink-0 w-24 sm:w-28 rounded-lg border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 aspect-square">
-                  <Plus className="w-6 h-6 text-primary" />
-                  <span className="text-xs font-medium text-primary">Custom</span>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create Custom Preset</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-name">Preset Name</Label>
-                    <Input
-                      id="preset-name"
-                      placeholder="e.g., Motivational Quote"
-                      value={newPresetName}
-                      onChange={(e) => setNewPresetName(e.target.value)}
-                    />
-                  </div>
+          <div className="relative">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#1A1B22] to-transparent z-10 pointer-events-none" />
+            <div className={cn(
+              "flex gap-3 overflow-x-auto pb-4 pt-1 -mx-1 px-1 snap-x",
+              "scrollbar-thin scrollbar-thumb-[#2A2A35] hover:scrollbar-thumb-[#3F3F4E] scrollbar-track-transparent"
+            )}>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <button className="flex-shrink-0 w-[160px] rounded-xl border border-dashed border-[#2A2A35] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex flex-col items-center justify-center py-5 gap-2 group">
+                    <div className="h-8 w-8 rounded-full bg-[#2A2A35] flex items-center justify-center group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+                      <Plus className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-medium text-gray-400 group-hover:text-blue-300">Create Style</span>
+                  </button>
+                </DialogTrigger>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-subtitle">Subtitle (optional)</Label>
-                    <Input
-                      id="preset-subtitle"
-                      placeholder="e.g., Inspiring content"
-                      value={newPresetSubtitle}
-                      onChange={(e) => setNewPresetSubtitle(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-snippet">Prompt Snippet</Label>
-                    <Textarea
-                      id="preset-snippet"
-                      placeholder="e.g., inspirational tone, engaging narrative, positive message"
-                      value={newPresetSnippet}
-                      onChange={(e) => setNewPresetSnippet(e.target.value)}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-description">Description (optional)</Label>
-                    <Textarea
-                      id="preset-description"
-                      placeholder="Describe what this preset does..."
-                      value={newPresetDescription}
-                      onChange={(e) => setNewPresetDescription(e.target.value)}
-                      className="min-h-[60px]"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Thumbnail (optional)</Label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleThumbnailUpload}
-                      className="hidden"
-                      id="preset-thumbnail"
-                    />
-                    {newPresetThumbnail ? (
-                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                        <img
-                          src={newPresetThumbnail || "/placeholder.svg"}
-                          alt="Thumbnail"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          onClick={() => setNewPresetThumbnail("")}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-white" />
-                        </button>
+                <DialogContent className="sm:max-w-md bg-[#1A1B22] border-[#2A2A35] text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-bold">New Content Style</DialogTitle>
+                    <p className="text-sm text-gray-400">Define a reusable style or instruction for your AI posts.</p>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Style Name</Label>
+                      <Input
+                        placeholder="e.g. 'Thought Leadership'"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="bg-[#14151B] border-[#2A2A35]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Instructions</Label>
+                      <Textarea
+                        placeholder="How should the AI write?"
+                        value={snippet}
+                        onChange={e => setSnippet(e.target.value)}
+                        className="min-h-[100px] text-sm bg-[#14151B] border-[#2A2A35]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Description</Label>
+                        <Input placeholder="Optional" value={desc} onChange={e => setDesc(e.target.value)} className="bg-[#14151B] border-[#2A2A35]" />
                       </div>
-                    ) : (
-                      <label
-                        htmlFor="preset-thumbnail"
-                        className="flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-border hover:border-chart-1 hover:bg-secondary/50 transition-colors cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Upload thumbnail</span>
-                      </label>
-                    )}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Category</Label>
+                        <Input placeholder="Custom" value={category} onChange={e => setCategory(e.target.value)} className="bg-[#14151B] border-[#2A2A35]" />
+                      </div>
+                    </div>
+                    <Button onClick={create} className="w-full mt-2 bg-blue-600 hover:bg-blue-700">Save Style</Button>
                   </div>
+                </DialogContent>
+              </Dialog>
 
-                  <Button onClick={handleCreatePreset} className="w-full">
-                    Create Preset
-                  </Button>
+              {sorted.map(p => (
+                <div key={p.id} className="flex-shrink-0 w-[200px] h-[140px]">
+                  <Card p={p} />
                 </div>
-              </DialogContent>
-            </Dialog>
-
-            {sortedPresets.slice(0, 10).map((preset) => (
-              <div key={preset.id} className="flex-shrink-0 w-24 sm:w-28">
-                <PresetCard preset={preset} />
-              </div>
-            ))}
-
-            {/* Show more button */}
-            <button
-              onClick={() => setPresetsFullscreen(true)}
-              className="flex-shrink-0 w-24 sm:w-28 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground hover:bg-secondary/50 transition-all flex flex-col items-center justify-center gap-2 aspect-square"
-            >
-              <Maximize2 className="w-5 h-5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">View All</span>
-              <span className="text-[10px] text-muted-foreground">({allPresets.length}+)</span>
-            </button>
+              ))}
+            </div>
           </div>
         ) : (
-          // Expanded: Grid view
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {/* Custom Preset Button First */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <button className="rounded-lg border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 aspect-square">
-                  <Plus className="w-6 h-6 text-primary" />
-                  <span className="text-xs font-medium text-primary">Create Custom</span>
+                <button className="rounded-xl border border-dashed border-[#2A2A35] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex flex-col items-center justify-center py-8 gap-3 group h-full min-h-[140px]">
+                  <div className="h-10 w-10 rounded-full bg-[#2A2A35] flex items-center justify-center group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+                    <Plus className="h-5 w-5" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-400 group-hover:text-blue-300">Create New Style</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="sm:max-w-md bg-[#1A1B22] border-[#2A2A35] text-white">
                 <DialogHeader>
-                  <DialogTitle>Create Custom Preset</DialogTitle>
+                  <DialogTitle className="text-lg font-bold">New Content Style</DialogTitle>
+                  <p className="text-sm text-gray-400">Define a reusable style or instruction for your AI posts.</p>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-name">Preset Name</Label>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Style Name</Label>
                     <Input
-                      id="preset-name"
-                      placeholder="e.g., Motivational Quote"
-                      value={newPresetName}
-                      onChange={(e) => setNewPresetName(e.target.value)}
+                      placeholder="e.g. 'Thought Leadership'"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="bg-[#14151B] border-[#2A2A35]"
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-subtitle">Subtitle (optional)</Label>
-                    <Input
-                      id="preset-subtitle"
-                      placeholder="e.g., Inspiring content"
-                      value={newPresetSubtitle}
-                      onChange={(e) => setNewPresetSubtitle(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-snippet">Prompt Snippet</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Instructions</Label>
                     <Textarea
-                      id="preset-snippet"
-                      placeholder="e.g., inspirational tone, engaging narrative, positive message"
-                      value={newPresetSnippet}
-                      onChange={(e) => setNewPresetSnippet(e.target.value)}
-                      className="min-h-[80px]"
+                      placeholder="How should the AI write?"
+                      value={snippet}
+                      onChange={e => setSnippet(e.target.value)}
+                      className="min-h-[100px] text-sm bg-[#14151B] border-[#2A2A35]"
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="preset-description">Description (optional)</Label>
-                    <Textarea
-                      id="preset-description"
-                      placeholder="Describe what this preset does..."
-                      value={newPresetDescription}
-                      onChange={(e) => setNewPresetDescription(e.target.value)}
-                      className="min-h-[60px]"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Description</Label>
+                      <Input
+                        placeholder="Short description"
+                        value={desc}
+                        onChange={e => setDesc(e.target.value)}
+                        className="bg-[#14151B] border-[#2A2A35]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Category</Label>
+                      <Input
+                        placeholder="e.g. Custom"
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        className="bg-[#14151B] border-[#2A2A35]"
+                      />
+                    </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Thumbnail (optional)</Label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleThumbnailUpload}
-                      className="hidden"
-                      id="preset-thumbnail"
-                    />
-                    {newPresetThumbnail ? (
-                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                        <img
-                          src={newPresetThumbnail || "/placeholder.svg"}
-                          alt="Thumbnail"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          onClick={() => setNewPresetThumbnail("")}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 backdrop-blur-sm flex items-center justify-center"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-white" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label
-                        htmlFor="preset-thumbnail"
-                        className="flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-border hover:border-chart-1 hover:bg-secondary/50 transition-colors cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Upload thumbnail</span>
-                      </label>
-                    )}
-                  </div>
-
-                  <Button onClick={handleCreatePreset} className="w-full">
-                    Create Preset
+                  <Button onClick={create} className="w-full mt-2 bg-blue-600 hover:bg-blue-700">
+                    Save Style
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            {sortedPresets.map((preset) => (
-              <PresetCard key={preset.id} preset={preset} />
-            ))}
+            {sorted.map(p => <div key={p.id} className="min-h-[140px]"><Card p={p} /></div>)}
+          </div>
+        )}
+
+        {filtered.length === 0 && search && (
+          <div className="text-center py-8 text-sm text-muted-foreground bg-[#1A1B22] rounded-xl border border-dashed border-[#2A2A35]">
+            No matching styles for "{search}"
+            <Button variant="link" size="sm" onClick={() => setSearch("")} className="ml-2 text-blue-400">
+              Clear
+            </Button>
           </div>
         )}
       </TooltipProvider>
     </div>
-  )
+  );
 }
-

@@ -17,15 +17,26 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: "payg",
     name: "Pay As You Go",
-    price: 0.1,
+    price: 0,
     currency: "USD",
     tokens: 0,
     features: [
       "Buy tokens as needed",
       "$0.10 per token",
       "No monthly commitment",
-      "Access all generation features",
-      "Flexible top-up system",
+      "Full feature access",
+    ],
+  },
+  {
+    id: "free",
+    name: "Free",
+    price: 0,
+    currency: "USD",
+    tokens: 5,
+    features: [
+      "5 Posts / month",
+      "1 Platform",
+      "Community Support"
     ],
   },
   {
@@ -33,54 +44,63 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: "Starter",
     price: 9.99,
     currency: "USD",
-    tokens: 100,
+    tokens: 50,
     features: [
-      "100 generation tokens/month",
-      "High quality images",
-      "All presets",
+      "50 Posts / month",
+      "Basic Templates",
       "Priority support",
-      "No watermarks",
+    ],
+  },
+  {
+    id: "creator",
+    name: "Creator",
+    price: 29.99,
+    currency: "USD",
+    tokens: 200,
+    popular: true,
+    features: [
+      "200 Posts / month",
+      "Viral Hooks",
+      "All Platforms",
+      "Analytics",
     ],
   },
   {
     id: "pro",
     name: "Pro",
-    price: 29.99,
+    price: 49.99,
     currency: "USD",
-    tokens: 500,
-    popular: true,
+    tokens: 1000,
     features: [
-      "500 generation tokens/month",
-      "Ultra quality images",
-      "All presets + custom presets",
-      "Priority support",
-      "Advanced editing tools",
-      "Commercial license",
+      "1000 Posts / month",
+      "Voice Cloning",
+      "Advanced Analytics",
+      "Priority Support",
     ],
   },
   {
-    id: "unlimited",
-    name: "Unlimited",
+    id: "enterprise",
+    name: "Enterprise",
     price: 99.99,
     currency: "USD",
     tokens: -1,
     features: [
-      "Unlimited generations",
-      "Ultra quality images",
-      "All features unlocked",
-      "24/7 premium support",
-      "API access",
-      "Team collaboration",
-      "Commercial license",
+      "Unlimited Posts",
+      "White-label Reports",
+      "Team Collaboration",
+      "API Access",
+      "Dedicated Account Manager",
     ],
   },
 ]
+
 
 interface BillingState {
   currentPlan: string
   tokensRemaining: number
   totalTokens: number
   subscriptionEndDate: number | null
+  userEmail: string
   hydrated: boolean
   setCurrentPlan: (planId: string) => void
   useToken: () => boolean
@@ -99,6 +119,7 @@ export const useBillingStore = create<BillingState>((set, get) => ({
   tokensRemaining: 0,
   totalTokens: 0,
   subscriptionEndDate: null,
+  userEmail: "",
   hydrated: false,
 
   /**
@@ -107,10 +128,12 @@ export const useBillingStore = create<BillingState>((set, get) => ({
    */
   syncFromDB: (data) => {
     console.log("💾 [BILLING] Syncing from MongoDB:", data)
+    // If plan is enterprise, force tokens to -1 (Unlimited) regardless of DB value
+    const isEnterprise = data.plan === "enterprise"
     set({
       currentPlan: data.plan,
-      tokensRemaining: data.tokens,
-      totalTokens: data.totalTokens || data.tokens,
+      tokensRemaining: isEnterprise ? -1 : data.tokens,
+      totalTokens: isEnterprise ? -1 : (data.totalTokens || data.tokens),
       subscriptionEndDate: data.endDate || null,
       hydrated: true,
     })

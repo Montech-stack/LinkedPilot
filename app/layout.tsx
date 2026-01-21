@@ -8,7 +8,7 @@ import Providers from "@/components/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Linked - AI Automated Social Media Manager",
+  title: "Maxis - AI Automated Social Media Manager",
   description: "Link. Create. Schedule - Go Viral Everywhere",
 
   icons: {
@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`min-h-screen app-bg text-white ${inter.className}`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`min-h-screen font-sans antialiased ${inter.className}`}>
         <Providers>{children}</Providers>
         <Toaster />
       </body>

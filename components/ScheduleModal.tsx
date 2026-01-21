@@ -30,31 +30,24 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule, post }: Sch
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const optimalTimes = [
-    { time: "09:00", engagement: "High", audience: "Morning commuters" },
-    { time: "12:00", engagement: "Very High", audience: "Lunch break browsers" },
-    { time: "14:00", engagement: "Very High", audience: "Afternoon peak" },
-    { time: "17:00", engagement: "High", audience: "End of workday" },
+    { time: "09:00", engagement: "High", audience: "Commute" },
+    { time: "12:00", engagement: "Very High", audience: "Lunch" },
+    { time: "14:00", engagement: "Very High", audience: "Work Flow" },
+    { time: "17:00", engagement: "High", audience: "Evening" },
   ]
-
-  const handleRecurringTypeChange = (value: string) => {
-    if (["daily", "weekly", "monthly"].includes(value)) {
-      setRecurringType(value as "daily" | "weekly" | "monthly")
-    }
-  }
 
   const validateAndFormatSchedule = useMemo(() => {
     if (scheduleType === "once") {
       if (!scheduleDate || !scheduleTime) return null
       const dateTime = parse(`${scheduleDate} ${scheduleTime}`, "yyyy-MM-dd HH:mm", new Date())
-      if (!isValid(dateTime) || !isFuture(dateTime)) return null
-      const utcDateTime = addHours(dateTime, -1) // WAT (UTC+1) to UTC
-      return format(utcDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'")
+      if (!isValid(dateTime)) return null
+      // Simple offset handling; assuming input is local
+      return dateTime.toISOString()
     } else {
       if (!recurringTime) return null
       const dateTime = parse(`${format(new Date(), "yyyy-MM-dd")} ${recurringTime}`, "yyyy-MM-dd HH:mm", new Date())
       if (!isValid(dateTime)) return null
-      const utcDateTime = addHours(dateTime, -1) // WAT (UTC+1) to UTC
-      return format(utcDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'")
+      return dateTime.toISOString()
     }
   }, [scheduleType, scheduleDate, scheduleTime, recurringTime])
 
@@ -63,26 +56,18 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule, post }: Sch
       toast.error("Please select a valid future date and time")
       return
     }
-    if (!post?.id || !post?.content) {
-      console.error("Invalid post data:", post)
-      toast.error("Invalid post data")
-      return
-    }
     setIsSubmitting(true)
     try {
-      const scheduleData = {
+      await onSchedule({
         postId: post.id,
         content: post.content,
         scheduleTime: validateAndFormatSchedule,
         recurring: scheduleType === "recurring" ? recurringType : null,
-      }
-      console.log("Scheduling post with data:", scheduleData)
-      await onSchedule(scheduleData)
-      toast.success(`Post ${scheduleType === "once" ? "scheduled" : "set to auto-schedule"}`)
+      })
+      toast.success(scheduleType === "once" ? "Scheduled!" : "Auto-schedule set!")
       onClose()
-    } catch (error) {
-      console.error("Scheduling error:", error)
-      toast.error("Failed to schedule post")
+    } catch {
+      toast.error("Failed to schedule")
     } finally {
       setIsSubmitting(false)
     }
@@ -92,230 +77,141 @@ export default function ScheduleModal({ isOpen, onClose, onSchedule, post }: Sch
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      role="dialog"
-      aria-labelledby="schedule-modal-title"
-      aria-modal="true"
     >
       <motion.div
-        className="gradient-bg rounded-xl p-4 sm:p-6 w-full max-w-2xl border border-[#2d3748] shadow-2xl max-h-[90vh] overflow-y-auto mx-4"
-        initial={{ scale: 0.9, opacity: 0 }}
+        className="bg-[#14151a] w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        exit={{ scale: 0.95, opacity: 0 }}
       >
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 id="schedule-modal-title" className="text-xl sm:text-2xl font-bold gradient-text">Schedule Your Post</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-[#17181f]">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-500" />
+            Schedule Post
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="flex gradient-card rounded-lg p-1 mb-4 sm:mb-6 border border-[#2d3748]">
-          <button
-            onClick={() => setScheduleType("once")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-3 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all duration-300 ${
-              scheduleType === "once"
-                ? "bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white shadow-lg"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
-            }`}
-            aria-pressed={scheduleType === "once"}
-          >
-            <Calendar className="w-4 h-4" />
-            <span className="hidden sm:inline">Schedule Once</span>
-            <span className="sm:hidden">Once</span>
-          </button>
-          <button
-            onClick={() => setScheduleType("recurring")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-3 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all duration-300 ${
-              scheduleType === "recurring"
-                ? "bg-gradient-to-r from-[#0077B5] to-[#00A0DC] text-white shadow-lg"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
-            }`}
-            aria-pressed={scheduleType === "recurring"}
-          >
-            <Repeat className="w-4 h-4" />
-            <span className="hidden sm:inline">Auto Schedule</span>
-            <span className="sm:hidden">Auto</span>
-          </button>
-        </div>
-
-        <div className="gradient-card rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-[#2d3748]">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#0077B5]" />
-            <span className="font-medium text-[#0077B5] text-sm sm:text-base">Optimal Posting Times (WAT)</span>
+        <div className="p-6 overflow-y-auto space-y-6">
+          {/* Toggle */}
+          <div className="flex bg-[#0b0c10] p-1 rounded-xl border border-white/5">
+            <button
+              onClick={() => setScheduleType("once")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${scheduleType === "once" ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-gray-200"
+                }`}
+            >
+              <Calendar className="w-4 h-4" /> One-time
+            </button>
+            <button
+              onClick={() => setScheduleType("recurring")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${scheduleType === "recurring" ? "bg-blue-600 text-white shadow-lg" : "text-gray-400 hover:text-gray-200"
+                }`}
+            >
+              <Repeat className="w-4 h-4" /> Recurring
+            </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            {optimalTimes.map((timeSlot, index) => (
-              <button
-                key={index}
-                className="flex items-center justify-between p-2 sm:p-3 bg-[#0a0b0f] rounded-lg border border-[#374151] hover:border-[#0077B5] transition-colors cursor-pointer"
-                onClick={() => {
-                  if (scheduleType === "once") {
-                    setScheduleTime(timeSlot.time)
-                  } else {
-                    setRecurringTime(timeSlot.time)
-                  }
-                }}
-                aria-label={`Select ${timeSlot.time} for ${timeSlot.audience}`}
-              >
-                <div>
-                  <div className="font-medium text-white text-sm sm:text-base">{timeSlot.time}</div>
-                  <div className="text-xs text-gray-400">{timeSlot.audience}</div>
+
+          {/* Suggestions */}
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-blue-400">
+              <TrendingUp className="w-4 h-4" /> Recommended Slots (Based on audience)
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {optimalTimes.map((slot, i) => (
+                <div
+                  key={i}
+                  onClick={() => scheduleType === 'once' ? setScheduleTime(slot.time) : setRecurringTime(slot.time)}
+                  className="cursor-pointer bg-[#0b0c10] hover:bg-[#1A1B22] border border-white/5 hover:border-blue-500/50 rounded-xl p-3 flex flex-col transition-all group"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-white font-bold">{slot.time}</span>
+                    <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">{slot.engagement}</span>
+                  </div>
+                  <span className="text-xs text-gray-500 group-hover:text-gray-400">{slot.audience}</span>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    timeSlot.engagement === "Very High"
-                      ? "bg-green-400/10 text-green-400 border border-green-400/20"
-                      : "bg-blue-400/10 text-blue-400 border border-blue-400/20"
-                  }`}
-                >
-                  {timeSlot.engagement}
-                </span>
-              </button>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* Input Fields */}
+          {scheduleType === "once" ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Date</label>
+                <Input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={e => setScheduleDate(e.target.value)}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  className="bg-[#0b0c10] border-white/10 text-white h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Time</label>
+                <Input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={e => setScheduleTime(e.target.value)}
+                  className="bg-[#0b0c10] border-white/10 text-white h-11"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Frequency</label>
+                <Select value={recurringType} onValueChange={(v: any) => setRecurringType(v)}>
+                  <SelectTrigger className="bg-[#0b0c10] border-white/10 text-white h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-[#1A1B22] border-white/10 text-white">
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Time</label>
+                <Input
+                  type="time"
+                  value={recurringTime}
+                  onChange={e => setRecurringTime(e.target.value)}
+                  className="bg-[#0b0c10] border-white/10 text-white h-11"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Prediction */}
+          <div className="bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-xl p-4 border border-blue-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Sparkles className="w-5 h-5" /></div>
+              <div>
+                <div className="text-sm font-bold text-white">AI Prediction</div>
+                <div className="text-xs text-gray-400">Estimated Reach</div>
+              </div>
+            </div>
+            <div className="text-xl font-bold text-white">+24% <span className="text-xs font-normal text-gray-500">vs avg</span></div>
           </div>
         </div>
 
-        {scheduleType === "once" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div>
-              <label htmlFor="schedule-date" className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#0077B5]" />
-                Date
-              </label>
-              <Input
-                id="schedule-date"
-                type="date"
-                value={scheduleDate}
-                onChange={(e) => setScheduleDate(e.target.value)}
-                className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
-                min={format(new Date(), "yyyy-MM-dd")}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="schedule-time" className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#0077B5]" />
-                Time (WAT)
-              </label>
-              <Input
-                id="schedule-time"
-                type="time"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
-                required
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div>
-              <label htmlFor="recurring-type" className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Repeat className="w-4 h-4 text-[#0077B5]" />
-                Frequency
-              </label>
-              <Select value={recurringType} onValueChange={handleRecurringTypeChange}>
-                <SelectTrigger
-                  id="recurring-type"
-                  className="bg-[#0a0b0f] border-[#2d3748] text-white focus:border-[#0077B5] h-10 sm:h-11"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1a1d29] border-[#2d3748]">
-                  <SelectItem value="daily" className="text-white hover:bg-[#2d3748]">
-                    📅 Daily
-                  </SelectItem>
-                  <SelectItem value="weekly" className="text-white hover:bg-[#2d3748]">
-                    📆 Weekly
-                  </SelectItem>
-                  <SelectItem value="monthly" className="text-white hover:bg-[#2d3748]">
-                    🗓️ Monthly
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label htmlFor="recurring-time" className="block text-sm font-medium mb-2 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#0077B5]" />
-                Time (WAT)
-              </label>
-              <Input
-                id="recurring-time"
-                type="time"
-                value={recurringTime}
-                onChange={(e) => setRecurringTime(e.target.value)}
-                className="w-full bg-[#0a0b0f] border border-[#2d3748] rounded-lg px-3 py-2 sm:py-3 text-white focus:border-[#0077B5] focus:outline-none transition-colors text-sm sm:text-base"
-                required
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="gradient-card rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-[#2d3748]">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-            <span className="font-medium text-purple-400 text-sm sm:text-base">Expected Performance</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold text-green-400">+45%</div>
-              <div className="text-xs text-gray-400">Engagement</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold text-blue-400">+32%</div>
-              <div className="text-xs text-gray-400">Reach</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold text-purple-400">+28%</div>
-              <div className="text-xs text-gray-400">Comments</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="p-6 pt-2 border-t border-white/5 bg-[#17181f] flex gap-3">
+          <Button variant="ghost" onClick={onClose} className="flex-1 text-gray-400 hover:text-white">Cancel</Button>
           <Button
-            variant="outline"
-            className="flex-1 border-[#2d3748] text-gray-300 hover:bg-[#2d3748] bg-transparent transition-all duration-300 h-11 sm:h-12"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="flex-1 bg-gradient-to-r from-[#0077B5] to-[#00A0DC] hover:from-[#004182] hover:to-[#0077B5] text-white shadow-lg glow-button transition-all duration-300 h-11 sm:h-12"
             onClick={handleSchedule}
-            disabled={isSubmitting || (scheduleType === "once" ? !scheduleDate || !scheduleTime : !recurringTime)}
-            aria-busy={isSubmitting}
+            disabled={isSubmitting}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
           >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Scheduling...
-              </span>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">{scheduleType === "once" ? "Schedule Post" : "Set Auto Schedule"}</span>
-                <span className="sm:hidden">{scheduleType === "once" ? "Schedule" : "Set Auto"}</span>
-              </>
-            )}
+            {isSubmitting ? "Scheduling..." : "Confirm Schedule"}
           </Button>
         </div>
+
       </motion.div>
     </motion.div>
   )

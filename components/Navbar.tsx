@@ -1,27 +1,33 @@
 "use client"
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Menu, X, User } from "lucide-react"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Menu, X, User, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import Image from "next/image"
-import ThemeToggle from "./ThemeToggle"
 import { AuthModal } from "@/components/auth-modal"
 import { useSession, signOut } from "next-auth/react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<"login" | "signup">("login")
+  const [scrolled, setScrolled] = useState(false)
 
-  const { data: session } = useSession() // <-- NextAuth session
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   const openSignIn = () => {
     setAuthMode("login")
     setAuthOpen(true)
   }
-  const openTryLinked = () => {
+  const openTryMaxis = () => {
     setAuthMode("signup")
     setAuthOpen(true)
   }
@@ -30,84 +36,64 @@ export default function Navbar() {
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
     { name: "Testimonials", href: "#testimonials" },
-    { name: "FAQ", href: "#faq" },
   ]
 
   return (
     <motion.nav
-      className="fixed top-0 left-0 right-0 z-50 app-surface bg-opacity-80 backdrop-blur-lg border-b border-[#1f2330] shadow-lg"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/80 backdrop-blur-md border-b border-border py-3" : "bg-transparent py-5"
+        }`}
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/Linked Logo.png"
-              alt="Linked Logo"
-              width={55}
-              height={35}
-              className="object-contain"
-            />
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-white/10 transition-all">
+              <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="font-bold text-lg text-foreground tracking-tight">Maxis</span>
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-gray-300 hover:text-white transition relative group"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {item.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#00b4ff] to-[#ffb347] transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
           </div>
 
           {/* CTA / User */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
-
             {session ? (
-              <div className="flex items-center gap-3">
-                <span className="text-gray-2 text-center font-medium hidden sm:inline">
-                  {session.user?.name || session.user?.email}
-                </span>
-                {session.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt="User Avatar"
-                    width={32}
-                    height={32}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <User className="w-8 h-8 text-gray-300" />
-                )}
-                <Button
-                  variant="ghost"
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
-                  onClick={() => signOut()}
-                >
-                  Sign Out
-                </Button>    </div>
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Go to Studio</Button>
+                </Link>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center border border-white/10">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              </div>
             ) : (
               <>
-                <Button
-                  variant="ghost"
+                <button
                   onClick={openSignIn}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Sign In
-                </Button>
+                  Log in
+                </button>
                 <Button
-                  onClick={openTryLinked}
-                  className="bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white shadow-md hover:opacity-90 transition"
+                  onClick={openTryMaxis}
+                  className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-5 py-2 h-auto text-sm font-semibold shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all"
                 >
-                  Try Maxis
+                  Start Free
                 </Button>
               </>
             )}
@@ -115,76 +101,62 @@ export default function Navbar() {
 
           {/* Mobile Toggle */}
           <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-300 hover:text-white"
+              className="text-gray-300 hover:text-white p-2"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+            </button>
           </div>
         </div>
 
         {/* Mobile Nav */}
-        {isOpen && (
-          <motion.div
-            className="md:hidden mt-2 bg-[#0b0b0c]/95 backdrop-blur-lg border border-[#1a1d29] rounded-lg shadow-lg"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <div className="px-3 py-3 space-y-2">
-              {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="block px-3 py-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-md"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              className="md:hidden absolute top-full left-0 right-0 bg-[#050505] border-b border-white/10 p-4 shadow-2xl"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div className="flex flex-col gap-4">
+                {navItems.map((item) => (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    className="text-gray-300 hover:text-white py-2 block"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.name}
+                  </a>
+                ))}
 
-              <div className="pt-3 space-y-2">
-                <ThemeToggle />
+                <div className="h-px bg-white/10 my-2" />
+
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-sm text-gray-400">Theme</span>
+                  <ThemeToggle />
+                </div>
+
                 {session ? (
-                  <div className="flex flex-col gap-2">
-                    <span className="text-gray-200 font-medium">
-                      {session.user?.name || session.user?.email}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-gray-300 hover:text-white hover:bg-white/10"
-                      onClick={() => signOut()}
-                    >
-                      Sign Out
-                    </Button>
+                  <div className="flex flex-col gap-3">
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)}>
+                      <Button className="w-full">Dashboard</Button>
+                    </Link>
+                    <Button variant="ghost" onClick={() => signOut()}>Sign Out</Button>
                   </div>
                 ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-gray-300 hover:text-white hover:bg-white/10"
-                      onClick={openSignIn}
-                    >
-                      Sign In
-                    </Button>
-                    <Button
-                      className="w-full bg-gradient-to-r from-[#00b4ff] to-[#ffb347] text-white hover:opacity-90"
-                      onClick={openTryLinked}
-                    >
-                      Try Linked
-                    </Button>
-                  </>
+                  <div className="flex flex-col gap-3">
+                    <Button variant="ghost" onClick={() => { openSignIn(); setIsOpen(false); }}>Log in</Button>
+                    <Button onClick={() => { openTryMaxis(); setIsOpen(false); }}>Start Free</Button>
+                  </div>
                 )}
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Auth modal */}
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} mode={authMode} />
     </motion.nav>
   )
