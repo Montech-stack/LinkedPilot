@@ -68,7 +68,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="flex items-center justify-between p-6 pb-2">
               <Link href="/dashboard" className="flex items-center gap-3 group">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-all border border-gold/30 group-hover:border-gold/60 bg-gold/5">
-                  <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+                  <img src="/maxis.png" alt="Maxis Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="font-bold text-xl text-foreground tracking-tight group-hover:text-gold transition-colors">Maxis</h1>

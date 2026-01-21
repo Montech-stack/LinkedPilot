@@ -28,7 +28,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
         {/* Brand */}
         <Link href="/dashboard" className="flex items-center gap-2 group">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-gold/30 group-hover:border-gold/60 transition-colors bg-gold/5">
-            <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+            <img src="/maxis.png" alt="Maxis Logo" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-lg text-foreground tracking-tight group-hover:text-gold transition-colors">Maxis</span>
         </Link>

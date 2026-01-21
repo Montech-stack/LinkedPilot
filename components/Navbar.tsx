@@ -51,7 +51,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-white/10 transition-all">
-              <img src="/Linked logo.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+              <img src="/maxis.png" alt="Maxis Logo" className="w-full h-full object-contain" />
             </div>
             <span className="font-bold text-lg text-foreground tracking-tight">Maxis</span>
           </Link>
