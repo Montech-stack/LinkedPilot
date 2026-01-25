@@ -115,7 +115,7 @@ interface BillingState {
  * Data comes from MongoDB via API calls
  */
 export const useBillingStore = create<BillingState>((set, get) => ({
-  currentPlan: "payg",
+  currentPlan: "free",
   tokensRemaining: 0,
   totalTokens: 0,
   subscriptionEndDate: null,
@@ -128,12 +128,11 @@ export const useBillingStore = create<BillingState>((set, get) => ({
    */
   syncFromDB: (data) => {
     console.log("💾 [BILLING] Syncing from MongoDB:", data)
-    // If plan is enterprise, force tokens to -1 (Unlimited) regardless of DB value
-    const isEnterprise = data.plan === "enterprise"
+    // Strictly use DB data as requested
     set({
       currentPlan: data.plan,
-      tokensRemaining: isEnterprise ? -1 : data.tokens,
-      totalTokens: isEnterprise ? -1 : (data.totalTokens || data.tokens),
+      tokensRemaining: data.tokens,
+      totalTokens: data.totalTokens || data.tokens, // Fallback if not provided
       subscriptionEndDate: data.endDate || null,
       hydrated: true,
     })

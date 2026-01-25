@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2,
   Zap,
@@ -61,6 +61,8 @@ const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
   pro: { maxPosts: 50, name: "Pro Plan" },
   enterprise: { maxPosts: 500, name: "Enterprise Plan" },
 };
+
+const isEnterprisePlan = (plan: string) => plan.toLowerCase() === "enterprise";
 
 const PLATFORM_OPTIONS: { value: PostPlatform; label: string; color: string }[] = [
   { value: "LinkedIn", label: "LinkedIn", color: "text-blue-500" },
@@ -130,7 +132,7 @@ export default function Dashboard() {
         const data = await res.json();
 
         const plan = data.plan || "free";
-        const isEnterprise = plan === "enterprise";
+        const isEnterprise = isEnterprisePlan(plan);
         const tokens = isEnterprise ? -1 : (data.tokensRemaining || 0);
 
         setUserPlan(plan);
@@ -208,7 +210,9 @@ export default function Dashboard() {
     const costPerPost = postLength === "short" ? 100 : postLength === "medium" ? 200 : 300;
     const totalCost = postCount * costPerPost;
 
-    if (userPlan !== "enterprise" && tokensRemaining < totalCost) {
+
+
+    if (!isEnterprisePlan(userPlan) && tokensRemaining < totalCost) {
       toast.error(`Not enough tokens. Cost: ${totalCost}, Bal: ${tokensRemaining}`);
       return;
     }
@@ -236,7 +240,7 @@ export default function Dashboard() {
       setGeneratedPosts(prev => [...prev, ...withIds]);
       toast.success(`Generated ${withIds.length} posts!`);
 
-      if (userPlan !== "enterprise") {
+      if (!isEnterprisePlan(userPlan)) {
         await fetch("/api/deduct-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -436,23 +440,46 @@ export default function Dashboard() {
               </p>
             </motion.div>
 
-            <div className="bg-card/50 backdrop-blur-xl p-1 rounded-3xl shadow-2xl border border-white/10 relative overflow-hidden group">
+            {/* Generated Posts Toggle (Floating) */}
+            {/* Generated Posts Toggle (Floating) */}
+            <AnimatePresence>
+              {generatedPosts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="fixed bottom-6 right-6 z-40"
+                >
+                  <Button
+                    onClick={() => {
+                      const element = document.getElementById("generated-posts-view");
+                      if (element) element.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="rounded-full h-12 px-6 shadow-2xl bg-primary text-primary-foreground font-bold"
+                  >
+                    View Generated Content ({generatedPosts.length})
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="bg-card/80 backdrop-blur-xl p-1 rounded-3xl shadow-2xl border border-border/50 relative overflow-hidden group">
               {/* Token Indicator */}
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-full px-3 py-1 z-20 backdrop-blur-md">
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-background/80 border border-border/50 rounded-full px-3 py-1 z-20 backdrop-blur-md shadow-sm">
                 <div className={`w-1.5 h-1.5 rounded-full ${tokensRemaining < 50 ? 'bg-red-500' : 'bg-gold'} animate-pulse`} />
-                <span className="text-[10px] font-medium text-white/80">
+                <span className="text-[10px] font-medium text-foreground/80">
                   {tokensRemaining === -1 ? "Unlimited" : `${tokensRemaining} tokens`}
                 </span>
               </div>
 
               {/* Main Input Area */}
-              <div className="relative bg-[#0A0A0A] rounded-[22px] border border-white/5 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+              <div className="relative bg-background/50 rounded-[22px] border border-border/50 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
                 <textarea
                   ref={textareaRef}
                   placeholder="What do you want to post about? (e.g. 'Launch of our new AI features', '3 tips for productivity')"
                   value={input}
                   onChange={handleChange}
-                  className="w-full bg-transparent text-white placeholder-white/20 border-none outline-none focus:ring-0 rounded-2xl p-6 min-h-[160px] max-h-96 resize-none text-lg leading-relaxed font-light"
+                  className="w-full bg-transparent text-foreground placeholder-muted-foreground/40 border-none outline-none focus:ring-0 rounded-2xl p-6 min-h-[160px] max-h-96 resize-none text-lg leading-relaxed font-light"
                 />
 
                 {/* Media Preview inside input */}
@@ -460,12 +487,12 @@ export default function Dashboard() {
                   <div className="absolute bottom-4 left-6 z-10 animate-in fade-in zoom-in duration-200">
                     <div className="relative group inline-block">
                       {uploadedMediaType === "image" ? (
-                        <div className="h-16 w-16 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                        <div className="h-16 w-16 rounded-xl overflow-hidden border border-border/50 shadow-lg">
                           <img src={uploadedMedia} alt="Thumb" className="h-full w-full object-cover" />
                         </div>
                       ) : (
-                        <div className="h-16 w-16 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 shadow-lg backdrop-blur-sm">
-                          <Settings2 className="w-8 h-8 text-white/50" />
+                        <div className="h-16 w-16 rounded-xl bg-muted/20 flex items-center justify-center border border-border/50 shadow-lg backdrop-blur-sm">
+                          <Settings2 className="w-8 h-8 text-muted-foreground" />
                         </div>
                       )}
                       <button
@@ -487,7 +514,7 @@ export default function Dashboard() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button onClick={handleUploadClick} className="p-2.5 rounded-xl text-muted-foreground hover:text-white hover:bg-white/5 transition-colors">
+                          <button onClick={handleUploadClick} className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
                             <Upload className="w-5 h-5" />
                           </button>
                         </TooltipTrigger>
@@ -535,17 +562,17 @@ export default function Dashboard() {
                     {/* Settings Popover for all config */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-white bg-white/5 border border-white/5 rounded-full hover:bg-white/10 transition-all">
+                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/30 border border-border/50 rounded-full hover:bg-muted/50 transition-all">
                           <SlidersHorizontal className="w-3.5 h-3.5" />
                           <span>Config</span>
-                          <div className="w-[1px] h-3 bg-white/10 mx-1" />
-                          <span className="text-white/70">{platforms.length} Plats • {postLength} • {postCount}x</span>
+                          <div className="w-[1px] h-3 bg-border/50 mx-1" />
+                          <span className="text-foreground/70">{platforms.length} Plats • {postLength} • {postCount}x</span>
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 p-5 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl mr-4" align="end" sideOffset={10}>
+                      <PopoverContent className="w-80 p-5 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl mr-4" align="end" sideOffset={10}>
                         <div className="space-y-6">
-                          <div className="pb-3 border-b border-white/10">
-                            <h4 className="text-sm font-semibold text-white">Generation Settings</h4>
+                          <div className="pb-3 border-b border-border/50">
+                            <h4 className="text-sm font-semibold text-foreground">Generation Settings</h4>
                             <p className="text-xs text-muted-foreground">Configure how your content is created.</p>
                           </div>
                           <PlatformSelector />
@@ -576,7 +603,7 @@ export default function Dashboard() {
                     onClick={() => setPostConfirmOpen(true)}
                     disabled={postingAllLoading || (!input.trim() && generatedPosts.length === 0)}
                     variant="secondary"
-                    className="h-14 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/5 font-semibold"
+                    className="h-14 px-6 rounded-2xl bg-secondary hover:bg-secondary/80 text-foreground border border-border/50 font-semibold"
                   >
                     <Share2 className="w-5 h-5 mr-2" />
                     Post
@@ -595,43 +622,61 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Content Feed */}
-            {generatedPosts.length > 0 && (
-              <motion.div ref={resultsRef} className="mt-8 space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    Generated Drafts ({generatedPosts.length})
-                  </h2>
-                </div>
+            {/* Generated Posts Expandable Modal View */}
+            <AnimatePresence>
+              {generatedPosts.length > 0 && (
+                <motion.div
+                  id="generated-posts-view"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-8 border-t border-border pt-8"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                      <Sparkles className="w-6 h-6 text-primary" />
+                      Generated Studio Results
+                    </h2>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="gap-2"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-[-90deg]" />
+                      Back to Studio
+                    </Button>
+                  </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  {generatedPosts.map((post, i) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      index={i}
-                      totalPosts={generatedPosts.length}
-                      isExpanded={expandedPost === post.id}
-                      onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
-                      onCopy={() => {
-                        navigator.clipboard.writeText(post.content);
-                        toast.success("Copied!");
-                      }}
-                      onDelete={() => handleDelete(post.id)}
-                      onSchedule={() => {
-                        setPostToSchedule({ id: post.id, content: post.content });
-                        setScheduleModalOpen(true);
-                      }}
-                      onPostSuccess={() => toast.success("Posted!")}
-                      onPostError={err => toast.error(err)}
-                      isLinkedInConnected={isLinkedInConnected}
-                      onUpdateMedia={updateMedia}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                  <div className="grid grid-cols-1 gap-6">
+                    {generatedPosts.map((post, i) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        index={i}
+                        totalPosts={generatedPosts.length}
+                        isExpanded={expandedPost === post.id}
+                        onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
+                        onCopy={() => {
+                          navigator.clipboard.writeText(post.content);
+                          toast.success("Copied!");
+                        }}
+                        onDelete={() => handleDelete(post.id)}
+                        onSchedule={() => {
+                          setPostToSchedule({ id: post.id, content: post.content });
+                          setScheduleModalOpen(true);
+                        }}
+                        onPostSuccess={() => toast.success("Posted!")}
+                        onPostError={err => toast.error(err)}
+                        isLinkedInConnected={isLinkedInConnected}
+                        onUpdateMedia={updateMedia}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Direct Post Confirmation Modal */}
             {postConfirmOpen && (
@@ -712,7 +757,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

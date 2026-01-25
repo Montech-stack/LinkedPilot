@@ -7,8 +7,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { AuthModal } from "@/components/auth-modal";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
 
@@ -55,15 +59,20 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/dashboard">
-                <Button
-                  size="lg"
-                  className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 bg-primary text-primary-foreground"
-                >
-                  Start Creating
-                  <ChevronRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
+              <Button
+                onClick={() => {
+                  if (session) {
+                    router.push("/dashboard");
+                  } else {
+                    openAuth("signup");
+                  }
+                }}
+                size="lg"
+                className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 bg-primary text-primary-foreground"
+              >
+                Start Creating
+                <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
             </div>
 
             <div className="mt-12 flex items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">

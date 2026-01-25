@@ -74,9 +74,15 @@ export default function ScheduledPage() {
     try {
       const res = await fetch(`/api/schedule?mode=all`); // Fetch all for calendar view
       const data = await res.json();
-      setScheduledPosts(data);
+      if (Array.isArray(data)) {
+        setScheduledPosts(data);
+      } else {
+        setScheduledPosts([]);
+        console.error("Expected array from /api/schedule, got:", data);
+      }
     } catch (error) {
       toast.error("Failed to load schedule");
+      setScheduledPosts([]);
     } finally {
       setLoading(false);
     }
@@ -201,40 +207,43 @@ export default function ScheduledPage() {
           <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 w-full h-full flex flex-col">
 
             {/* Header Toolbar */}
-            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-              <div className="flex items-center gap-4">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500 py-1">
+            {/* Header Toolbar */}
+            <div className="flex flex-col xl:flex-row items-center justify-between mb-6 gap-6">
+              <div className="flex flex-col lg:flex-row items-center gap-4 w-full lg:w-auto">
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500 py-1 text-center lg:text-left">
                   Content Calendar
                 </h1>
 
-                {/* View Toggles */}
-                <div className="flex items-center bg-muted rounded-lg p-1 border border-border">
-                  <button
-                    onClick={() => setViewMode("month")}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === "month" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setViewMode("week")}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === "week" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    Week
-                  </button>
-                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto justify-center">
+                  {/* View Toggles */}
+                  <div className="flex items-center bg-muted rounded-lg p-1 border border-border shrink-0">
+                    <button
+                      onClick={() => setViewMode("month")}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === "month" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Month
+                    </button>
+                    <button
+                      onClick={() => setViewMode("week")}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === "week" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Week
+                    </button>
+                  </div>
 
-                <div className="flex items-center gap-1 bg-muted rounded-lg p-1 border border-border">
-                  <button onClick={prevPeriod} className="p-1 hover:bg-background rounded-md transition-colors"><ChevronLeft className="w-5 h-5 text-muted-foreground" /></button>
-                  <button onClick={goToToday} className="px-3 py-1 text-sm font-semibold hover:bg-background rounded-md transition-colors min-w-[100px]">
-                    {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Week of' MMM d")}
-                  </button>
-                  <button onClick={nextPeriod} className="p-1 hover:bg-background rounded-md transition-colors"><ChevronRight className="w-5 h-5 text-muted-foreground" /></button>
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1 border border-border shrink-0">
+                    <button onClick={prevPeriod} className="p-1 hover:bg-background rounded-md transition-colors"><ChevronLeft className="w-5 h-5 text-muted-foreground" /></button>
+                    <button onClick={goToToday} className="px-3 py-1 text-sm font-semibold hover:bg-background rounded-md transition-colors min-w-[100px] text-center">
+                      {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Week' MMM d")}
+                    </button>
+                    <button onClick={nextPeriod} className="p-1 hover:bg-background rounded-md transition-colors"><ChevronRight className="w-5 h-5 text-muted-foreground" /></button>
+                  </div>
                 </div>
               </div>
 
               <Button
                 onClick={() => setIsGenModalOpen(true)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 flex items-center gap-2"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
                 AI Auto-Schedule
@@ -242,78 +251,80 @@ export default function ScheduledPage() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+            <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px] overflow-x-auto">
               {/* Week Headers */}
-              <div className="grid grid-cols-7 border-b border-border bg-muted/30">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                  <div key={day} className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {day}
-                  </div>
-                ))}
-              </div>
+              <div className="min-w-[800px]">
+                <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                    <div key={day} className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {day}
+                    </div>
+                  ))}
+                </div>
 
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-background">
-                {calendarDays.map((day, idx) => {
-                  const posts = getPostsForDay(day);
-                  const isCurrentMonth = isSameMonth(day, monthStart);
-                  const isTodayDate = isToday(day);
+                {/* Days Grid */}
+                <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-background">
+                  {calendarDays.map((day, idx) => {
+                    const posts = getPostsForDay(day);
+                    const isCurrentMonth = isSameMonth(day, monthStart);
+                    const isTodayDate = isToday(day);
 
-                  return (
-                    <motion.div
-                      key={day.toISOString()}
-                      className={`min-h-[100px] border-b border-r border-border p-2 transition-colors relative group 
+                    return (
+                      <motion.div
+                        key={day.toISOString()}
+                        className={`min-h-[100px] border-b border-r border-border p-2 transition-colors relative group 
                         ${!isCurrentMonth && viewMode === 'month' ? "bg-muted/10 text-muted-foreground" : "text-foreground"}
                         ${isTodayDate ? "bg-primary/5" : "hover:bg-muted/5"}
                       `}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.005 }}
-                    >
-                      {/* Date Label */}
-                      <div className={`text-xs font-semibold mb-2 flex justify-between items-center
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: idx * 0.005 }}
+                      >
+                        {/* Date Label */}
+                        <div className={`text-xs font-semibold mb-2 flex justify-between items-center
                           ${isTodayDate ? "text-primary" : "text-muted-foreground"}
                         `}>
-                        <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isTodayDate ? "bg-primary text-primary-foreground" : ""}`}>
-                          {format(day, "d")}
-                        </span>
-                        {/* Add Post Button */}
-                        <button
-                          onClick={() => {
-                            setQuickPostDate(day);
-                            setQuickPostContent("");
-                            setQuickPostTime("09:00");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 hover:bg-muted p-1 rounded transition-opacity"
-                        >
-                          <Plus className="w-3 h-3 text-primary" />
-                        </button>
-                      </div>
+                          <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isTodayDate ? "bg-primary text-primary-foreground" : ""}`}>
+                            {format(day, "d")}
+                          </span>
+                          {/* Add Post Button */}
+                          <button
+                            onClick={() => {
+                              setQuickPostDate(day);
+                              setQuickPostContent("");
+                              setQuickPostTime("09:00");
+                            }}
+                            className="opacity-0 group-hover:opacity-100 hover:bg-muted p-1 rounded transition-opacity"
+                          >
+                            <Plus className="w-3 h-3 text-primary" />
+                          </button>
+                        </div>
 
-                      {/* Posts List */}
-                      <div className="space-y-1.5 overflow-hidden max-h-[120px] overflow-y-auto scrollbar-none">
-                        {posts.map(post => (
-                          <DropdownMenu key={post._id}>
-                            <DropdownMenuTrigger asChild>
-                              <div className="text-[10px] p-1.5 rounded-md bg-card border border-border shadow-sm cursor-pointer hover:border-primary/50 transition-colors flex items-center gap-1.5 text-left group/post">
-                                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${post.posted ? "bg-green-500" : "bg-blue-500"}`} />
-                                <span className="truncate flex-1 font-medium">{post.content}</span>
-                              </div>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-56 text-xs">
-                              <DropdownMenuItem disabled className="text-xs font-bold opacity-100 mb-1">
-                                {format(new Date(post.scheduledAt), "h:mm a")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(post._id)} className="text-destructive">
-                                <Trash2 className="w-3.5 h-3.5 mr-2" /> Cancel Post
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ))}
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                        {/* Posts List */}
+                        <div className="space-y-1.5 overflow-hidden max-h-[120px] overflow-y-auto scrollbar-none">
+                          {posts.map(post => (
+                            <DropdownMenu key={post._id}>
+                              <DropdownMenuTrigger asChild>
+                                <div className="text-[10px] p-1.5 rounded-md bg-card border border-border shadow-sm cursor-pointer hover:border-primary/50 transition-colors flex items-center gap-1.5 text-left group/post">
+                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${post.posted ? "bg-green-500" : "bg-blue-500"}`} />
+                                  <span className="truncate flex-1 font-medium">{post.content}</span>
+                                </div>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-56 text-xs">
+                                <DropdownMenuItem disabled className="text-xs font-bold opacity-100 mb-1">
+                                  {format(new Date(post.scheduledAt), "h:mm a")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(post._id)} className="text-destructive">
+                                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Cancel Post
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -329,7 +340,7 @@ export default function ScheduledPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-2xl overflow-hidden"
+              className="bg-card w-[95%] sm:w-full max-w-lg rounded-2xl border border-border shadow-2xl overflow-hidden mx-auto my-auto"
             >
               <div className="p-6 border-b border-border bg-muted/20 flex justify-between items-center">
                 <div>
@@ -404,7 +415,7 @@ export default function ScheduledPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card w-full max-w-md rounded-2xl border border-border shadow-2xl overflow-hidden"
+              className="bg-card w-[95%] sm:w-full max-w-md rounded-2xl border border-border shadow-2xl overflow-hidden mx-auto"
             >
               <div className="p-5 border-b border-border bg-muted/20 flex justify-between items-center">
                 <h3 className="text-lg font-bold flex items-center gap-2">

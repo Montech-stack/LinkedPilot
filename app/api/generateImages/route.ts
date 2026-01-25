@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const maxDuration = 60;
 
@@ -23,83 +22,64 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
         }
 
-        // Initialize Gemini Client
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        // Use the model available to the key (gemini-2.5-flash-image)
-        // Note: If this model is text-to-text only, this will fail to produce an image.
-        // But given the name, it implies image capabilities.
-        // If this fails to produce an image, we might need to look into 'imagen' models specifically.
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
+        // Use Imagen 4.0 model via REST API
+        // Confirmed working model: models/imagen-4.0-generate-001
+        const modelName = "models/imagen-4.0-generate-001";
+        const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:predict?key=${API_KEY}`;
 
-        const parts: any[] = [{ text: prompt }];
+        // Construct Payload for Imagen
+        // Note: If sourceImages are present, this model might not support editing via this endpoint structure directly
+        // without specific instance keys (e.g. 'image' for mask-based editing).
+        // For now, we focus on Generation.
 
-        // Handle source images if present (for editing contexts)
-        if (sourceImages && Array.isArray(sourceImages) && sourceImages.length > 0) {
-            console.log(`🖼️ Processing ${sourceImages.length} Source Image(s)...`);
-
-            for (const imgUrl of sourceImages) {
-                if (!imgUrl) continue;
-                try {
-                    console.log(`  - Fetching: ${imgUrl.slice(0, 50)}...`);
-                    const imageResp = await fetch(imgUrl);
-                    if (!imageResp.ok) throw new Error(`Failed to fetch ${imgUrl}`);
-                    const arrayBuffer = await imageResp.arrayBuffer();
-                    const base64Data = Buffer.from(arrayBuffer).toString("base64");
-                    const mimeType = imageResp.headers.get("content-type") || "image/png";
-
-                    parts.push({
-                        inlineData: {
-                            data: base64Data,
-                            mimeType: mimeType
-                        }
-                    });
-                } catch (e: any) {
-                    console.error(`  ❌ Failed to download image ${imgUrl}:`, e.message);
-                }
+        const payload: any = {
+            instances: [
+                { prompt: prompt }
+            ],
+            parameters: {
+                sampleCount: 1,
+                aspectRatio: "1:1" // Default square, can be adjusted
             }
+        };
+
+        if (sourceImages && sourceImages.length > 0) {
+            console.warn("⚠️ Source images provided but experimental Imagen editing support is limited via this endpoint. Proceeding with Generation based on prompt.");
+            // In a future update, we could try adding 'image': { bytesBase64Encoded: ... } to instances if the model supports it.
         }
 
-        console.log("⬆️ Sending Request to Gemini...");
-        const result = await model.generateContent(parts);
-        const response = await result.response;
+        console.log(`⬆️ Sending Request to ${modelName}...`);
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-        // Attempt to extract image from response candidates
-        let generatedImageBase64 = null;
-        let generatedImageMimeType = null;
+        console.log("Response Status:", response.status);
 
-        // Access raw candidates
-        const candidates = (response as any).candidates;
-        if (candidates && candidates.length > 0) {
-            const parts = candidates[0].content?.parts || [];
-            for (const part of parts) {
-                if (part.inlineData) {
-                    generatedImageBase64 = part.inlineData.data;
-                    generatedImageMimeType = part.inlineData.mimeType;
-                    break;
-                }
-            }
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("❌ Generation Failed:", errorText);
+            return NextResponse.json({
+                error: "Image generation failed",
+                details: errorText
+            }, { status: response.status });
         }
 
-        let imageUrl = null;
-        if (generatedImageBase64) {
-            imageUrl = `data:${generatedImageMimeType || "image/png"};base64,${generatedImageBase64}`;
-            console.log("✅ Extracted Image Data URI");
+        const data = await response.json();
+
+        // Extract image
+        // Response format: { predictions: [ { bytesBase64Encoded: "..." } ] }
+        const prediction = data.predictions?.[0];
+        const base64Image = prediction?.bytesBase64Encoded || prediction?.image?.bytesBase64Encoded;
+
+        if (!base64Image) {
+            console.error("❌ No image data in response:", JSON.stringify(data));
+            return NextResponse.json({ error: "Model returned no image data" }, { status: 500 });
         }
 
-        if (!imageUrl) {
-            let generatedText = "";
-            try { generatedText = response.text(); } catch (e) { }
-
-            console.warn("⚠️ No image data found in response.");
-            if (generatedText) {
-                console.log("Model returned text:", generatedText.slice(0, 100));
-                return NextResponse.json({
-                    error: "Model returned text instead of image",
-                    details: generatedText
-                }, { status: 400 });
-            }
-            return NextResponse.json({ error: "Model returned no content" }, { status: 500 });
-        }
+        const imageUrl = `data:image/png;base64,${base64Image}`;
 
         console.log("✅ SUCCESS — returning image to client");
         console.log("===============================================================\n");

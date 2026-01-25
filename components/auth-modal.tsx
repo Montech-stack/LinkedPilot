@@ -45,7 +45,7 @@ export function AuthModal({
 
   const handleRedirectAfterAuth = () => {
     const hasTokens = tokensRemaining > 0 || tokensRemaining === -1
-    router.push("/home")
+    router.push("/dashboard")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

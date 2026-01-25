@@ -1,4 +1,5 @@
 "use client"
+import React from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { motion, AnimatePresence } from "framer-motion"
@@ -38,6 +39,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { currentPlan } = useBillingStore()
   const planData = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan)
 
+  const [isDesktop, setIsDesktop] = React.useState(false)
+
+  React.useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024)
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
+
   return (
     <>
       <AnimatePresence>
@@ -53,11 +63,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {(isOpen || (typeof window !== "undefined" && window.innerWidth >= 1024)) && (
+        {(isOpen || isDesktop) && (
           <motion.aside
             className={cn(
               "fixed left-0 top-0 h-screen w-72 bg-card border-r border-border shadow-2xl z-[100] lg:sticky lg:z-auto flex flex-col",
-              // "bg-gradient-to-b from-[#0F1116] to-[#0b0c10]" // Removed specific gradient for cleaner theme support
             )}
             initial={{ x: -300 }}
             animate={{ x: 0 }}
@@ -163,7 +172,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {user?.email || "user@example.com"}
                   </p>
                 </div>
-                <ProfileDropdown />
+                <ProfileDropdown showIconOnly />
               </div>
             </div>
           </motion.aside>

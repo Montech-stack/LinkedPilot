@@ -4,7 +4,7 @@ import type React from "react"
 import { Check, Trash2, GripHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { ContentPreset } from "@/lib/types/content-preset"
+import type { ContentPreset } from "@/lib/content-preset-store"
 
 interface ContentPresetCardProps {
   preset: ContentPreset
@@ -49,7 +49,7 @@ export function ContentPresetCard({
               "group relative transition-all rounded-lg border-2",
               isSelected
                 ? "border-primary bg-primary/10"
-                : "border-border bg-card hover:border-primary/50 hover:bg-primary/5",
+                : "border-gray-200 dark:border-border bg-white dark:bg-card hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-primary/5",
               draggedItem === preset.id && "opacity-50",
             )}
           >
@@ -65,7 +65,7 @@ export function ContentPresetCard({
                 alt={preset.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => {
-                  ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=200&width=200"
+                  ; (e.target as HTMLImageElement).src = "/placeholder.svg?height=200&width=200"
                 }}
               />
               {/* Selection Checkmark */}

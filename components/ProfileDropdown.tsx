@@ -2,13 +2,17 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Settings, CreditCard, LogOut, Crown, User, Star, Loader2, Sparkles } from "lucide-react"
+import { Settings, CreditCard, LogOut, Crown, User, Star, Loader2, Sparkles, ChevronsUpDown } from "lucide-react"
 import { useBillingStore, SUBSCRIPTION_PLANS } from "@/lib/billing-store"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useSession, signOut } from "next-auth/react"
 
-export default function ProfileDropdown() {
+interface ProfileDropdownProps {
+  showIconOnly?: boolean;
+}
+
+export default function ProfileDropdown({ showIconOnly }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -96,12 +100,19 @@ export default function ProfileDropdown() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative group w-9 h-9 rounded-full font-semibold text-sm flex items-center justify-center bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg ring-2 ring-transparent hover:ring-blue-500/50 transition-all overflow-hidden"
+        className={`relative group rounded-full font-semibold text-sm flex items-center justify-center transition-all overflow-hidden ${showIconOnly
+          ? "w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+          : "w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg ring-2 ring-transparent hover:ring-blue-500/50"
+          }`}
       >
-        {user.image ? (
-          <img src={user.image} alt="User" className="w-full h-full object-cover" />
+        {showIconOnly ? (
+          <ChevronsUpDown className="w-4 h-4" />
         ) : (
-          <span>{userInitials}</span>
+          user.image ? (
+            <img src={user.image} alt="User" className="w-full h-full object-cover" />
+          ) : (
+            <span>{userInitials}</span>
+          )
         )}
       </motion.button>
 
@@ -112,7 +123,7 @@ export default function ProfileDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-3 w-72 bg-popover border border-border rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
+            className="absolute left-full bottom-0 ml-2 mb-0 w-72 bg-popover border border-border rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
           >
             {/* Header */}
             <div className="p-4 border-b border-border bg-muted/30">
