@@ -84,9 +84,4 @@ export async function generateContent(prompt: string, options: {
   console.log('Gemini API generated content length:', content.length);
   console.log('Token usage:', JSON.stringify(data.usageMetadata, null, 2));
   return content;
-} catch (error) {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  console.error('Gemini API error:', errorMessage);
-  throw new Error(errorMessage);
-}
 }
