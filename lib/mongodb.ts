@@ -27,22 +27,37 @@ async function connectToDatabase(): Promise<Mongoose> {
   }
 
   if (!cached.promise) {
+    const opts = {
+      dbName: 'Linkedpilot',
+      bufferCommands: false,
+      family: 4, // Force IPv4 to avoid potential IPv6/DNS issues
+    };
+
+    console.log('🔌 Mongoose: Connecting to MongoDB...');
+
     cached.promise = mongoose
-      .connect(MONGODB_URI!, {
-        dbName: 'Linkedpilot',
-        bufferCommands: false,
-      })
+      .connect(MONGODB_URI!, opts)
       .then((mongoose) => {
         console.log('✅ Mongoose: Connected to MongoDB Atlas');
         return mongoose;
       })
       .catch((error) => {
         console.error('❌ Mongoose: Connection error:', error);
+        // Do not throw here immediately if we want to allow retries, 
+        // but for now, caching the rejection is correct so we don't spam.
+        // However, we might want to clear the promise on failure so next request retries.
+        cached.promise = null;
         throw error;
       });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null; // Reset promise on failure to allow retry
+    throw e;
+  }
+
   globalMongoose.mongoose = cached;
   return cached.conn;
 }
