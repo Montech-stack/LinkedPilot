@@ -270,8 +270,8 @@ export default function LandingPage() {
                             <span className="block bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                                 Post Like a Pro.
                             </span>
-                            <span className="block mt-1 bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
-                               Maximize Growth.
+                            <span className="block mt-1 bg-gradient-to-r from-violet-500 via-blue-500 via-cyan-500 to-amber-400 bg-clip-text text-transparent">
+                                Maximize Growth.
                             </span>
                         </h1>
 
@@ -684,7 +684,7 @@ export default function LandingPage() {
                         <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
                             Your expertise deserves
                             <br />
-                            <span className="bg-gradient-to-r from-violet-500 to-blue-500 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-violet-500 via-blue-500 to-amber-400 bg-clip-text text-transparent">
                                 to be seen.
                             </span>
                         </h2>
@@ -694,7 +694,7 @@ export default function LandingPage() {
                         <Button
                             onClick={handleCTA}
                             size="lg"
-                            className="h-14 md:h-16 px-10 md:px-14 text-lg md:text-xl font-bold rounded-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50 transition-all hover:scale-105 text-white border-0"
+                            className="h-14 md:h-16 px-10 md:px-14 text-lg md:text-xl font-bold rounded-full bg-gradient-to-r from-violet-600 via-blue-600 to-amber-500 hover:from-violet-700 hover:via-blue-700 hover:to-amber-600 shadow-2xl shadow-violet-500/30 hover:shadow-amber-500/40 transition-all hover:scale-105 text-white border-0"
                         >
                             Get Started Free
                             <ArrowRight className="ml-3 w-5 h-5 md:w-6 md:h-6" />

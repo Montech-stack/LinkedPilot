@@ -20,9 +20,12 @@ import {
   ChevronDown,
   Menu,
   Sparkles,
-  Calendar
+  Calendar,
+  Mic,
+  Eye,
 } from "lucide-react";
 import ScheduleModal from "@/components/ScheduleModal";
+import OnboardingModal from "@/components/OnboardingModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -101,15 +104,49 @@ export default function Dashboard() {
   const [postingAllLoading, setPostingAllLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+
   // Voice Clone State
   const [useClonedVoice, setUseClonedVoice] = useState(false);
   const [hasVoiceProfile, setHasVoiceProfile] = useState(false);
+
+  // Generated Posts Modal State
+  const [showGeneratedPostsModal, setShowGeneratedPostsModal] = useState(false);
 
   useEffect(() => {
     // Check for voice profile
     const profile = localStorage.getItem("maxis_voice_profile");
     if (profile) setHasVoiceProfile(true);
   }, []);
+
+  // Check onboarding status on mount - only show on fresh login, not refresh
+  useEffect(() => {
+    async function checkOnboarding() {
+      // Check if we already showed onboarding this session
+      const shownThisSession = sessionStorage.getItem("maxis_onboarding_shown");
+      if (shownThisSession) return;
+
+      try {
+        const res = await fetch("/api/onboarding");
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.onboardingCompleted) {
+            setOnboardingStep(data.onboardingStep || 0);
+            setShowOnboarding(true);
+            // Mark that we've shown onboarding this session
+            sessionStorage.setItem("maxis_onboarding_shown", "true");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check onboarding:", e);
+      }
+    }
+    if (session?.user?.email) {
+      checkOnboarding();
+    }
+  }, [session?.user?.email]);
 
   // Scheduling State
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -252,9 +289,9 @@ export default function Dashboard() {
       toast.error("Generation failed");
     } finally {
       setIsGenerating(false);
-      // Scroll to results
+      // Open the generated posts modal
       setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setShowGeneratedPostsModal(true);
       }, 100);
     }
   }, [input, platforms, postCount, postLength, generatePosts, setIsGenerating, userPlan, tokensRemaining, userEmail, selectedPresets, customPresets]);
@@ -428,19 +465,18 @@ export default function Dashboard() {
           <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 w-full">
             {/* Page Header */}
             <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs font-medium">
-                <Zap className="w-3 h-3 fill-gold/20" />
+              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-primary/20 text-primary text-xs font-medium">
+                <Zap className="w-3 h-3" />
                 <span>AI Content Studio</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                Create Viral Content
+                Write Like You. Post Like a Pro.
               </h1>
               <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-                Select your platforms, define your style, and let AI generate viral-worthy posts in seconds.
+                Turn one idea into scroll-stopping content that sounds like you — in seconds, not hours.
               </p>
             </motion.div>
 
-            {/* Generated Posts Toggle (Floating) */}
             {/* Generated Posts Toggle (Floating) */}
             <AnimatePresence>
               {generatedPosts.length > 0 && (
@@ -451,13 +487,11 @@ export default function Dashboard() {
                   className="fixed bottom-6 right-6 z-40"
                 >
                   <Button
-                    onClick={() => {
-                      const element = document.getElementById("generated-posts-view");
-                      if (element) element.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="rounded-full h-12 px-6 shadow-2xl bg-primary text-primary-foreground font-bold"
+                    onClick={() => setShowGeneratedPostsModal(true)}
+                    className="rounded-full h-12 px-6 shadow-2xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-bold gap-2"
                   >
-                    View Generated Content ({generatedPosts.length})
+                    <Eye className="w-5 h-5" />
+                    View Generated ({generatedPosts.length})
                   </Button>
                 </motion.div>
               )}
@@ -549,12 +583,36 @@ export default function Dashboard() {
                       </Tooltip>
                     </TooltipProvider>
 
-                    {hasVoiceProfile && (
-                      <div className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full cursor-pointer hover:bg-primary/20 transition-colors" onClick={() => setUseClonedVoice(!useClonedVoice)}>
-                        <div className={`w-2 h-2 rounded-full ${useClonedVoice ? 'bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-muted-foreground'} transition-colors`} />
-                        <span className={`text-xs font-medium ${useClonedVoice ? 'text-primary' : 'text-muted-foreground'}`}>Voice Clone</span>
-                      </div>
-                    )}
+                    {/* Voice Clone Button */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => {
+                              if (!hasVoiceProfile) {
+                                toast.error("Set up your voice profile in Settings first");
+                                return;
+                              }
+                              setUseClonedVoice(!useClonedVoice);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
+                              useClonedVoice
+                                ? "bg-violet-500/20 border border-violet-500/50 text-violet-400"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            <Mic className={cn("w-5 h-5", useClonedVoice && "text-violet-400")} />
+                            <span className="text-xs font-medium hidden sm:inline">
+                              {useClonedVoice ? "Voice ON" : "Voice Clone"}
+                            </span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{hasVoiceProfile ? (useClonedVoice ? "Voice cloning active" : "Enable voice cloning") : "Set up voice profile first"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
 
                   {/* Right: Settings Triggers */}
@@ -622,57 +680,80 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Generated Posts Expandable Modal View */}
+            {/* Generated Posts Full-Screen Modal */}
             <AnimatePresence>
-              {generatedPosts.length > 0 && (
+              {showGeneratedPostsModal && generatedPosts.length > 0 && (
                 <motion.div
-                  id="generated-posts-view"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-8 border-t border-border pt-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                      <Sparkles className="w-6 h-6 text-primary" />
-                      Generated Studio Results
-                    </h2>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="gap-2"
-                    >
-                      <ChevronRight className="w-4 h-4 rotate-[-90deg]" />
-                      Back to Studio
-                    </Button>
+                  {/* Modal Header */}
+                  <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50 px-4 sm:px-6 py-4">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+                          <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold text-foreground">Generated Content</h2>
+                          <p className="text-xs text-muted-foreground">{generatedPosts.length} post{generatedPosts.length !== 1 ? 's' : ''} ready</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          onClick={() => {
+                            setGeneratedPosts([]);
+                            setShowGeneratedPostsModal(false);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Clear All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowGeneratedPostsModal(false)}
+                          className="gap-2"
+                        >
+                          <X className="w-4 h-4" />
+                          Close
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-6">
-                    {generatedPosts.map((post, i) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        index={i}
-                        totalPosts={generatedPosts.length}
-                        isExpanded={expandedPost === post.id}
-                        onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
-                        onCopy={() => {
-                          navigator.clipboard.writeText(post.content);
-                          toast.success("Copied!");
-                        }}
-                        onDelete={() => handleDelete(post.id)}
-                        onSchedule={() => {
-                          setPostToSchedule({ id: post.id, content: post.content });
-                          setScheduleModalOpen(true);
-                        }}
-                        onPostSuccess={() => toast.success("Posted!")}
-                        onPostError={err => toast.error(err)}
-                        isLinkedInConnected={isLinkedInConnected}
-                        onUpdateMedia={updateMedia}
-                      />
-                    ))}
+                  {/* Modal Content */}
+                  <div className="h-[calc(100vh-80px)] overflow-y-auto px-4 sm:px-6 py-6">
+                    <div className="max-w-4xl mx-auto space-y-4">
+                      {generatedPosts.map((post, i) => (
+                        <PostCard
+                          key={post.id}
+                          post={post}
+                          index={i}
+                          totalPosts={generatedPosts.length}
+                          isExpanded={expandedPost === post.id}
+                          onToggleExpand={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
+                          onCopy={() => {
+                            navigator.clipboard.writeText(post.content);
+                            toast.success("Copied!");
+                          }}
+                          onDelete={() => handleDelete(post.id)}
+                          onSchedule={() => {
+                            setPostToSchedule({ id: post.id, content: post.content });
+                            setScheduleModalOpen(true);
+                          }}
+                          onPostSuccess={() => toast.success("Posted!")}
+                          onPostError={err => toast.error(err)}
+                          isLinkedInConnected={isLinkedInConnected}
+                          onUpdateMedia={updateMedia}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -758,6 +839,15 @@ export default function Dashboard() {
           </div>
         </div>
       </div >
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => setShowOnboarding(false)}
+        onVoiceProfileCreated={() => setHasVoiceProfile(true)}
+        initialStep={onboardingStep}
+      />
     </div >
   );
 }
