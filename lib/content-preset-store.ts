@@ -18,7 +18,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Thought Leadership",
     subtitle: "Insights & Opinions",
     description: "Deep insights & expert opinions",
-    promptSnippet: "Write in confident thought-leadership tone, share original strategic insight, position author as industry expert",
+    promptSnippet: "Write as an industry authority sharing a unique perspective. Open with a bold statement that challenges conventional wisdom. Support with evidence from experience. Use confident language without arrogance. End with a forward-looking insight that positions the author as ahead of the curve.",
     category: "Authority",
   },
   {
@@ -26,7 +26,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Quick Tips",
     subtitle: "Actionable Advice",
     description: "Numbered actionable advice",
-    promptSnippet: "Format as concise numbered list of 5–7 practical, immediately implementable tips",
+    promptSnippet: "Create a numbered list of 5-7 actionable tips. Each tip should be specific enough to implement today. Start each point with an action verb. Keep explanations to one sentence. The tips should progress logically and build on each other.",
     category: "Educational",
   },
   {
@@ -34,7 +34,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Personal Story",
     subtitle: "Vulnerable & Real",
     description: "Relatable anecdote + lessons",
-    promptSnippet: "Start with short vulnerable personal story or failure, extract 2–3 clear lessons, close with inspiring takeaway",
+    promptSnippet: "Share a vulnerable personal moment - a failure, challenge, or turning point. Be specific about the situation and emotions. Extract 2-3 clear lessons that readers can apply. Close with an inspiring but realistic takeaway. Write in first person with raw honesty.",
     category: "Storytelling",
   },
   {
@@ -42,7 +42,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Bold Opinion",
     subtitle: "Spark Debate",
     description: "Provocative view that sparks debate",
-    promptSnippet: "Share strong, slightly controversial opinion on [topic], support with clear reasoning, invite discussion",
+    promptSnippet: "Take a strong stance on a topic most people disagree with or avoid discussing. Open with the controversial opinion directly. Support with logical reasoning and specific examples. Acknowledge the opposing view briefly. Invite respectful debate with a thought-provoking question at the end.",
     category: "Engagement",
   },
   {
@@ -50,7 +50,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Mini Case Study",
     subtitle: "Proven Results",
     description: "Before → Strategy → Result",
-    promptSnippet: "Structure as mini case study: challenge → key decision/strategy → measurable result + lesson",
+    promptSnippet: "Structure as a mini case study with three clear parts: the Challenge (specific problem and context), the Strategy (what was done differently), and the Result (measurable outcome with numbers if possible). Keep it concise. End with a universal lesson others can apply.",
     category: "Proof",
   },
   {
@@ -58,7 +58,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Question Hook",
     subtitle: "Drive Comments",
     description: "Engage with powerful question",
-    promptSnippet: "Start with thought-provoking question that challenges reader assumptions, then deliver value",
+    promptSnippet: "Open with a provocative question that challenges assumptions or creates curiosity. Make it specific enough to resonate deeply. Follow with valuable insight that answers or expands on the question. End with an invitation for readers to share their perspective in the comments.",
     category: "Engagement",
   },
   {
@@ -66,7 +66,7 @@ export const PRESETS: ContentPreset[] = [
     name: "List Format",
     subtitle: "Easy to Read",
     description: "Numbered or bulleted value",
-    promptSnippet: "Write in numbered list format, each point clear, actionable and valuable",
+    promptSnippet: "Format as a clean numbered list for easy scanning. Each point should deliver standalone value. Use parallel structure across all points. Start with the most compelling point to hook readers. Keep each point focused on one clear idea.",
     category: "Educational",
   },
   {
@@ -74,7 +74,7 @@ export const PRESETS: ContentPreset[] = [
     name: "Behind the Scenes",
     subtitle: "Transparent Process",
     description: "Show the real process",
-    promptSnippet: "Share transparent behind-the-scenes look at process, challenges and decisions",
+    promptSnippet: "Pull back the curtain on a process, decision, or journey that usually stays hidden. Be specific about the messy reality, including mistakes and pivots. Share what you learned that you would do differently. Make readers feel like insiders getting exclusive access.",
     category: "Authenticity",
   },
 ]

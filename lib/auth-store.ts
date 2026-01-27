@@ -40,37 +40,43 @@ export const useAuthStore = create<AuthState>()(
           body: JSON.stringify({ email, password, name }),
         })
         if (!res.ok) throw new Error(await res.text())
-        
-        const signInResult = await signIn("credentials", { 
-          email, 
-          password, 
-          redirect: false 
+
+        // Clear onboarding flag for fresh signup experience
+        sessionStorage.removeItem("maxis_onboarding_shown");
+
+        const signInResult = await signIn("credentials", {
+          email,
+          password,
+          redirect: false
         })
-        
+
         if (signInResult?.ok) {
-          set({ 
-            user: { id: "", email, name }, 
-            isAuthenticated: true 
+          set({
+            user: { id: "", email, name },
+            isAuthenticated: true
           })
         }
       },
 
       login: async (email, password) => {
-        const res = await signIn("credentials", { 
-          email, 
-          password, 
-          redirect: false 
+        // Clear onboarding flag for fresh login experience
+        sessionStorage.removeItem("maxis_onboarding_shown");
+
+        const res = await signIn("credentials", {
+          email,
+          password,
+          redirect: false
         })
-        
+
         if (res?.error) {
           throw new Error(res.error)
         }
-        
+
         if (res?.ok) {
           // Optimistic update; useAuthSync will confirm details shortly
-          set({ 
-            user: { id: "", email, name: "" }, 
-            isAuthenticated: true 
+          set({
+            user: { id: "", email, name: "" },
+            isAuthenticated: true
           })
         }
       },
@@ -78,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       googleLogin: async () => {
         console.log("🔵 [AUTH] Starting Google sign in...")
         toast("🔵 [AUTH] Starting Google sign in...")
-        
+
         // 1. CLEAR localStorage completely to remove cached old user
         try {
           useAuthStore.persist.clearStorage()
@@ -97,23 +103,24 @@ export const useAuthStore = create<AuthState>()(
         }
 
         // 3. Clear Zustand state
-        set({ 
-          user: null, 
-          isAuthenticated: false 
+        set({
+          user: null,
+          isAuthenticated: false
         })
         console.log("✅ [AUTH] Zustand state cleared")
 
-        // 4. Now sign in with Google
+        // 4. Now sign in with Google - redirect to dashboard
         console.log("🔵 [AUTH] Starting Google OAuth...")
-        await signIn("google", { 
+        sessionStorage.removeItem("maxis_onboarding_shown"); // Clear for fresh login
+        await signIn("google", {
           redirect: true,
-          callbackUrl: "/",
+          callbackUrl: "/dashboard",
         })
       },
 
       logout: async () => {
         console.log("🚪 [AUTH] Logging out...")
-        
+
         try {
           useAuthStore.persist.clearStorage()
           localStorage.removeItem("auth-store")
@@ -121,14 +128,14 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("❌ [AUTH] Failed to clear localStorage:", error)
         }
-        
-        set({ 
-          user: null, 
-          isAuthenticated: false 
+
+        set({
+          user: null,
+          isAuthenticated: false
         })
-        
+
         console.log("✅ [AUTH] Zustand state cleared")
-        
+
         try {
           await signOut({ redirect: true, callbackUrl: "/" })
           console.log("✅ [AUTH] NextAuth signed out")
@@ -144,7 +151,7 @@ export const useAuthStore = create<AuthState>()(
 
       syncWithSession: (sessionUser) => {
         const currentUser = get().user
-        
+
         // Only update if the user is different to prevent infinite re-renders
         if (sessionUser && (!currentUser || currentUser.email !== sessionUser.email)) {
           console.log("🔄 [AUTH] Syncing with NextAuth session:", sessionUser.email)
@@ -163,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
           set({ user: null, isAuthenticated: false })
         }
       },
-      
+
       setHydrated: (value) => set({ hydrated: value }),
     }),
     {
@@ -175,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
         } else if (state) {
           console.log("✅ [AUTH STORE] Rehydrated:", state.user?.email || "No user")
         }
-        
+
         queueMicrotask(() => {
           useAuthStore.setState({ hydrated: true })
           console.log("🔄 [AUTH STORE] Hydration complete")

@@ -42,42 +42,73 @@ export async function POST(request: Request) {
     const platformNames = platformList.join(', ');
 
     // =====================================================
-    // 🔥 UPGRADED PROMPT FOR MULTI-PLATFORM
+    // OPTIMIZED PROMPT FOR MULTI-PLATFORM CONTENT
     // =====================================================
     const prompt = `
-Generate ${count} distinct social media post(s) for EACH of the following platforms: ${platformNames}.
-Based on the idea: "${idea}".
+You are an elite social media ghostwriter who has generated millions of impressions for thought leaders, coaches, and founders. Your content consistently goes viral because you understand human psychology and platform algorithms.
 
-TOTAL POSTS TO GENERATE per platform: ${count}. (If 2 platforms and count 1, generate 1 for each).
+TASK: Generate ${count} high-performing social media post(s) for EACH of these platforms: ${platformNames}.
+Based on this idea: "${idea}"
 
-Your mission: **maximize engagement and virality** specific to each platform's culture in 2024–2025.
+TOTAL OUTPUT: ${count} post(s) per platform.
 
-PLATFORM SPECIFIC INSTRUCTIONS:
-- **LinkedIn**: Professional, value-driven, storytelling, "bro-etry" usage if effective, clear takeaways.
-- **Twitter / X**: If length is 'short', standard tweet. If 'medium' or 'long', create a **THREAD**. For threads, separate tweets with "---". Tone: Punchy, contrarian, high-signal.
-- **Instagram**: Visual-first captions, engaging hooks, use of emojis, "Link in bio" CTA.
-- **Facebook**: Conversational, community-focused, storytelling.
+CRITICAL FORMATTING RULES:
+- Do NOT use asterisks or markdown formatting in your output
+- Do NOT use bold, italic, or any special formatting characters
+- Use plain text only with natural line breaks
+- Use emojis sparingly and only where they add value
 
-GENERAL RULES:
-1. **Hook**: Start with a scroll-stopping hook.
-2. **Value**: Provide actionable insight or emotional resonance.
-3. **Structure**: Use short paragraphs and white space.
-4. **Dates**: Today is ${now.toLocaleDateString()}.
-5. **Trends**: ${trendsClause}
+PLATFORM-SPECIFIC MASTERY:
 
-LENGTH: ${wordCount}.
+LINKEDIN:
+- Open with a pattern-interrupting first line that stops the scroll
+- Use short paragraphs of 1-2 sentences max with blank lines between
+- Include a personal angle or story element when possible
+- End with a clear call-to-action or thought-provoking question
+- Writing style: Confident, conversational, valuable
 
-OUTPUT FORMAT:
-Return a valid JSON array of objects. Each object must have:
-- "id": A unique string ID.
-- "platform": The platform name (e.g. "LinkedIn", "Twitter").
-- "content": The full post text.
-- "note": A short note on why this works for this platform.
+TWITTER/X:
+- For short content: One punchy tweet with high signal-to-noise ratio
+- For medium/long content: Create a thread format, separate each tweet with "---"
+- Start with an irresistible hook that creates curiosity
+- Each tweet should stand alone while building momentum
+- Writing style: Sharp, contrarian, memorable
 
-Example JSON:
+INSTAGRAM:
+- Lead with an emotional hook that connects to the visual experience
+- Use strategic line breaks for mobile readability
+- Include 3-5 relevant hashtags at the end
+- End with engagement prompt: question or call-to-action
+- Add "Link in bio" if referencing external content
+
+FACEBOOK:
+- Conversational and community-focused tone
+- Storytelling approach that invites discussion
+- Ask questions that encourage comments
+- Relatable, warm, and inclusive language
+
+QUALITY STANDARDS:
+1. HOOK: First line must create urgency or curiosity - make scrolling past impossible
+2. VALUE: Every sentence must earn its place - cut fluff ruthlessly
+3. AUTHENTICITY: Write like a real human, not a corporate copywriter
+4. SPECIFICITY: Use concrete examples and numbers over vague claims
+5. EMOTION: Tap into desires, fears, frustrations, or aspirations
+
+CONTEXT:
+- Current date: ${now.toLocaleDateString()}
+- ${trendsClause}
+- Target length: ${wordCount}
+
+OUTPUT: Return a valid JSON array. Each object must contain:
+- "id": Unique string identifier
+- "platform": Platform name exactly as provided
+- "content": The complete post text without any markdown or special formatting
+- "note": 10-word max explanation of why this will perform well
+
+JSON FORMAT EXAMPLE:
 [
-  { "id": "1", "platform": "Twitter", "content": "Hook... \n\nBody...", "note": "Thread structure used" },
-  { "id": "2", "platform": "LinkedIn", "content": "Hook... \n\nBody...", "note": "Professional formatting" }
+  { "id": "1", "platform": "LinkedIn", "content": "Your post content here...", "note": "Strong hook with personal story" },
+  { "id": "2", "platform": "Twitter", "content": "Tweet content here...", "note": "Contrarian take creates engagement" }
 ]
     `;
 

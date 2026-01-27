@@ -34,8 +34,10 @@ export async function POST(req: Request) {
       provider: "credentials",
       role: "user",
       plan: "free",
-      tokensRemaining: 0,      // no free tokens
-      billingEnabled: false,   // must enable billing first
+      tokensRemaining: 0,
+      billingEnabled: false,
+      onboardingCompleted: false,
+      onboardingStep: 0,
     })
 
     const sanitizedUser = {
@@ -46,10 +48,8 @@ export async function POST(req: Request) {
       billingEnabled: false,
     }
 
-    const redirectUrl =
-      sanitizedUser.tokensRemaining > 0 && sanitizedUser.billingEnabled
-        ? "/home"
-        : "/billing"
+    // Always redirect to dashboard - onboarding will show there
+    const redirectUrl = "/dashboard"
 
     return NextResponse.json({
       success: true,

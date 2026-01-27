@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { connectToDatabase } from "@/lib/mongodb"
-import {User} from "@/models/User"   // You MUST create a User model
+import { User } from "@/models/User"   // You MUST create a User model
 
 export const authOptions: NextAuthOptions = {
   // ❌ REMOVE adapter (Mongoose does not support it)
@@ -53,6 +53,38 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
 
   callbacks: {
+    async signIn({ user, account }) {
+      // For Google OAuth, create user if doesn't exist
+      if (account?.provider === "google" && user.email) {
+        await connectToDatabase();
+        const existingUser = await User.findOne({ email: user.email });
+
+        if (!existingUser) {
+          // Create new user for first-time Google sign-in
+          await User.create({
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            provider: "google",
+            role: "user",
+            plan: "free",
+            tokensRemaining: 0,
+            onboardingCompleted: false,
+            onboardingStep: 0,
+          });
+        }
+      }
+      return true;
+    },
+
+    async redirect({ url, baseUrl }) {
+      // Always redirect to dashboard after sign in
+      if (url.startsWith(baseUrl)) {
+        return `${baseUrl}/dashboard`;
+      }
+      return `${baseUrl}/dashboard`;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
