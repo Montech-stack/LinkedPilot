@@ -32,7 +32,13 @@ export async function POST(req: Request) {
     }
     const userId = session.user.id;
     const body = await req.json();
-    const { title, type, isActive, lastRun, topic, postTime, tone, length, selectedAccounts, nextRun, count, automateImages, username, profileImageUrl } = body;
+    const {
+      title, type, isActive, lastRun, topic, postTime, tone, length,
+      selectedAccounts, nextRun, count, automateImages, username, profileImageUrl,
+      // New fields
+      preset, generateImage, importedScheduleIds, frequency, customDays
+    } = body;
+
     if (!title || !type) {
       return NextResponse.json({ error: "Title and type are required." }, { status: 400 });
     }
@@ -42,6 +48,7 @@ export async function POST(req: Request) {
     if (automateImages && (!username || !profileImageUrl)) {
       return NextResponse.json({ error: "Username and profile image URL are required when automating images." }, { status: 400 });
     }
+
     const record = await Automation.create({
       userId,
       title,
@@ -53,11 +60,17 @@ export async function POST(req: Request) {
       tone,
       length,
       selectedAccounts: selectedAccounts ? selectedAccounts.map((id: string) => new mongoose.Types.ObjectId(id)) : [],
-      nextRun: nextRun ? new Date(nextRun) : calculateNextRun(postTime),
+      nextRun: nextRun ? new Date(nextRun) : calculateNextRun(postTime, frequency, customDays),
       count: count ?? 0,
       automateImages: automateImages ?? false,
       username,
       profileImageUrl,
+      // New fields
+      preset: preset || null,
+      generateImage: generateImage ?? false,
+      importedScheduleIds: importedScheduleIds ? importedScheduleIds.map((id: string) => new mongoose.Types.ObjectId(id)) : [],
+      frequency: frequency || 'daily',
+      customDays: customDays || [],
     });
     return NextResponse.json(record);
   } catch (error: any) {
@@ -125,13 +138,44 @@ export async function DELETE(req: Request) {
   }
 }
 
-// Helper to calculate nextRun based on postTime (daily, UTC)
-function calculateNextRun(postTime: string): Date {
+// Helper to calculate nextRun based on postTime, frequency, and custom days
+function calculateNextRun(postTime: string, frequency: string = 'daily', customDays: number[] = []): Date {
   const [hours, minutes] = postTime.split(':').map(Number);
   const now = new Date();
-  const next = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0, 0);
+  let next = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes, 0, 0);
+
+  // If time already passed today, start from tomorrow
   if (next < now) {
     next.setUTCDate(next.getUTCDate() + 1);
   }
+
+  // For weekdays only (Mon-Fri = 1-5)
+  if (frequency === 'weekdays') {
+    const dayOfWeek = next.getUTCDay();
+    if (dayOfWeek === 0) next.setUTCDate(next.getUTCDate() + 1); // Sunday -> Monday
+    else if (dayOfWeek === 6) next.setUTCDate(next.getUTCDate() + 2); // Saturday -> Monday
+  }
+
+  // For weekly (next Monday)
+  if (frequency === 'weekly') {
+    const dayOfWeek = next.getUTCDay();
+    const daysUntilMonday = (8 - dayOfWeek) % 7 || 7;
+    next.setUTCDate(next.getUTCDate() + daysUntilMonday);
+  }
+
+  // For custom days
+  if (frequency === 'custom' && customDays.length > 0) {
+    const sortedDays = [...customDays].sort((a, b) => a - b);
+    const currentDay = next.getUTCDay();
+    let targetDay = sortedDays.find(d => d >= currentDay);
+
+    if (targetDay === undefined) {
+      targetDay = sortedDays[0];
+      next.setUTCDate(next.getUTCDate() + (7 - currentDay + targetDay));
+    } else if (targetDay > currentDay) {
+      next.setUTCDate(next.getUTCDate() + (targetDay - currentDay));
+    }
+  }
+
   return next;
 }

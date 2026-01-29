@@ -134,7 +134,7 @@ export default function ViralIdeasLibrary() {
               <div>
                 <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
                   <Lightbulb className="w-8 h-8 text-yellow-500 fill-yellow-500/20" />
-                  Viral Ideas Lab
+                  Viral Labs
                 </h1>
                 <p className="text-muted-foreground mt-1">Generate high-converting angles for your next post.</p>
               </div>

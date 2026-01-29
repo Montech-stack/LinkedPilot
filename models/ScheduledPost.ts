@@ -8,6 +8,8 @@ export interface IScheduledPost extends Document {
   scheduledAt: Date;
   posted: boolean;
   error?: string | null;
+  platform?: string;
+  generateImage?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,8 @@ const ScheduledPostSchema = new Schema<IScheduledPost>(
     scheduledAt: { type: Date, required: true },
     posted: { type: Boolean, default: false },
     error: { type: String, default: null },
+    platform: { type: String, default: "linkedin" },
+    generateImage: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -30,3 +34,4 @@ const ScheduledPost: Model<IScheduledPost> =
   mongoose.model<IScheduledPost>("ScheduledPost", ScheduledPostSchema);
 
 export default ScheduledPost;
+

@@ -8,8 +8,8 @@ import Providers from "@/components/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Maxis - AI Automated Social Media Manager",
-  description: "Link. Create. Schedule - Go Viral Everywhere",
+  title: "Maxis - Automated Social Media Manager for Professionals",
+  description: "Write like you, Post like a pro, Maximize Growth",
 
   icons: {
     icon: [

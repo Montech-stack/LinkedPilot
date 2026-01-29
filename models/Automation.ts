@@ -16,6 +16,12 @@ const automationSchema = new mongoose.Schema({
   automateImages: { type: Boolean, default: false },
   username: { type: String },
   profileImageUrl: { type: String },
+  // New fields for enhanced functionality
+  preset: { type: String, default: null }, // Content preset ID (e.g., "thought-leadership")
+  generateImage: { type: Boolean, default: false }, // Auto-generate AI images
+  importedScheduleIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ScheduledPost' }], // Imported schedules
+  frequency: { type: String, enum: ['daily', 'weekdays', 'weekly', 'custom'], default: 'daily' },
+  customDays: [{ type: Number }], // 0-6 for custom frequency (0 = Sunday)
 }, { timestamps: true });
 
 export default mongoose.models.Automation || mongoose.model('Automation', automationSchema);

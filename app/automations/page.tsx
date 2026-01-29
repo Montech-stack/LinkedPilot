@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, MessageSquare, Clock, BarChart, Share2, Linkedin, Facebook, Instagram, Twitter, Bot, Play, Zap } from "lucide-react";
+import { Plus, MessageSquare, Clock, BarChart, Share2, Linkedin, Facebook, Instagram, Twitter, Bot, Play, Zap, Sparkles, Calendar, Image as ImageIcon, Import } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AutomationList } from "@/components/automation-list";
 import Sidebar from "@/components/Sidebar";
@@ -13,9 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { PRESETS } from "@/lib/content-preset-store";
 
 type UserPlan = "free" | "pro" | "enterprise";
 
@@ -25,6 +27,14 @@ interface SocialAccount {
   name: string;
   email: string;
   connected: boolean;
+}
+
+interface ScheduledPost {
+  _id: string;
+  content: string;
+  scheduledAt: string;
+  platform?: string;
+  posted: boolean;
 }
 
 interface Automation {
@@ -45,6 +55,8 @@ export default function AutomationsPage() {
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
+  const [showScheduleImport, setShowScheduleImport] = useState(false);
 
   // Form Items
   const [title, setTitle] = useState("");
@@ -53,10 +65,15 @@ export default function AutomationsPage() {
   const [tone, setTone] = useState("professional");
   const [length, setLength] = useState("medium");
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
-  const [automateImages, setAutomateImages] = useState(false);
   const [username, setUsername] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // New form fields
+  const [preset, setPreset] = useState("");
+  const [generateImage, setGenerateImage] = useState(false);
+  const [frequency, setFrequency] = useState("daily");
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
 
   const [userPlan, setUserPlan] = useState<UserPlan>("free");
 
@@ -72,6 +89,7 @@ export default function AutomationsPage() {
   useEffect(() => {
     fetch("/api/social").then(r => r.json()).then(setConnectedAccounts).catch(() => { });
     fetchAutomations();
+    fetchScheduledPosts();
   }, []);
 
   const fetchAutomations = async () => {
@@ -84,11 +102,23 @@ export default function AutomationsPage() {
         icon: getIcon(a.type),
         lastRun: a.lastRun ? new Date(a.lastRun).toLocaleString() : "Never",
         nextRun: a.nextRun ? new Date(a.nextRun).toLocaleString() : "Pending",
-        description: a.type === "content" ? `Daily post about ${a.topic} at ${a.postTime}` : "Automated task",
+        description: a.type === "content" ? `${a.preset ? `[${PRESETS.find(p => p.id === a.preset)?.name || a.preset}] ` : ''}${a.topic} at ${a.postTime}` : "Automated task",
       }));
       setAutomations(mapped);
     } catch {
       toast.error("Failed to sync automations");
+    }
+  };
+
+  const fetchScheduledPosts = async () => {
+    try {
+      const res = await fetch('/api/schedule?mode=all');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setScheduledPosts(data.filter((p: ScheduledPost) => !p.posted));
+      }
+    } catch {
+      console.error("Failed to fetch scheduled posts");
     }
   };
 
@@ -102,6 +132,7 @@ export default function AutomationsPage() {
   };
 
   const toggleAccount = (id: string) => setSelectedAccounts(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const toggleScheduleId = (id: string) => setSelectedScheduleIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +144,21 @@ export default function AutomationsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title, type: "content", isActive: true, topic, postTime, tone, length, selectedAccounts, automateImages, username, profileImageUrl
+          title,
+          type: "content",
+          isActive: true,
+          topic,
+          postTime,
+          tone,
+          length,
+          selectedAccounts,
+          username,
+          profileImageUrl,
+          // New fields
+          preset: preset || null,
+          generateImage,
+          frequency,
+          importedScheduleIds: selectedScheduleIds,
         })
       });
       if (!res.ok) throw new Error();
@@ -130,7 +175,9 @@ export default function AutomationsPage() {
 
   const resetForm = () => {
     setTitle(""); setTopic(""); setPostTime("09:00"); setTone("professional"); setLength("medium");
-    setSelectedAccounts([]); setAutomateImages(false); setUsername(""); setProfileImageUrl("");
+    setSelectedAccounts([]); setUsername(""); setProfileImageUrl("");
+    setPreset(""); setGenerateImage(false); setFrequency("daily"); setSelectedScheduleIds([]);
+    setShowScheduleImport(false);
   };
 
   const runAll = async () => {
@@ -161,7 +208,7 @@ export default function AutomationsPage() {
                   <Zap className="w-8 h-8 text-yellow-500 fill-yellow-500/20" />
                   Automations
                 </h1>
-                <p className="text-muted-foreground mt-1">Set your growth on autopilot.</p>
+                <p className="text-muted-foreground mt-1">Set your growth on autopilot with AI-powered content.</p>
               </div>
 
               <div className="flex gap-3">
@@ -185,7 +232,7 @@ export default function AutomationsPage() {
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
                 <AutomationList
                   automations={automations}
-                  setAutomations={setAutomations as any} // Typing loose for now
+                  setAutomations={setAutomations as any}
                   connectedAccounts={connectedAccounts}
                   fetchAutomations={fetchAutomations}
                 />
@@ -196,7 +243,7 @@ export default function AutomationsPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-xl bg-card border border-border text-card-foreground p-0 overflow-hidden rounded-2xl">
+        <DialogContent className="sm:max-w-2xl bg-card border border-border text-card-foreground p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="p-6 pb-2 border-b border-border bg-muted/50">
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <Bot className="w-5 h-5 text-primary" /> Auto-Pilot Setup
@@ -204,17 +251,45 @@ export default function AutomationsPage() {
           </DialogHeader>
 
           <div className="p-6 overflow-y-auto max-h-[70vh] space-y-5">
+            {/* Campaign Title */}
             <div className="space-y-2">
               <Label>Campaign Title</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Daily Tech News" className="bg-background border-input" />
             </div>
 
+            {/* Content Strategy Section */}
             <div className="space-y-4 rounded-xl bg-muted/30 p-4 border border-border">
-              <Label className="text-primary">Content Strategy</Label>
+              <Label className="text-primary flex items-center gap-2">
+                <Sparkles className="w-4 h-4" /> Content Strategy
+              </Label>
+
+              {/* Content Preset */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Content Style Preset</Label>
+                <Select value={preset} onValueChange={setPreset}>
+                  <SelectTrigger className="bg-background border-input">
+                    <SelectValue placeholder="Select a content style..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border text-popover-foreground max-h-[200px]">
+                    <SelectItem value="none">No specific style</SelectItem>
+                    {PRESETS.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-xs text-muted-foreground">{p.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Topic */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Topic / Niche</Label>
                 <Textarea value={topic} onChange={e => setTopic(e.target.value)} placeholder="What should the AI write about?" className="bg-background border-input min-h-[80px]" />
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Tone</Label>
@@ -242,11 +317,102 @@ export default function AutomationsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Schedule (UTC)</Label>
-              <Input type="time" value={postTime} onChange={e => setPostTime(e.target.value)} className="bg-background border-input w-full" />
+            {/* Image Generation Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <ImageIcon className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <Label className="font-medium">Generate AI Images</Label>
+                  <p className="text-xs text-muted-foreground">Automatically create visuals for each post</p>
+                </div>
+              </div>
+              <Switch checked={generateImage} onCheckedChange={setGenerateImage} />
             </div>
 
+            {/* Schedule Settings */}
+            <div className="space-y-4 rounded-xl bg-muted/30 p-4 border border-border">
+              <Label className="text-primary flex items-center gap-2">
+                <Clock className="w-4 h-4" /> Schedule Settings
+              </Label>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Post Time (UTC)</Label>
+                  <Input type="time" value={postTime} onChange={e => setPostTime(e.target.value)} className="bg-background border-input w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Frequency</Label>
+                  <Select value={frequency} onValueChange={setFrequency}>
+                    <SelectTrigger className="bg-background border-input"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border text-popover-foreground">
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekdays">Weekdays Only</SelectItem>
+                      <SelectItem value="weekly">Weekly (Mondays)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Import from Schedule */}
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowScheduleImport(!showScheduleImport)}
+                className="w-full flex items-center justify-center gap-2 border-dashed"
+              >
+                <Import className="w-4 h-4" />
+                {showScheduleImport ? 'Hide' : 'Import from Scheduled Posts'}
+                {selectedScheduleIds.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
+                    {selectedScheduleIds.length} selected
+                  </span>
+                )}
+              </Button>
+
+              <AnimatePresence>
+                {showScheduleImport && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="border border-border rounded-xl p-3 bg-background/50 max-h-[200px] overflow-y-auto space-y-2">
+                      {scheduledPosts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No scheduled posts available</p>
+                      ) : (
+                        scheduledPosts.map(post => (
+                          <label
+                            key={post._id}
+                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedScheduleIds.includes(post._id)
+                              ? 'bg-primary/10 border-primary/50'
+                              : 'bg-background border-border hover:bg-muted'
+                              }`}
+                          >
+                            <Checkbox
+                              checked={selectedScheduleIds.includes(post._id)}
+                              onCheckedChange={() => toggleScheduleId(post._id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{post.content.substring(0, 60)}...</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(post.scheduledAt).toLocaleDateString()} at {new Date(post.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Target Platforms */}
             <div className="space-y-2">
               <Label>Target Platforms</Label>
               <div className="grid grid-cols-2 gap-2">

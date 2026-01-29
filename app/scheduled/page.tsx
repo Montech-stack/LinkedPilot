@@ -14,18 +14,29 @@ import {
   Plus,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PRESETS } from "@/lib/content-preset-store";
 
 import {
   format,
@@ -56,7 +67,10 @@ export default function ScheduledPage() {
     topics: "",
     frequency: 3,
     tone: "Professional",
-    platform: "LinkedIn"
+    platform: "LinkedIn",
+    preset: "",
+    length: "medium",
+    generateImage: false
   });
 
   // Quick Post State
@@ -72,7 +86,7 @@ export default function ScheduledPage() {
   const fetchScheduled = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/schedule?mode=all`); // Fetch all for calendar view
+      const res = await fetch(`/api/schedule?mode=all`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setScheduledPosts(data);
@@ -101,7 +115,11 @@ export default function ScheduledPage() {
           frequency: genFormData.frequency,
           tone: genFormData.tone,
           platform: genFormData.platform,
-          startDate: format(new Date(), "yyyy-MM-dd")
+          startDate: format(new Date(), "yyyy-MM-dd"),
+          // New fields
+          preset: genFormData.preset || null,
+          length: genFormData.length,
+          generateImage: genFormData.generateImage
         })
       });
 
@@ -110,7 +128,16 @@ export default function ScheduledPage() {
 
       toast.success(`Generated ${data.count} posts!`);
       setIsGenModalOpen(false);
-      fetchScheduled(); // Refresh calendar
+      setGenFormData({
+        topics: "",
+        frequency: 3,
+        tone: "Professional",
+        platform: "LinkedIn",
+        preset: "",
+        length: "medium",
+        generateImage: false
+      });
+      fetchScheduled();
     } catch (e: any) {
       toast.error(e.message || "Generation failed");
     } finally {
@@ -135,7 +162,6 @@ export default function ScheduledPage() {
 
     setQuickPostLoading(true);
     try {
-      // Combine date and time
       const dateStr = format(quickPostDate, "yyyy-MM-dd");
       const dateTime = new Date(`${dateStr}T${quickPostTime}:00`);
 
@@ -145,7 +171,7 @@ export default function ScheduledPage() {
         body: JSON.stringify({
           content: quickPostContent,
           scheduledAt: dateTime,
-          platform: "linkedin", // Default
+          platform: "linkedin",
           media: null,
           mediaType: null
         })
@@ -164,11 +190,10 @@ export default function ScheduledPage() {
     }
   };
 
-  // --- Calendar Logic ---
+  // Calendar Logic
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
 
-  // Decide Grid Range
   let startDate, endDate;
   if (viewMode === "month") {
     startDate = startOfWeek(monthStart);
@@ -207,7 +232,6 @@ export default function ScheduledPage() {
           <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 w-full h-full flex flex-col">
 
             {/* Header Toolbar */}
-            {/* Header Toolbar */}
             <div className="flex flex-col xl:flex-row items-center justify-between mb-6 gap-6">
               <div className="flex flex-col lg:flex-row items-center gap-4 w-full lg:w-auto">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500 py-1 text-center lg:text-left">
@@ -215,7 +239,6 @@ export default function ScheduledPage() {
                 </h1>
 
                 <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto justify-center">
-                  {/* View Toggles */}
                   <div className="flex items-center bg-muted rounded-lg p-1 border border-border shrink-0">
                     <button
                       onClick={() => setViewMode("month")}
@@ -252,7 +275,6 @@ export default function ScheduledPage() {
 
             {/* Calendar Grid */}
             <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px] overflow-x-auto">
-              {/* Week Headers */}
               <div className="min-w-[800px]">
                 <div className="grid grid-cols-7 border-b border-border bg-muted/30">
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
@@ -262,7 +284,6 @@ export default function ScheduledPage() {
                   ))}
                 </div>
 
-                {/* Days Grid */}
                 <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-background">
                   {calendarDays.map((day, idx) => {
                     const posts = getPostsForDay(day);
@@ -280,14 +301,12 @@ export default function ScheduledPage() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: idx * 0.005 }}
                       >
-                        {/* Date Label */}
                         <div className={`text-xs font-semibold mb-2 flex justify-between items-center
                           ${isTodayDate ? "text-primary" : "text-muted-foreground"}
                         `}>
                           <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isTodayDate ? "bg-primary text-primary-foreground" : ""}`}>
                             {format(day, "d")}
                           </span>
-                          {/* Add Post Button */}
                           <button
                             onClick={() => {
                               setQuickPostDate(day);
@@ -300,7 +319,6 @@ export default function ScheduledPage() {
                           </button>
                         </div>
 
-                        {/* Posts List */}
                         <div className="space-y-1.5 overflow-hidden max-h-[120px] overflow-y-auto scrollbar-none">
                           {posts.map(post => (
                             <DropdownMenu key={post._id}>
@@ -332,7 +350,7 @@ export default function ScheduledPage() {
         </div>
       </div>
 
-      {/* AI Generator Modal */}
+      {/* AI Generator Modal - Enhanced */}
       <AnimatePresence>
         {isGenModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -340,58 +358,131 @@ export default function ScheduledPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card w-[95%] sm:w-full max-w-lg rounded-2xl border border-border shadow-2xl overflow-hidden mx-auto my-auto"
+              className="bg-card w-[95%] sm:w-full max-w-xl rounded-2xl border border-border shadow-2xl overflow-hidden mx-auto my-auto"
             >
               <div className="p-6 border-b border-border bg-muted/20 flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-bold flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-primary" />
-                    Auto-Schedule Calendar
+                    AI Auto-Schedule
                   </h3>
-                  <p className="text-sm text-muted-foreground">Generate a full month plan with AI</p>
+                  <p className="text-sm text-muted-foreground">Generate a full month of content with AI</p>
                 </div>
                 <button onClick={() => setIsGenModalOpen(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
               </div>
 
-              <div className="p-6 space-y-5">
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                {/* Content Style Preset */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold">What is this month's focus?</label>
+                  <Label className="text-sm font-semibold">Content Style</Label>
+                  <Select value={genFormData.preset} onValueChange={(value) => setGenFormData({ ...genFormData, preset: value })}>
+                    <SelectTrigger className="w-full bg-background border-input h-11">
+                      <SelectValue placeholder="Select a content style..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border max-h-[250px]">
+                      <SelectItem value="none" className="py-2.5">
+                        <span className="font-medium">None</span>
+                        <span className="text-xs text-muted-foreground ml-2">— No specific style</span>
+                      </SelectItem>
+                      {PRESETS.map(p => (
+                        <SelectItem key={p.id} value={p.id} className="py-2.5">
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">— {p.description}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Topic */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">What is this month's focus?</Label>
                   <textarea
                     value={genFormData.topics}
                     onChange={e => setGenFormData({ ...genFormData, topics: e.target.value })}
-                    className="w-full bg-background border border-input rounded-xl p-3 text-sm min-h-[80px]"
+                    className="w-full bg-background border border-input rounded-xl p-3 text-sm min-h-[80px] focus:ring-1 focus:ring-primary outline-none"
                     placeholder="e.g., Launching our new SaaS features, Tips for React developers, Industry news..."
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold">Posts per Week</label>
-                    <select
-                      value={genFormData.frequency}
-                      onChange={e => setGenFormData({ ...genFormData, frequency: Number(e.target.value) })}
-                      className="w-full h-10 bg-background border border-input rounded-lg px-3 text-sm"
-                    >
-                      <option value={1}>1 Post / Week (4 total)</option>
-                      <option value={3}>3 Posts / Week (12 total)</option>
-                      <option value={5}>5 Posts / Week (20 total)</option>
-                      <option value={7}>Daily (28-30 total)</option>
-                    </select>
+                    <Label className="text-sm font-semibold">Platform</Label>
+                    <Select value={genFormData.platform} onValueChange={(value) => setGenFormData({ ...genFormData, platform: value })}>
+                      <SelectTrigger className="w-full bg-background border-input h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="LinkedIn" className="py-2.5">LinkedIn</SelectItem>
+                        <SelectItem value="Twitter" className="py-2.5">Twitter / X</SelectItem>
+                        <SelectItem value="Instagram" className="py-2.5">Instagram</SelectItem>
+                        <SelectItem value="Facebook" className="py-2.5">Facebook</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold">Tone</label>
-                    <select
-                      value={genFormData.tone}
-                      onChange={e => setGenFormData({ ...genFormData, tone: e.target.value })}
-                      className="w-full h-10 bg-background border border-input rounded-lg px-3 text-sm"
-                    >
-                      <option value="Professional">Professional</option>
-                      <option value="Casual">Casual & Fun</option>
-                      <option value="Inspirational">Inspirational</option>
-                      <option value="Educational">Educational</option>
-                    </select>
+                    <Label className="text-sm font-semibold">Posts per Week</Label>
+                    <Select value={String(genFormData.frequency)} onValueChange={(value) => setGenFormData({ ...genFormData, frequency: Number(value) })}>
+                      <SelectTrigger className="w-full bg-background border-input h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="1" className="py-2.5">1 Post / Week (4 total)</SelectItem>
+                        <SelectItem value="3" className="py-2.5">3 Posts / Week (12 total)</SelectItem>
+                        <SelectItem value="5" className="py-2.5">5 Posts / Week (20 total)</SelectItem>
+                        <SelectItem value="7" className="py-2.5">Daily (28-30 total)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Tone</Label>
+                    <Select value={genFormData.tone} onValueChange={(value) => setGenFormData({ ...genFormData, tone: value })}>
+                      <SelectTrigger className="w-full bg-background border-input h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="Professional" className="py-2.5">Professional</SelectItem>
+                        <SelectItem value="Casual" className="py-2.5">Casual & Fun</SelectItem>
+                        <SelectItem value="Inspirational" className="py-2.5">Inspirational</SelectItem>
+                        <SelectItem value="Educational" className="py-2.5">Educational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Length</Label>
+                    <Select value={genFormData.length} onValueChange={(value) => setGenFormData({ ...genFormData, length: value })}>
+                      <SelectTrigger className="w-full bg-background border-input h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border">
+                        <SelectItem value="short" className="py-2.5">Short (under 100 words)</SelectItem>
+                        <SelectItem value="medium" className="py-2.5">Medium (100-200 words)</SelectItem>
+                        <SelectItem value="long" className="py-2.5">Long (200-400 words)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Image Generation Toggle */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/20 rounded-lg">
+                      <ImageIcon className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <Label className="font-medium">Generate AI Images</Label>
+                      <p className="text-xs text-muted-foreground">Create visuals for each post</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={genFormData.generateImage}
+                    onCheckedChange={(checked) => setGenFormData({ ...genFormData, generateImage: checked })}
+                  />
                 </div>
 
                 <div className="pt-2">

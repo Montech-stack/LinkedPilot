@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Check,
@@ -29,6 +29,40 @@ import Navbar from "@/components/Navbar";
 import { AuthModal } from "@/components/auth-modal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import DemoShowcase from "@/components/DemoShowcase";
+
+// Typewriter animation component
+function TypewriterText({ text, speed = 50 }: { text: string; speed?: number }) {
+    const [displayedText, setDisplayedText] = useState("");
+    const [isInView, setIsInView] = useState(false);
+
+    useEffect(() => {
+        if (!isInView) return;
+
+        let index = 0;
+        const interval = setInterval(() => {
+            setDisplayedText(text.slice(0, index + 1));
+            index++;
+            if (index >= text.length) {
+                clearInterval(interval);
+            }
+        }, speed);
+
+        return () => clearInterval(interval);
+    }, [text, speed, isInView]);
+
+    return (
+        <motion.span
+            onViewportEnter={() => setIsInView(true)}
+            viewport={{ once: true }}
+        >
+            {displayedText}
+            {displayedText.length < text.length && (
+                <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5" />
+            )}
+        </motion.span>
+    );
+}
 
 /* ==========================================================================
    MAXIS LANDING PAGE V3
@@ -298,7 +332,7 @@ export default function LandingPage() {
                                 variant="ghost"
                                 size="lg"
                                 className="w-full sm:w-auto h-14 px-8 text-base font-medium rounded-full hover:bg-secondary/50"
-                                onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+                                onClick={() => document.getElementById("demo-showcase")?.scrollIntoView({ behavior: "smooth" })}
                             >
                                 <Play className="mr-2 w-4 h-4" />
                                 See How It Works
@@ -391,6 +425,13 @@ export default function LandingPage() {
           }
         `}</style>
             </section>
+
+            {/* ════════════════════════════════════════════════════════════════════
+          ANIMATED DEMO SECTION - Comprehensive Feature Showcase
+      ════════════════════════════════════════════════════════════════════ */}
+            <div id="demo-showcase">
+                <DemoShowcase />
+            </div>
 
             {/* ════════════════════════════════════════════════════════════════════
           HOW IT WORKS / FEATURES

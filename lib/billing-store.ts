@@ -35,6 +35,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     tokens: 5,
     features: [
       "5 Posts / month",
+      "Studio Access",
+      "Viral Labs",
       "1 Platform",
       "Community Support"
     ],
@@ -47,8 +49,12 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     tokens: 50,
     features: [
       "50 Posts / month",
-      "Basic Templates",
-      "Priority support",
+      "All Free Features",
+      "Schedules & Automations",
+      "AI Image Generation",
+      "Voice Cloning",
+      "Analytics Dashboard",
+      "Priority Support",
     ],
   },
   {
@@ -60,9 +66,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     popular: true,
     features: [
       "200 Posts / month",
-      "Viral Hooks",
+      "All Starter Features",
+      "Engagement Pilot",
       "All Platforms",
-      "Analytics",
+      "Advanced Analytics",
     ],
   },
   {
@@ -73,8 +80,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     tokens: 1000,
     features: [
       "1000 Posts / month",
-      "Voice Cloning",
-      "Advanced Analytics",
+      "All Creator Features",
+      "Advanced Voice Cloning",
+      "Team Collaboration",
       "Priority Support",
     ],
   },
@@ -86,8 +94,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     tokens: -1,
     features: [
       "Unlimited Posts",
+      "All Pro Features",
       "White-label Reports",
-      "Team Collaboration",
       "API Access",
       "Dedicated Account Manager",
     ],
