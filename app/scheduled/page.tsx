@@ -42,7 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PRESETS } from "@/lib/content-preset-store";
+
 
 import {
   format,
@@ -72,10 +72,7 @@ export default function ScheduledPage() {
   const [genFormData, setGenFormData] = useState({
     topics: "",
     frequency: 3,
-    tone: "Professional",
     platform: "LinkedIn",
-    preset: "",
-    length: "medium",
     generateImage: false
   });
 
@@ -119,12 +116,8 @@ export default function ScheduledPage() {
         body: JSON.stringify({
           topics: genFormData.topics,
           frequency: genFormData.frequency,
-          tone: genFormData.tone,
           platform: genFormData.platform,
           startDate: format(new Date(), "yyyy-MM-dd"),
-          // New fields
-          preset: genFormData.preset || null,
-          length: genFormData.length,
           generateImage: genFormData.generateImage
         })
       });
@@ -137,10 +130,7 @@ export default function ScheduledPage() {
       setGenFormData({
         topics: "",
         frequency: 3,
-        tone: "Professional",
         platform: "LinkedIn",
-        preset: "",
-        length: "medium",
         generateImage: false
       });
       fetchScheduled();
@@ -479,26 +469,7 @@ export default function ScheduledPage() {
 
               <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                 {/* Content Style Preset */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Content Style</Label>
-                  <Select value={genFormData.preset} onValueChange={(value) => setGenFormData({ ...genFormData, preset: value })}>
-                    <SelectTrigger className="w-full bg-background border-input h-11">
-                      <SelectValue placeholder="Select a content style..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border max-h-[250px]">
-                      <SelectItem value="none" className="py-2.5">
-                        <span className="font-medium">None</span>
-                        <span className="text-xs text-muted-foreground ml-2">— No specific style</span>
-                      </SelectItem>
-                      {PRESETS.map(p => (
-                        <SelectItem key={p.id} value={p.id} className="py-2.5">
-                          <span className="font-medium">{p.name}</span>
-                          <span className="text-xs text-muted-foreground ml-2">— {p.description}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
 
                 {/* Topic */}
                 <div className="space-y-2">
@@ -543,36 +514,7 @@ export default function ScheduledPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Tone</Label>
-                    <Select value={genFormData.tone} onValueChange={(value) => setGenFormData({ ...genFormData, tone: value })}>
-                      <SelectTrigger className="w-full bg-background border-input h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="Professional" className="py-2.5">Professional</SelectItem>
-                        <SelectItem value="Casual" className="py-2.5">Casual & Fun</SelectItem>
-                        <SelectItem value="Inspirational" className="py-2.5">Inspirational</SelectItem>
-                        <SelectItem value="Educational" className="py-2.5">Educational</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Length</Label>
-                    <Select value={genFormData.length} onValueChange={(value) => setGenFormData({ ...genFormData, length: value })}>
-                      <SelectTrigger className="w-full bg-background border-input h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        <SelectItem value="short" className="py-2.5">Short (under 100 words)</SelectItem>
-                        <SelectItem value="medium" className="py-2.5">Medium (100-200 words)</SelectItem>
-                        <SelectItem value="long" className="py-2.5">Long (200-400 words)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
                 {/* Image Generation Toggle */}
                 <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">

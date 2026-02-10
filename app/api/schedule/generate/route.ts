@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateContent } from "@/lib/gemini";
 import ScheduledPost from "@/models/ScheduledPost";
 import { connectToDatabase } from "@/lib/mongodb";
 import { getServerSession } from "next-auth";
@@ -17,8 +17,6 @@ const PRESET_PROMPTS: Record<string, string> = {
     "behind-scenes": "Pull back the curtain on a process, decision, or journey that usually stays hidden. Be specific about the messy reality, including mistakes and pivots. Make readers feel like insiders."
 };
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
@@ -27,19 +25,15 @@ export async function POST(req: NextRequest) {
         const {
             topics,
             frequency,
-            tone,
+            tone = "Professional",
             platform,
             startDate,
             accountId,
-            // New fields
+            // New fields - default if missing
             preset,
             length = "medium",
             generateImage = false
         } = await req.json();
-
-        if (!process.env.GEMINI_API_KEY) {
-            return NextResponse.json({ error: "Gemini API key missing" }, { status: 500 });
-        }
 
         // Build length instruction
         const lengthInstruction = length === 'short'
@@ -78,7 +72,6 @@ export async function POST(req: NextRequest) {
         - Relatable, warm, and inclusive language`
         };
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `
 You are an elite social media ghostwriter who creates viral, engaging content.
 
@@ -122,12 +115,12 @@ Example format:
 ]
     `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        // Use our robust helper instead of direct SDK usage
+        // Note: generateContent returns a string directly
+        const generatedText = await generateContent(prompt, { maxTokens: 8192 });
 
-        // Cleanup potential markdown and asterisks
-        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        // Robust JSON parsing (handles markdown blocks if present)
+        let text = generatedText.replace(/```json\n|\n```/g, '').replace(/```/g, '').trim();
 
         let plan = [];
         try {
@@ -140,10 +133,11 @@ Example format:
                 try {
                     plan = JSON.parse(match[0]);
                 } catch {
-                    return NextResponse.json({ error: "Failed to generate valid plan" }, { status: 500 });
+                    // Last ditch: try to fix common JSON errors if needed, but for now just fail gracefully
+                    return NextResponse.json({ error: "Failed to generate valid plan format" }, { status: 500 });
                 }
             } else {
-                return NextResponse.json({ error: "Failed to generate valid plan" }, { status: 500 });
+                return NextResponse.json({ error: "Failed to generate valid plan structure" }, { status: 500 });
             }
         }
 
@@ -178,6 +172,6 @@ Example format:
 
     } catch (error) {
         console.error("Calendar Generation Error:", error);
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal Error" }, { status: 500 });
     }
 }
