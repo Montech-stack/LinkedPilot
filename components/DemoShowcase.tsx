@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Sparkles,
-    Mic,
+    Dna,
     Calendar,
     TrendingUp,
     Clock,
@@ -22,10 +22,10 @@ import {
 const demoSteps = [
     {
         id: "voice-clone",
-        title: "Voice Clone Technology",
-        subtitle: "Your Voice, Perfected by AI",
-        description: "See the difference between generic AI and Maxis voice-trained content",
-        icon: Mic,
+        title: "Writing DNA Technology",
+        subtitle: "Your DNA, Perfected by AI",
+        description: "See the difference between generic AI and Maxis DNA-trained content",
+        icon: Dna,
         color: "from-violet-500 to-purple-600",
     },
     {
@@ -110,8 +110,8 @@ export default function DemoShowcase() {
                             key={s.id}
                             onClick={() => setCurrentStep(i)}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${currentStep === i
-                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
                                 }`}
                         >
                             <s.icon className="w-4 h-4 inline-block mr-1.5" />
@@ -213,11 +213,11 @@ function VoiceCloneStep() {
                 </div>
             </div>
 
-            {/* Maxis with Voice Clone */}
+            {/* Maxis with Writing Style */}
             <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-green-500">
-                    <span className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center"><Mic className="w-3 h-3" /></span>
-                    Maxis + Your Voice Clone
+                    <span className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center"><Dna className="w-3 h-3" /></span>
+                    Maxis + Your Writing DNA
                 </div>
                 <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/5 to-blue-500/5 border border-violet-500/20 min-h-[180px]">
                     <p className="text-sm text-foreground leading-relaxed">
@@ -237,9 +237,9 @@ function VoiceCloneStep() {
             {/* Differentiator */}
             <div className="md:col-span-2 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-blue-500/10 border border-violet-500/20">
                 <div className="flex items-center gap-3">
-                    <Mic className="w-8 h-8 text-violet-500" />
+                    <Dna className="w-8 h-8 text-violet-500" />
                     <div>
-                        <p className="font-semibold text-foreground">Voice Clone trains on YOUR writing style</p>
+                        <p className="font-semibold text-foreground">AI trains on YOUR Writing DNA</p>
                         <p className="text-sm text-muted-foreground">Feed it 3-5 of your best posts and watch AI write exactly like you</p>
                     </div>
                 </div>
@@ -279,8 +279,8 @@ function PresetsStep() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
                         className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 ${i === 0
-                                ? "bg-gradient-to-br from-violet-500/10 to-blue-500/10 border-violet-500/30 shadow-lg shadow-violet-500/10"
-                                : "bg-card border-border hover:border-primary/30"
+                            ? "bg-gradient-to-br from-violet-500/10 to-blue-500/10 border-violet-500/30 shadow-lg shadow-violet-500/10"
+                            : "bg-card border-border hover:border-primary/30"
                             }`}
                     >
                         <div className="text-2xl mb-2">{preset.emoji}</div>
@@ -349,8 +349,8 @@ function BatchStep() {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.1 }}
                         className={`p-3 rounded-lg border ${post.status === "ready"
-                                ? "bg-green-500/5 border-green-500/20"
-                                : "bg-muted/50 border-border"
+                            ? "bg-green-500/5 border-green-500/20"
+                            : "bg-muted/50 border-border"
                             }`}
                     >
                         <div className="flex items-center justify-between mb-2">

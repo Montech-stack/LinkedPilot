@@ -3,7 +3,7 @@ import React from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Link2, Settings2Icon, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, LogOut, User, Mic, BarChart3, MessageCircle, Lock } from "lucide-react"
+import { Link2, Settings2Icon, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, LogOut, User, Dna, BarChart3, MessageCircle, Lock } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -22,17 +22,37 @@ interface NavItem {
   access: FeatureAccess;
 }
 
-const navigationItems: NavItem[] = [
-  { icon: Sparkles, label: "Studio", href: "/dashboard", access: 'free' },
-  { icon: Link2, label: "Links", href: "/dashboard/links", access: 'free' },
-  { icon: Target, label: "Viral Labs", href: "/hooks", access: 'free' },
-  { icon: Calendar, label: "Schedules", href: "/scheduled", access: 'paid' },
-  { icon: Settings2Icon, label: "Automations", href: "/automations", access: 'paid' },
-  { icon: CreditCard, label: "Billing", href: "/billing", access: 'free' },
-  { icon: Mic, label: "Voice Clone", href: "/voice-clone", access: 'paid' },
-  { icon: BarChart3, label: "Analytics", href: "/analytics", access: 'paid' },
-  { icon: MessageCircle, label: "Engagement Pilot", href: "/engagement", access: 'paid' },
-  { icon: HomeIcon, label: "HomePage", href: "/", access: 'free' },
+interface NavGroup {
+  title?: string;
+  items: NavItem[];
+}
+
+const navigationGroups: NavGroup[] = [
+  {
+    title: "Create",
+    items: [
+      { icon: Sparkles, label: "Studio", href: "/dashboard", access: 'free' },
+      { icon: Dna, label: "Writing DNA", href: "/voice-clone", access: 'paid' },
+      { icon: Target, label: "Viral Labs", href: "/hooks", access: 'free' },
+    ]
+  },
+  {
+    title: "Grow",
+    items: [
+      { icon: Calendar, label: "Schedules", href: "/scheduled", access: 'paid' },
+      { icon: Settings2Icon, label: "Automations", href: "/automations", access: 'paid' },
+      { icon: BarChart3, label: "Analytics", href: "/analytics", access: 'paid' },
+      { icon: MessageCircle, label: "Engagement Pilot", href: "/engagement", access: 'paid' },
+    ]
+  },
+  {
+    title: "System",
+    items: [
+      { icon: Link2, label: "Links", href: "/dashboard/links", access: 'free' },
+      { icon: CreditCard, label: "Billing", href: "/billing", access: 'free' },
+      { icon: HomeIcon, label: "Public Page", href: "/", access: 'free' },
+    ]
+  }
 ]
 
 interface SidebarProps {
@@ -111,50 +131,58 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border">
-              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Menu</p>
-              {navigationItems.map((item) => {
-                const isActive = pathname === item.href
-                const isPaidFeature = item.access === 'paid'
-                const isLocked = isPaidFeature && currentPlan === 'free'
-                const targetHref = isLocked ? '/billing' : item.href
+            <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-border">
+              {navigationGroups.map((group, groupIndex) => (
+                <div key={group.title || groupIndex}>
+                  {group.title && (
+                    <p className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">{group.title}</p>
+                  )}
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href
+                      const isPaidFeature = item.access === 'paid'
+                      const isLocked = isPaidFeature && currentPlan === 'free'
+                      const targetHref = isLocked ? '/billing' : item.href
 
-                return (
-                  <Link key={item.href} href={targetHref} onClick={() => window.innerWidth < 1024 && onClose()}>
-                    <motion.div
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 group relative overflow-hidden",
-                        isActive && !isLocked
-                          ? "bg-gold/10 text-gold"
-                          : isLocked
-                            ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      )}
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {isActive && !isLocked && (
-                        <motion.div
-                          layoutId="activeTab"
-                          className="absolute left-0 top-0 bottom-0 w-1 bg-gold rounded-r-full shadow-[0_0_10px_0_rgba(251,191,36,0.5)]"
-                        />
-                      )}
-                      <item.icon
-                        className={cn(
-                          "w-5 h-5 transition-colors",
-                          isActive && !isLocked ? "text-gold" : isLocked ? "text-muted-foreground/50" : "text-muted-foreground group-hover:text-gold/80"
-                        )}
-                      />
-                      <span className="font-medium text-sm flex-1">
-                        {item.label}
-                      </span>
-                      {isLocked && (
-                        <Lock className="w-3.5 h-3.5 text-muted-foreground/50" />
-                      )}
-                    </motion.div>
-                  </Link>
-                )
-              })}
+                      return (
+                        <Link key={item.href} href={targetHref} onClick={() => window.innerWidth < 1024 && onClose()}>
+                          <motion.div
+                            className={cn(
+                              "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 group relative overflow-hidden",
+                              isActive && !isLocked
+                                ? "bg-gold/10 text-gold"
+                                : isLocked
+                                  ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            )}
+                            whileHover={{ x: 4 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {isActive && !isLocked && (
+                              <motion.div
+                                layoutId="activeTab"
+                                className="absolute left-0 top-0 bottom-0 w-1 bg-gold rounded-r-full shadow-[0_0_10px_0_rgba(251,191,36,0.5)]"
+                              />
+                            )}
+                            <item.icon
+                              className={cn(
+                                "w-5 h-5 transition-colors",
+                                isActive && !isLocked ? "text-gold" : isLocked ? "text-muted-foreground/50" : "text-muted-foreground group-hover:text-gold/80"
+                              )}
+                            />
+                            <span className="font-medium text-sm flex-1">
+                              {item.label}
+                            </span>
+                            {isLocked && (
+                              <Lock className="w-3.5 h-3.5 text-muted-foreground/50" />
+                            )}
+                          </motion.div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
 
             {/* Plan Card */}

@@ -2,12 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, ArrowUp, ArrowDown, Share2, Eye, Heart, MessageCircle, Users, Zap, RefreshCw } from "lucide-react";
+import { BarChart3, ArrowUp, ArrowDown, Share2, Eye, Heart, MessageCircle, Users, Zap, RefreshCw, DollarSign, Target, MousePointerClick } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    Funnel,
+    FunnelChart,
+    LabelList
+} from 'recharts';
 import toast from "react-hot-toast";
 
 export default function AnalyticsPage() {
@@ -42,12 +55,34 @@ export default function AnalyticsPage() {
     const stats = currentAccount?.stats || {};
     const graphData = stats.graphData || [];
 
-    // Aggregated Stats for "Total" view could be added, but per-account is cleaner
+    // --- ROI / Funnel Data (Mocked for Demo based on research) ---
+    const funnelData = [
+        {
+            "value": stats.views || 12500,
+            "name": "Impressions",
+            "fill": "#3b82f6"
+        },
+        {
+            "value": Math.floor((stats.views || 12500) * 0.04), // 4% CTR to profile
+            "name": "Profile Visits",
+            "fill": "#8b5cf6"
+        },
+        {
+            "value": Math.floor((stats.views || 12500) * 0.04 * 0.15), // 15% conversion to Lead/Click
+            "name": "Leads Generated",
+            "fill": "#ec4899"
+        }
+    ];
+
+    const estimatedLeadValue = 75; // $ per lead
+    const totalLeadValue = funnelData[2].value * estimatedLeadValue;
+
     const cards = [
+        // Highlight ROI first
+        { label: "Est. Lead Value", val: `$${totalLeadValue.toLocaleString()}`, icon: DollarSign, color: "text-green-500", trend: "+$420 this week", highlight: true },
         { label: "Followers", val: stats.followers?.toLocaleString() || "0", icon: Users, color: "text-blue-500", trend: "+2.4%" },
         { label: "Impressions", val: stats.views?.toLocaleString() || "0", icon: Eye, color: "text-purple-500", trend: "+12.1%" },
-        { label: "Engagement", val: stats.engagement?.toLocaleString() || "0", icon: Zap, color: "text-yellow-500", trend: "+5.3%" },
-        { label: "Avg. Likes", val: Math.floor((stats.views || 0) * 0.05).toLocaleString(), icon: Heart, color: "text-rose-500", trend: "+8.2%" }
+        { label: "Engagement Rate", val: "4.8%", icon: Zap, color: "text-yellow-500", trend: "+0.3%" }
     ];
 
     return (
@@ -61,8 +96,8 @@ export default function AnalyticsPage() {
 
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-foreground">Analytics Hub</h1>
-                                <p className="text-muted-foreground mt-1">Real-time performance metrics for your connected accounts.</p>
+                                <h1 className="text-3xl font-bold text-foreground">Content ROI Engine</h1>
+                                <p className="text-muted-foreground mt-1">Track not just views, but business impact and leads.</p>
                             </div>
 
                             <div className="flex items-center gap-3 bg-card p-1 rounded-xl border border-border shadow-sm">
@@ -90,14 +125,14 @@ export default function AnalyticsPage() {
                             <div className="h-96 flex items-center justify-center">
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                                    <p className="text-muted-foreground animate-pulse">Crunching numbers...</p>
+                                    <p className="text-muted-foreground animate-pulse">Calculating ROI...</p>
                                 </div>
                             </div>
                         ) : data.length === 0 ? (
                             <div className="bg-muted/30 border border-dashed border-border rounded-3xl p-12 text-center">
                                 <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                                 <h3 className="text-xl font-bold text-foreground">No Data Available</h3>
-                                <p className="text-muted-foreground mb-6">Connect your social accounts to see analytics.</p>
+                                <p className="text-muted-foreground mb-6">Connect your social accounts to see ROI metrics.</p>
                                 <Button onClick={() => window.location.href = '/dashboard/links'}>Connect Accounts</Button>
                             </div>
                         ) : (
@@ -109,7 +144,7 @@ export default function AnalyticsPage() {
                                 {/* KPI Cards */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {cards.map((card, i) => (
-                                        <Card key={i} className="border-border/50 bg-card/50 hover:bg-card transition-colors shadow-sm hover:shadow-md hover:border-primary/20">
+                                        <Card key={i} className={`border-border/50 bg-card/50 hover:bg-card transition-colors shadow-sm hover:shadow-md hover:border-primary/20 ${card.highlight ? 'ring-1 ring-green-500/50 bg-green-500/5' : ''}`}>
                                             <CardContent className="p-6">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className={`p-2.5 rounded-xl bg-muted/50 ${card.color} bg-opacity-10 backdrop-blur-sm`}>
@@ -130,11 +165,78 @@ export default function AnalyticsPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* Main Chart */}
+
+                                    {/* Conversion Funnel (The Core ROI Viz) */}
+                                    <Card className="lg:col-span-1 border-border/50 bg-card shadow-sm flex flex-col">
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <Target className="w-5 h-5 text-primary" />
+                                                Conversion Funnel
+                                            </CardTitle>
+                                            <CardDescription>From Impression to Income</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex-1 min-h-[300px] flex flex-col justify-center">
+                                            {/* Custom Funnel Visualization using HTML/CSS for cleaner control than simpler charts */}
+                                            <div className="space-y-6 relative">
+                                                {/* Step 1 */}
+                                                <div className="relative">
+                                                    <div className="flex justify-between text-sm mb-1 px-1">
+                                                        <span className="font-semibold text-blue-400">Impressions</span>
+                                                        <span className="font-mono">{funnelData[0].value.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="h-12 w-full bg-blue-500/10 rounded-lg flex items-center px-4 border border-blue-500/20 relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 bg-blue-500/20 w-full" />
+                                                        <span className="relative z-10 text-xs text-blue-300">Top of Funnel</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Connector */}
+                                                <div className="flex justify-center -my-2">
+                                                    <div className="bg-muted px-2 py-0.5 rounded text-[10px] text-muted-foreground border border-border">
+                                                        4.2% CTR
+                                                    </div>
+                                                </div>
+
+                                                {/* Step 2 */}
+                                                <div className="relative px-4">
+                                                    <div className="flex justify-between text-sm mb-1 px-1">
+                                                        <span className="font-semibold text-violet-400">Profile Visits</span>
+                                                        <span className="font-mono">{funnelData[1].value.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="h-12 w-full bg-violet-500/10 rounded-lg flex items-center px-4 border border-violet-500/20 relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 bg-violet-500/20 w-full" />
+                                                        <span className="relative z-10 text-xs text-violet-300">Interest</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Connector */}
+                                                <div className="flex justify-center -my-2">
+                                                    <div className="bg-muted px-2 py-0.5 rounded text-[10px] text-muted-foreground border border-border">
+                                                        15% Conversion
+                                                    </div>
+                                                </div>
+
+                                                {/* Step 3 */}
+                                                <div className="relative px-8">
+                                                    <div className="flex justify-between text-sm mb-1 px-1">
+                                                        <span className="font-semibold text-pink-400">Leads Generated</span>
+                                                        <span className="font-mono">{funnelData[2].value.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="h-12 w-full bg-pink-500/10 rounded-lg flex items-center px-4 border border-pink-500/20 relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 bg-pink-500/20 w-full" />
+                                                        <span className="relative z-10 text-xs text-pink-300">Revenue Opportunity</span>
+                                                        <div className="absolute right-3 font-bold text-pink-500 animate-pulse">${totalLeadValue}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Growth Chart */}
                                     <Card className="lg:col-span-2 border-border/50 bg-card shadow-sm">
                                         <CardHeader>
-                                            <CardTitle>Growth Overview</CardTitle>
-                                            <CardDescription>Views & Engagement over the last 7 days</CardDescription>
+                                            <CardTitle>Audience Growth</CardTitle>
+                                            <CardDescription>Views vs. Engagement Trend</CardDescription>
                                         </CardHeader>
                                         <CardContent className="h-[350px]">
                                             <ResponsiveContainer width="100%" height="100%">
@@ -189,58 +291,26 @@ export default function AnalyticsPage() {
                                         </CardContent>
                                     </Card>
 
-                                    {/* Quick Details */}
-                                    <div className="space-y-6">
-                                        <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
-                                            <CardHeader>
-                                                <CardTitle className="text-base">Audience Quality</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span className="text-muted-foreground">Senior Roles</span>
-                                                            <span className="font-bold">64%</span>
-                                                        </div>
-                                                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                                            <div className="h-full bg-blue-500 w-[64%]" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span className="text-muted-foreground">Founders</span>
-                                                            <span className="font-bold">22%</span>
-                                                        </div>
-                                                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                                            <div className="h-full bg-purple-500 w-[22%]" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span className="text-muted-foreground">Recruiters</span>
-                                                            <span className="font-bold">14%</span>
-                                                        </div>
-                                                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                                            <div className="h-full bg-green-500 w-[14%]" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
+                                    {/* Top Performing */}
+                                    <div className="lg:col-span-3">
                                         <Card className="border-border/50 bg-card">
                                             <CardHeader>
-                                                <CardTitle className="text-base">Top Performing</CardTitle>
+                                                <CardTitle className="text-base">Top Converting Content</CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                                <div className="space-y-4">
-                                                    {[1, 2, 3].map(i => (
-                                                        <div key={i} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer border border-transparent hover:border-border/50">
-                                                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center font-bold text-muted-foreground">#{i}</div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {[
+                                                        { title: "How I scaled to $10k/mo...", leads: 12, val: "$600" },
+                                                        { title: "The death of SEO...", leads: 8, val: "$400" },
+                                                        { title: "3 tools you need...", leads: 5, val: "$250" }
+                                                    ].map((item, i) => (
+                                                        <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer">
+                                                            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center font-bold text-green-500">#{i + 1}</div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-medium truncate">How to scale SaaS in 2026...</p>
-                                                                <p className="text-xs text-muted-foreground">2.4k views • 142 likes</p>
+                                                                <p className="text-sm font-medium truncate">{item.title}</p>
+                                                                <p className="text-xs text-muted-foreground">{item.leads} Leads Generated</p>
                                                             </div>
+                                                            <div className="text-sm font-bold text-green-500">{item.val}</div>
                                                         </div>
                                                     ))}
                                                 </div>

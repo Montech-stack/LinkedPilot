@@ -10,7 +10,7 @@ import {
     Briefcase,
     Linkedin,
     Target,
-    Mic,
+    Dna,
     Calendar,
     Sparkles,
     Loader2,
@@ -291,11 +291,11 @@ export default function OnboardingModal({
                     <div className="space-y-6">
                         <div className="text-center">
                             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                                <Mic className="w-8 h-8 text-white" />
+                                <Dna className="w-8 h-8 text-white" />
                             </div>
-                            <h2 className="text-2xl font-bold mb-2">Train your AI voice</h2>
+                            <h2 className="text-2xl font-bold mb-2">Train your Deep DNA</h2>
                             <p className="text-muted-foreground">
-                                Let Maxis learn your unique writing style
+                                To analyze your unique Writing DNA, we need <strong>10-20 examples</strong> of your best work.
                             </p>
                         </div>
 
@@ -321,12 +321,12 @@ export default function OnboardingModal({
                                             const postsData = await postsRes.json();
                                             if (postsData.posts && postsData.posts.length > 0) {
                                                 const importedPosts = postsData.posts
-                                                    .slice(0, 5)
+                                                    .slice(0, 20)
                                                     .map((p: any) => p.text || p.content)
                                                     .filter(Boolean)
                                                     .join("\n\n");
                                                 setVoiceSamples(importedPosts);
-                                                toast.success(`Imported ${Math.min(postsData.posts.length, 5)} posts from LinkedIn!`);
+                                                toast.success(`Imported ${Math.min(postsData.posts.length, 20)} posts from LinkedIn!`);
                                             } else {
                                                 toast.error("No posts found on your LinkedIn profile");
                                             }
@@ -347,7 +347,7 @@ export default function OnboardingModal({
                                 </div>
                                 <div className="flex-1">
                                     <span className="font-semibold text-foreground block">Import from LinkedIn</span>
-                                    <span className="text-sm text-muted-foreground">Auto-import your best posts</span>
+                                    <span className="text-sm text-muted-foreground">Auto-import your last 20 posts</span>
                                 </div>
                                 {isLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin text-[#0A66C2]" />
@@ -365,13 +365,13 @@ export default function OnboardingModal({
                         </div>
 
                         <Textarea
-                            placeholder="Paste 2-3 of your best posts here, separated by blank lines..."
+                            placeholder="Paste 10-20 of your best posts here. The more you provide, the deeper the DNA analysis..."
                             value={voiceSamples}
                             onChange={(e) => setVoiceSamples(e.target.value)}
-                            className="min-h-[140px] resize-none"
+                            className="min-h-[200px] resize-none"
                         />
                         <p className="text-xs text-muted-foreground text-center">
-                            You can always update your voice profile later in Settings
+                            Quality in = Quality out. Don't skip this.
                         </p>
                     </div>
                 );

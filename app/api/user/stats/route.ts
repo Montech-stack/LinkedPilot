@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { User } from "@/models/User"; // Adjust path if needed
 
 export async function GET(req: Request) {
+  console.log("Stats API called at " + new Date().toISOString());
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
 

@@ -8,40 +8,31 @@ import {
   Plus,
   Minus,
   SlidersHorizontal,
-  Gauge,
   Trash2,
   Share2,
   X,
   Check,
   Upload,
   Settings2,
-  ChevronRight,
-  ChevronLeft,
-  ChevronDown,
-  Menu,
   Sparkles,
-  Calendar,
-  Mic,
+  Dna,
   Eye,
 } from "lucide-react";
 import ScheduleModal from "@/components/ScheduleModal";
 import OnboardingModal from "@/components/OnboardingModal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { analyzeCredibility } from "@/lib/credibility-service";
 import PresetsPanel from "@/components/PresetsPanel";
 import { useContentPresetStore, PRESETS } from "@/lib/content-preset-store";
 import { useBillingStore } from "@/lib/billing-store";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import toast from "react-hot-toast";
 import MobileHeader from "@/components/MobileHeader";
 import Sidebar from "@/components/Sidebar";
 import PostCard from "@/components/PostCard";
+import RepurposeWizard from "@/components/RepurposeWizard";
 import { usePostGeneration } from "@/hooks/usePostGeneration";
 import { useRouter } from "next/navigation";
 import {
@@ -58,6 +49,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useSession } from "next-auth/react";
+
 
 const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
   free: { maxPosts: 5, name: "Free Plan" },
@@ -99,7 +91,6 @@ export default function Dashboard() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [uploadedMedia, setUploadedMedia] = useState<string | null>(null);
   const [uploadedMediaType, setUploadedMediaType] = useState<"image" | "video" | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [postConfirmOpen, setPostConfirmOpen] = useState(false);
   const [postingAllLoading, setPostingAllLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -121,10 +112,9 @@ export default function Dashboard() {
     if (profile) setHasVoiceProfile(true);
   }, []);
 
-  // Check onboarding status on mount - only show on fresh login, not refresh
+  // Check onboarding status on mount
   useEffect(() => {
     async function checkOnboarding() {
-      // Check if we already showed onboarding this session
       const shownThisSession = sessionStorage.getItem("maxis_onboarding_shown");
       if (shownThisSession) return;
 
@@ -135,7 +125,6 @@ export default function Dashboard() {
           if (!data.onboardingCompleted) {
             setOnboardingStep(data.onboardingStep || 0);
             setShowOnboarding(true);
-            // Mark that we've shown onboarding this session
             sessionStorage.setItem("maxis_onboarding_shown", "true");
           }
         }
@@ -151,8 +140,6 @@ export default function Dashboard() {
   // Scheduling State
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [postToSchedule, setPostToSchedule] = useState<{ id: string; content: string } | null>(null);
-
-  const resultsRef = useRef<HTMLDivElement>(null);
 
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
   const { selectedPresets, customPresets } = useContentPresetStore();
@@ -174,12 +161,7 @@ export default function Dashboard() {
 
         setUserPlan(plan);
         setTokensRemaining(tokens);
-
-        // Sync global store for Sidebar/ProfileDropdown
-        syncFromDB({
-          plan: plan,
-          tokens: tokens
-        });
+        syncFromDB({ plan: plan, tokens: tokens });
       } catch (err) {
         console.error(err);
       }
@@ -228,7 +210,6 @@ export default function Dashboard() {
         setPlatforms(s.platforms || ["LinkedIn"]);
         setPostCount(s.postCount || 1);
         setPostLength(s.postLength || "medium");
-        // Restore generated posts
         setGeneratedPosts(s.generatedPosts || []);
       } catch { }
     }
@@ -247,8 +228,6 @@ export default function Dashboard() {
     const costPerPost = postLength === "short" ? 100 : postLength === "medium" ? 200 : 300;
     const totalCost = postCount * costPerPost;
 
-
-
     if (!isEnterprisePlan(userPlan) && tokensRemaining < totalCost) {
       toast.error(`Not enough tokens. Cost: ${totalCost}, Bal: ${tokensRemaining}`);
       return;
@@ -256,7 +235,6 @@ export default function Dashboard() {
 
     setIsGenerating(true);
     try {
-      // Append Presets to Prompt
       const allPresets = [...PRESETS, ...customPresets];
       const activePresets = allPresets.filter(p => selectedPresets.includes(p.id));
       const presetInstructions = activePresets.map(p => `[Style: ${p.name}] ${p.promptSnippet}`).join("\n");
@@ -271,9 +249,20 @@ export default function Dashboard() {
         }
       }
 
+
       const newPosts = await generatePosts(finalPrompt, platforms, postCount, postLength);
       const baseId = Math.floor(Date.now() / 1000);
-      const withIds = newPosts.map((p, i) => ({ ...p, id: baseId + i }));
+      const withIds = newPosts.map((p, i) => {
+        const credibility = analyzeCredibility(p.content);
+        return {
+          ...p,
+          id: baseId + i,
+          credibilityScore: {
+            score: credibility.score,
+            flaggedWords: credibility.flaggedWords
+          }
+        };
+      });
       setGeneratedPosts(prev => [...prev, ...withIds]);
       toast.success(`Generated ${withIds.length} posts!`);
 
@@ -285,16 +274,14 @@ export default function Dashboard() {
         });
         setTokensRemaining(prev => prev - totalCost);
       }
-    } catch {
-      toast.error("Generation failed");
+      setTimeout(() => setShowGeneratedPostsModal(true), 100);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Generation failed");
     } finally {
       setIsGenerating(false);
-      // Open the generated posts modal
-      setTimeout(() => {
-        setShowGeneratedPostsModal(true);
-      }, 100);
     }
-  }, [input, platforms, postCount, postLength, generatePosts, setIsGenerating, userPlan, tokensRemaining, userEmail, selectedPresets, customPresets]);
+  }, [input, platforms, postCount, postLength, generatePosts, setIsGenerating, userPlan, tokensRemaining, userEmail, selectedPresets, customPresets, useClonedVoice, hasVoiceProfile]);
 
   const handleUploadClick = () => fileInputRef.current?.click();
 
@@ -304,7 +291,6 @@ export default function Dashboard() {
     const isImg = file.type.startsWith("image/");
     const isVid = file.type.startsWith("video/");
 
-    // Size check (example 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error("File is too large (max 10MB)");
       return;
@@ -382,7 +368,6 @@ export default function Dashboard() {
     }
   };
 
-  // Reusable Controls Components
   const PlatformSelector = () => (
     <div className="space-y-2">
       <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Platforms</label>
@@ -463,222 +448,239 @@ export default function Dashboard() {
 
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border">
           <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 w-full">
-            {/* Page Header */}
-            <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-primary/20 text-primary text-xs font-medium">
-                <Zap className="w-3 h-3" />
-                <span>AI Content Studio</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                Write Like You. Post Like a Pro.
-              </h1>
-              <p className="text-muted-foreground text-sm max-w-lg mx-auto">
-                Turn one idea into scroll-stopping content that sounds like you — in seconds, not hours.
-              </p>
-            </motion.div>
 
-            {/* Generated Posts Toggle (Floating) */}
-            <AnimatePresence>
-              {generatedPosts.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="fixed bottom-6 right-6 z-40"
-                >
-                  <Button
-                    onClick={() => setShowGeneratedPostsModal(true)}
-                    className="rounded-full h-12 px-6 shadow-2xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-bold gap-2"
+            <Tabs defaultValue="quick" className="w-full">
+              {/* Page Header */}
+              <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-primary/20 text-primary text-xs font-medium">
+                  <Zap className="w-3 h-3" />
+                  <span>AI Content Studio</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                  Content Studio
+                </h1>
+                <p className="text-muted-foreground text-sm max-w-lg mx-auto mb-4">
+                  Turn one idea into scroll-stopping content that sounds like you — in seconds, not hours.
+                </p>
+
+                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-muted/50 p-1 rounded-xl">
+                  <TabsTrigger value="quick" className="rounded-lg">Quick Post</TabsTrigger>
+                  <TabsTrigger value="repurpose" className="rounded-lg">Repurpose Engine</TabsTrigger>
+                </TabsList>
+              </motion.div>
+
+              {/* Generated Posts Toggle (Floating) */}
+              <AnimatePresence>
+                {generatedPosts.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="fixed bottom-6 right-6 z-40"
                   >
-                    <Eye className="w-5 h-5" />
-                    View Generated ({generatedPosts.length})
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <Button
+                      onClick={() => setShowGeneratedPostsModal(true)}
+                      className="rounded-full h-12 px-6 shadow-2xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-bold gap-2"
+                    >
+                      <Eye className="w-5 h-5" />
+                      View Generated ({generatedPosts.length})
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <div className="bg-card/80 backdrop-blur-xl p-1 rounded-3xl shadow-2xl border border-border/50 relative overflow-hidden group">
-              {/* Token Indicator */}
-              <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-background/80 border border-border/50 rounded-full px-3 py-1 z-20 backdrop-blur-md shadow-sm">
-                <div className={`w-1.5 h-1.5 rounded-full ${tokensRemaining < 50 ? 'bg-red-500' : 'bg-gold'} animate-pulse`} />
-                <span className="text-[10px] font-medium text-foreground/80">
-                  {tokensRemaining === -1 ? "Unlimited" : `${tokensRemaining} tokens`}
-                </span>
-              </div>
+              <TabsContent value="quick">
+                <div className="bg-card/80 backdrop-blur-xl p-1 rounded-3xl shadow-2xl border border-border/50 relative overflow-hidden group">
+                  {/* Token Indicator */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-background/80 border border-border/50 rounded-full px-3 py-1 z-20 backdrop-blur-md shadow-sm">
+                    <div className={`w-1.5 h-1.5 rounded-full ${tokensRemaining < 50 ? 'bg-red-500' : 'bg-gold'} animate-pulse`} />
+                    <span className="text-[10px] font-medium text-foreground/80">
+                      {tokensRemaining === -1 ? "Unlimited" : `${tokensRemaining} tokens`}
+                    </span>
+                  </div>
 
-              {/* Main Input Area */}
-              <div className="relative bg-background/50 rounded-[22px] border border-border/50 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
-                <textarea
-                  ref={textareaRef}
-                  placeholder="What do you want to post about? (e.g. 'Launch of our new AI features', '3 tips for productivity')"
-                  value={input}
-                  onChange={handleChange}
-                  className="w-full bg-transparent text-foreground placeholder-muted-foreground/40 border-none outline-none focus:ring-0 rounded-2xl p-6 min-h-[160px] max-h-96 resize-none text-lg leading-relaxed font-light"
-                />
+                  {/* Main Input Area */}
+                  <div className="relative bg-background/50 rounded-[22px] border border-border/50 transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+                    <textarea
+                      ref={textareaRef}
+                      placeholder="What do you want to post about? (e.g. 'Launch of our new AI features', '3 tips for productivity')"
+                      value={input}
+                      onChange={handleChange}
+                      className="w-full bg-transparent text-foreground placeholder-muted-foreground/40 border-none outline-none focus:ring-0 rounded-2xl p-6 min-h-[160px] max-h-96 resize-none text-lg leading-relaxed font-light"
+                    />
 
-                {/* Media Preview inside input */}
-                {uploadedMedia && (
-                  <div className="absolute bottom-4 left-6 z-10 animate-in fade-in zoom-in duration-200">
-                    <div className="relative group inline-block">
-                      {uploadedMediaType === "image" ? (
-                        <div className="h-16 w-16 rounded-xl overflow-hidden border border-border/50 shadow-lg">
-                          <img src={uploadedMedia} alt="Thumb" className="h-full w-full object-cover" />
+                    {/* Media Preview inside input */}
+                    {uploadedMedia && (
+                      <div className="absolute bottom-4 left-6 z-10 animate-in fade-in zoom-in duration-200">
+                        <div className="relative group inline-block">
+                          {uploadedMediaType === "image" ? (
+                            <div className="h-16 w-16 rounded-xl overflow-hidden border border-border/50 shadow-lg">
+                              <img src={uploadedMedia} alt="Thumb" className="h-full w-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="h-16 w-16 rounded-xl bg-muted/20 flex items-center justify-center border border-border/50 shadow-lg backdrop-blur-sm">
+                              <Settings2 className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => { setUploadedMedia(null); setUploadedMediaType(null); }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
-                      ) : (
-                        <div className="h-16 w-16 rounded-xl bg-muted/20 flex items-center justify-center border border-border/50 shadow-lg backdrop-blur-sm">
-                          <Settings2 className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <button
-                        onClick={() => { setUploadedMedia(null); setUploadedMediaType(null); }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow-md hover:scale-110"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      </div>
+                    )}
+
+                    {/* Bottom Toolbar inside Input */}
+                    <div className="flex items-center justify-between px-4 pb-3 pt-2">
+                      {/* Left: Quick Actions */}
+                      <div className="flex items-center gap-1">
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFile} />
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button onClick={handleUploadClick} className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                                <Upload className="w-5 h-5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Upload Media</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={async () => {
+                                  if (!input.trim()) return toast.error("Enter a topic first");
+                                  toast.loading("Generating Image...");
+                                  try {
+                                    const res = await fetch('/api/generateImages', { method: 'POST', body: JSON.stringify({ prompt: input }) });
+                                    const data = await res.json();
+                                    if (data.success && data.imageUrl) {
+                                      setUploadedMedia(data.imageUrl);
+                                      setUploadedMediaType("image");
+                                      toast.dismiss();
+                                      toast.success("Image Generated!");
+                                    } else throw new Error();
+                                  } catch { toast.dismiss(); toast.error("Failed"); }
+                                }}
+                                className="p-2.5 rounded-xl text-muted-foreground hover:text-pink-400 hover:bg-pink-500/10 transition-colors"
+                              >
+                                <Sparkles className="w-5 h-5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Generate AI Image</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        {/* Voice Clone Button */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  if (!hasVoiceProfile) {
+                                    toast.error("Set up your voice profile in Settings first");
+                                    return;
+                                  }
+                                  setUseClonedVoice(!useClonedVoice);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
+                                  useClonedVoice
+                                    ? "bg-violet-500/20 border border-violet-500/50 text-violet-400"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                )}
+                              >
+                                <Dna className={cn("w-5 h-5", useClonedVoice && "text-violet-400")} />
+                                <span className="text-xs font-medium hidden sm:inline">
+                                  {useClonedVoice ? "DNA Active" : "Writing DNA"}
+                                </span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{hasVoiceProfile ? (useClonedVoice ? "Voice cloning active" : "Enable voice cloning") : "Set up voice profile first"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+
+                      {/* Right: Settings Triggers */}
+                      <div className="flex items-center gap-2">
+                        {/* Settings Popover for all config */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/30 border border-border/50 rounded-full hover:bg-muted/50 transition-all">
+                              <SlidersHorizontal className="w-3.5 h-3.5" />
+                              <span>Config</span>
+                              <div className="w-[1px] h-3 bg-border/50 mx-1" />
+                              <span className="text-foreground/70">{platforms.length} Plats • {postLength} • {postCount}x</span>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-5 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl mr-4" align="end" sideOffset={10}>
+                            <div className="space-y-6">
+                              <div className="pb-3 border-b border-border/50">
+                                <h4 className="text-sm font-semibold text-foreground">Generation Settings</h4>
+                                <p className="text-xs text-muted-foreground">Configure how your content is created.</p>
+                              </div>
+                              <PlatformSelector />
+                              <LengthSelector />
+                              <CountSelector />
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* Bottom Toolbar inside Input */}
-                <div className="flex items-center justify-between px-4 pb-3 pt-2">
-                  {/* Left: Quick Actions */}
-                  <div className="flex items-center gap-1">
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" onChange={handleFile} />
+                  <PresetsPanel />
 
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button onClick={handleUploadClick} className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                            <Upload className="w-5 h-5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Upload Media</p></TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={async () => {
-                              if (!input.trim()) return toast.error("Enter a topic first");
-                              toast.loading("Generating Image...");
-                              try {
-                                const res = await fetch('/api/generateImages', { method: 'POST', body: JSON.stringify({ prompt: input }) });
-                                const data = await res.json();
-                                if (data.success && data.imageUrl) {
-                                  setUploadedMedia(data.imageUrl);
-                                  setUploadedMediaType("image");
-                                  toast.dismiss();
-                                  toast.success("Image Generated!");
-                                } else throw new Error();
-                              } catch { toast.dismiss(); toast.error("Failed"); }
-                            }}
-                            className="p-2.5 rounded-xl text-muted-foreground hover:text-pink-400 hover:bg-pink-500/10 transition-colors"
-                          >
-                            <Sparkles className="w-5 h-5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Generate AI Image</p></TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    {/* Voice Clone Button */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => {
-                              if (!hasVoiceProfile) {
-                                toast.error("Set up your voice profile in Settings first");
-                                return;
-                              }
-                              setUseClonedVoice(!useClonedVoice);
-                            }}
-                            className={cn(
-                              "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
-                              useClonedVoice
-                                ? "bg-violet-500/20 border border-violet-500/50 text-violet-400"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                          >
-                            <Mic className={cn("w-5 h-5", useClonedVoice && "text-violet-400")} />
-                            <span className="text-xs font-medium hidden sm:inline">
-                              {useClonedVoice ? "Voice ON" : "Voice Clone"}
-                            </span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{hasVoiceProfile ? (useClonedVoice ? "Voice cloning active" : "Enable voice cloning") : "Set up voice profile first"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-
-                  {/* Right: Settings Triggers */}
-                  <div className="flex items-center gap-2">
-                    {/* Settings Popover for all config */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/30 border border-border/50 rounded-full hover:bg-muted/50 transition-all">
-                          <SlidersHorizontal className="w-3.5 h-3.5" />
-                          <span>Config</span>
-                          <div className="w-[1px] h-3 bg-border/50 mx-1" />
-                          <span className="text-foreground/70">{platforms.length} Plats • {postLength} • {postCount}x</span>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-5 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl mr-4" align="end" sideOffset={10}>
-                        <div className="space-y-6">
-                          <div className="pb-3 border-b border-border/50">
-                            <h4 className="text-sm font-semibold text-foreground">Generation Settings</h4>
-                            <p className="text-xs text-muted-foreground">Configure how your content is created.</p>
-                          </div>
-                          <PlatformSelector />
-                          <LengthSelector />
-                          <CountSelector />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-              </div>
-
-              <PresetsPanel />
-
-              {/* Action Bar */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-4 px-2 pb-2">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!input.trim() || isGenerating}
-                  className="flex-1 h-14 text-base font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] border-t border-white/10"
-                >
-                  {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-white" />}
-                  Generate Content
-                </Button>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setPostConfirmOpen(true)}
-                    disabled={postingAllLoading || (!input.trim() && generatedPosts.length === 0)}
-                    variant="secondary"
-                    className="h-14 px-6 rounded-2xl bg-secondary hover:bg-secondary/80 text-foreground border border-border/50 font-semibold"
-                  >
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Post
-                  </Button>
-
-                  {generatedPosts.length > 0 && (
+                  {/* Action Bar */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4 px-2 pb-2">
                     <Button
-                      variant="ghost"
-                      className="h-14 w-14 rounded-2xl border border-red-500/20 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
-                      onClick={() => setGeneratedPosts([])}
+                      onClick={handleGenerate}
+                      disabled={!input.trim() || isGenerating}
+                      className="flex-1 h-14 text-base font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] border-t border-white/10"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-white" />}
+                      Generate Content
                     </Button>
-                  )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setPostConfirmOpen(true)}
+                        disabled={postingAllLoading || (!input.trim() && generatedPosts.length === 0)}
+                        variant="secondary"
+                        className="h-14 px-6 rounded-2xl bg-secondary hover:bg-secondary/80 text-foreground border border-border/50 font-semibold"
+                      >
+                        <Share2 className="w-5 h-5 mr-2" />
+                        Post
+                      </Button>
+
+                      {generatedPosts.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          className="h-14 w-14 rounded-2xl border border-red-500/20 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+                          onClick={() => setGeneratedPosts([])}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
+
+              <TabsContent value="repurpose">
+                <RepurposeWizard onPostsGenerated={(newPosts) => {
+                  setGeneratedPosts(prev => [...prev, ...newPosts]);
+                  setShowGeneratedPostsModal(true);
+                }} />
+              </TabsContent>
+            </Tabs>
 
             {/* Generated Posts Full-Screen Modal */}
             <AnimatePresence>
@@ -728,7 +730,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Modal Content */}
-                  <div className="h-[calc(100vh-80px)] overflow-y-auto px-4 sm:px-6 py-6">
+                  <div className="h-[calc(100vh-80px)] overflow-y-auto px-4 sm:px-6 py-6 scrollbar-thin scrollbar-thumb-border">
                     <div className="max-w-4xl mx-auto space-y-4">
                       {generatedPosts.map((post, i) => (
                         <PostCard
@@ -838,7 +840,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div >
+      </div>
 
       {/* Onboarding Modal */}
       <OnboardingModal
@@ -848,6 +850,6 @@ export default function Dashboard() {
         onVoiceProfileCreated={() => setHasVoiceProfile(true)}
         initialStep={onboardingStep}
       />
-    </div >
+    </div>
   );
 }

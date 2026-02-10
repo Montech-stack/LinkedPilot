@@ -18,7 +18,7 @@ import {
     Target,
     TrendingUp,
     Users,
-    Mic,
+    Dna,
     Brain,
     Send,
     Eye,
@@ -114,9 +114,9 @@ export default function LandingPage() {
     // Features mapped to value propositions from research
     const features = [
         {
-            icon: Mic,
+            icon: Dna,
             title: "AI That Actually Sounds Like You",
-            description: "Train Maxis on your past content. Every post matches your voice, tone, and style — not generic AI slop that hurts your credibility.",
+            description: "Train Maxis on your past content. Every post matches your Writing DNA — not generic AI slop that hurts your credibility.",
             highlight: "The #1 reason pros switch to Maxis",
             gradient: "from-violet-500 to-purple-600",
         },
@@ -185,48 +185,61 @@ export default function LandingPage() {
     // Pricing from research recommendations
     const pricingPlans = [
         {
-            name: "Free",
+            name: "Free Trial",
             price: "$0",
             period: "forever",
-            description: "Try Maxis risk-free",
+            description: "Experience the Maxis difference",
             features: [
-                "5 AI posts per month",
+                "10 AI posts per month",
+                "Basic Writing DNA",
                 "1 social account",
-                "Basic voice training",
                 "7-day analytics",
             ],
             cta: "Get Started Free",
             popular: false,
         },
         {
-            name: "Pro",
-            price: "$29",
+            name: "Strategy",
+            price: "$49",
             period: "/month",
             description: "For serious professionals",
             features: [
-                "Unlimited AI posts",
-                "5 social accounts",
-                "Advanced voice cloning",
-                "90-day analytics",
-                "Auto-engagement",
-                "Lead tracking",
-                "Priority support",
+                "1,000 AI posts / month",
+                "Deep Writing DNA",
+                "Repurpose Engine (1→7)",
+                "ROI Analytics",
+                "Smart Scheduling",
+                "All Platforms",
             ],
             cta: "Start 14-Day Free Trial",
             popular: true,
         },
         {
-            name: "Team",
-            price: "$79",
+            name: "Enterprise",
+            price: "$199",
             period: "/month",
-            description: "For agencies & teams",
+            description: "For scaling teams",
             features: [
-                "Everything in Pro",
-                "Unlimited accounts",
-                "Team collaboration",
-                "Client workspaces",
-                "White-label exports",
-                "Dedicated success manager",
+                "5,000 AI posts / month",
+                "5 Client Workspaces",
+                "White-label Reports",
+                "Team API Access",
+                "Priority 24/7 Support",
+            ],
+            cta: "Get Started",
+            popular: false,
+        },
+        {
+            name: "Agency",
+            price: "Custom",
+            period: "",
+            description: "For large organizations",
+            features: [
+                "Unlimited AI Content",
+                "Unlimited Workspaces",
+                "Custom Contracts",
+                "Dedicated Success Manager",
+                "SSO & Security",
             ],
             cta: "Contact Sales",
             popular: false,
@@ -499,11 +512,11 @@ export default function LandingPage() {
                             className="text-center mb-12"
                         >
                             <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20">
-                                <Mic className="w-4 h-4 text-violet-500" />
+                                <Dna className="w-4 h-4 text-violet-500" />
                                 <span className="text-sm font-medium text-violet-500">The Maxis Difference</span>
                             </div>
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                                AI That Learns <span className="text-primary">Your Voice</span>
+                                AI That Learns <span className="text-primary">Your Writing DNA</span>
                             </h2>
                             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                                 Most AI sounds like everyone else. Maxis sounds like <em>you</em>.

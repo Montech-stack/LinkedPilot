@@ -326,7 +326,7 @@ export default function PresetsPanel() {
         <div className="space-y-4 mt-6 p-5 border border-gray-200 dark:border-[#2A2A35] bg-white/50 dark:bg-[#1A1B22]/50 rounded-xl shadow-sm backdrop-blur-sm">
             <div className="flex items-center justify-between flex-wrap gap-3 pl-2">
                 <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">Content Presets</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Angle Frameworks</h3>
                     <Button
                         variant="ghost"
                         size="icon"

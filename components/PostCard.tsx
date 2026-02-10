@@ -370,6 +370,36 @@ export default function PostCard({
           </div>
         )}
 
+        {/* Credibility Score Indicator */}
+        {post.credibilityScore && (
+          <div className="mt-4 mb-2 p-3 rounded-xl bg-muted/30 border border-border/50">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">Credibility Score</span>
+                {post.credibilityScore.score > 90 && <span className="text-[10px] px-1.5 py-0.5 bg-green-500/10 text-green-600 rounded-md font-medium">Excellent</span>}
+                {post.credibilityScore.score <= 90 && post.credibilityScore.score > 70 && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/10 text-yellow-600 rounded-md font-medium">Good</span>}
+                {post.credibilityScore.score <= 70 && <span className="text-[10px] px-1.5 py-0.5 bg-red-500/10 text-red-600 rounded-md font-medium">AI Heavy</span>}
+              </div>
+              <span className={`text-sm font-bold ${post.credibilityScore.score > 90 ? "text-green-600" :
+                  post.credibilityScore.score > 70 ? "text-yellow-600" : "text-red-500"
+                }`}>{post.credibilityScore.score}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${post.credibilityScore.score > 90 ? "bg-green-500" :
+                    post.credibilityScore.score > 70 ? "bg-yellow-500" : "bg-red-500"
+                  }`}
+                style={{ width: `${post.credibilityScore.score}%` }}
+              />
+            </div>
+            {post.credibilityScore.flaggedWords?.length > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-2">
+                <span className="font-medium text-red-400">Flagged Words:</span> {post.credibilityScore.flaggedWords.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Action Footer */}
         <div className="mt-6 pt-4 border-t border-border flex gap-3">
           <Button

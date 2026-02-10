@@ -40,6 +40,9 @@ const UserSchema = new Schema<IUser>({
   plan: { type: String, default: 'free' },
   tokensRemaining: { type: Number, default: 0 },
 
+  // Organization / Team
+  organizationId: { type: String }, // If null, they are a solo user. If set, they belong to this org.
+
   // Onboarding fields
   onboardingStep: { type: Number, default: 0 },
   onboardingCompleted: { type: Boolean, default: false },

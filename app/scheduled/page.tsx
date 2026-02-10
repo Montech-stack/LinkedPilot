@@ -15,7 +15,13 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  TrendingUp,
+  Zap,
+  BarChart3,
+  Target,
+  Layers,
+  Users
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
@@ -273,79 +279,179 @@ export default function ScheduledPage() {
               </Button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px] overflow-x-auto">
-              <div className="min-w-[800px]">
-                <div className="grid grid-cols-7 border-b border-border bg-muted/30">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                    <div key={day} className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {day}
-                    </div>
-                  ))}
-                </div>
+            {/* Calendar Grid & Insights Wrapper */}
+            <div className="flex flex-col xl:flex-row gap-6 flex-1 min-h-0">
+              {/* Calendar Grid */}
+              <div className="flex-1 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px] overflow-x-auto">
+                <div className="min-w-[800px]">
+                  <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                      <div key={day} className="py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-background">
-                  {calendarDays.map((day, idx) => {
-                    const posts = getPostsForDay(day);
-                    const isCurrentMonth = isSameMonth(day, monthStart);
-                    const isTodayDate = isToday(day);
+                  <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-background">
+                    {calendarDays.map((day, idx) => {
+                      const posts = getPostsForDay(day);
+                      const isCurrentMonth = isSameMonth(day, monthStart);
+                      const isTodayDate = isToday(day);
 
-                    return (
-                      <motion.div
-                        key={day.toISOString()}
-                        className={`min-h-[100px] border-b border-r border-border p-2 transition-colors relative group 
+                      return (
+                        <motion.div
+                          key={day.toISOString()}
+                          className={`min-h-[100px] border-b border-r border-border p-2 transition-colors relative group 
                         ${!isCurrentMonth && viewMode === 'month' ? "bg-muted/10 text-muted-foreground" : "text-foreground"}
                         ${isTodayDate ? "bg-primary/5" : "hover:bg-muted/5"}
                       `}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: idx * 0.005 }}
-                      >
-                        <div className={`text-xs font-semibold mb-2 flex justify-between items-center
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: idx * 0.005 }}
+                        >
+                          <div className={`text-xs font-semibold mb-2 flex justify-between items-center
                           ${isTodayDate ? "text-primary" : "text-muted-foreground"}
                         `}>
-                          <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isTodayDate ? "bg-primary text-primary-foreground" : ""}`}>
-                            {format(day, "d")}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setQuickPostDate(day);
-                              setQuickPostContent("");
-                              setQuickPostTime("09:00");
-                            }}
-                            className="opacity-0 group-hover:opacity-100 hover:bg-muted p-1 rounded transition-opacity"
-                          >
-                            <Plus className="w-3 h-3 text-primary" />
-                          </button>
-                        </div>
+                            <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isTodayDate ? "bg-primary text-primary-foreground" : ""}`}>
+                              {format(day, "d")}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setQuickPostDate(day);
+                                setQuickPostContent("");
+                                setQuickPostTime("09:00");
+                              }}
+                              className="opacity-0 group-hover:opacity-100 hover:bg-muted p-1 rounded transition-opacity"
+                            >
+                              <Plus className="w-3 h-3 text-primary" />
+                            </button>
+                          </div>
 
-                        <div className="space-y-1.5 overflow-hidden max-h-[120px] overflow-y-auto scrollbar-none">
-                          {posts.map(post => (
-                            <DropdownMenu key={post._id}>
-                              <DropdownMenuTrigger asChild>
-                                <div className="text-[10px] p-1.5 rounded-md bg-card border border-border shadow-sm cursor-pointer hover:border-primary/50 transition-colors flex items-center gap-1.5 text-left group/post">
-                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${post.posted ? "bg-green-500" : "bg-blue-500"}`} />
-                                  <span className="truncate flex-1 font-medium">{post.content}</span>
-                                </div>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-56 text-xs">
-                                <DropdownMenuItem disabled className="text-xs font-bold opacity-100 mb-1">
-                                  {format(new Date(post.scheduledAt), "h:mm a")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(post._id)} className="text-destructive">
-                                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Cancel Post
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ))}
+                          <div className="space-y-1.5 overflow-hidden max-h-[120px] overflow-y-auto scrollbar-none">
+                            {posts.map(post => (
+                              <DropdownMenu key={post._id}>
+                                <DropdownMenuTrigger asChild>
+                                  <div className="text-[10px] p-1.5 rounded-md bg-card border border-border shadow-sm cursor-pointer hover:border-primary/50 transition-colors flex items-center gap-1.5 text-left group/post">
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${post.posted ? "bg-green-500" : "bg-blue-500"}`} />
+                                    <span className="truncate flex-1 font-medium">{post.content}</span>
+                                  </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-56 text-xs">
+                                  <DropdownMenuItem disabled className="text-xs font-bold opacity-100 mb-1">
+                                    {format(new Date(post.scheduledAt), "h:mm a")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDelete(post._id)} className="text-destructive">
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Cancel Post
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ))}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Smart Insights Panel */}
+              <div className="w-full xl:w-80 shrink-0 space-y-6 overflow-y-auto pr-2 pb-2">
+                {/* Strategy Score Card */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-500/10 to-blue-500/10 border border-violet-500/20 shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                    <Sparkles className="w-12 h-12 text-violet-500" />
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="font-bold text-lg mb-1 flex items-center gap-2">Strategy Score</h3>
+                    <div className="flex items-end gap-2 mb-2">
+                      <span className="text-4xl font-extrabold text-violet-600 dark:text-violet-400">92</span>
+                      <span className="text-sm text-green-500 font-semibold mb-1.5 flex items-center">
+                        <TrendingUp className="w-3 h-3 mr-1" /> +4%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-background/50 rounded-full overflow-hidden mb-3">
+                      <div className="h-full bg-gradient-to-r from-violet-500 to-blue-500 w-[92%] rounded-full" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Great work! You're posting consistently.</p>
+                  </div>
+                </div>
+
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground mb-1">Posts Ready</p>
+                    <p className="text-2xl font-bold flex items-center gap-2">
+                      {scheduledPosts.filter(p => new Date(p.scheduledAt) > new Date()).length}
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground mb-1">Est. Reach</p>
+                    <p className="text-2xl font-bold flex items-center gap-2">
+                      2.4k
+                      <Users className="w-4 h-4 text-blue-500" />
+                    </p>
+                  </div>
+                </div>
+
+                {/* Best Times */}
+                <div className="bg-card border border-border rounded-xl shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-500" />
+                      Best Times to Post
+                    </h4>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { day: "Today", time: "2:00 PM", score: "High" },
+                      { day: "Tomorrow", time: "9:00 AM", score: "Peak" },
+                      { day: "Wed", time: "5:00 PM", score: "Good" },
+                    ].map((slot, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground w-20">{slot.day}</span>
+                        <span className="font-medium bg-muted px-2 py-0.5 rounded text-xs">{slot.time}</span>
+                        <span className={`text-xs font-semibold ${slot.score === 'Peak' ? 'text-green-500' : 'text-blue-500'}`}>
+                          {slot.score}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Content Mix - Matching Demo Presets */}
+                <div className="bg-card border border-border rounded-xl shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-amber-500" />
+                      Content Mix
+                    </h4>
+                  </div>
+                  <div className="space-y-4">
+                    {[
+                      { label: "Educational", val: 40, color: "bg-blue-500" },
+                      { label: "Personal Story", val: 30, color: "bg-pink-500" },
+                      { label: "Promotional", val: 10, color: "bg-emerald-500" },
+                    ].map((item) => (
+                      <div key={item.label} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>{item.label}</span>
+                          <span className="text-muted-foreground">{item.val}%</span>
                         </div>
-                      </motion.div>
-                    );
-                  })}
+                        <div className="w-full h-1.5 bg-muted rounded-full">
+                          <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.val}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-primary h-8">
+                      View Full Analytics
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>

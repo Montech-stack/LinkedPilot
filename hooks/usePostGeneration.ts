@@ -59,7 +59,7 @@ export function usePostGeneration() {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       console.log('Error generating posts:', errorMessage);
-      return [];
+      throw new Error(errorMessage);
     } finally {
       setIsGenerating(false);
       setTimeout(() => setGenerationProgress(0), 1000);
