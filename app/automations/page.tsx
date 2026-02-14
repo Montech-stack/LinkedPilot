@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, MessageSquare, Clock, BarChart, Share2, Linkedin, Facebook, Instagram, Twitter, Bot, Play, Zap, Sparkles, Calendar, Image as ImageIcon, Import } from "lucide-react";
+import { Plus, MessageSquare, Clock, BarChart, Share2, Linkedin, Facebook, Instagram, Twitter, Bot, Play, Zap, Sparkles, Calendar, Image as ImageIcon, Import, FileText, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AutomationList } from "@/components/automation-list";
 import Sidebar from "@/components/Sidebar";
@@ -48,6 +48,14 @@ interface Automation {
   description?: string;
 }
 
+interface AutomationLog {
+  id: number;
+  run_at: string;
+  automations_processed: number;
+  status: string;
+  error_details?: string;
+}
+
 export default function AutomationsPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -76,6 +84,11 @@ export default function AutomationsPage() {
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
 
   const [userPlan, setUserPlan] = useState<UserPlan>("free");
+
+  // Logs State
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [logs, setLogs] = useState<AutomationLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   // Fetch plan
   useEffect(() => {
@@ -119,6 +132,21 @@ export default function AutomationsPage() {
       }
     } catch {
       console.error("Failed to fetch scheduled posts");
+    }
+  };
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    setIsLogsOpen(true);
+    try {
+      const res = await fetch("/api/automations/logs");
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      const data = await res.json();
+      setLogs(data);
+    } catch (e) {
+      toast.error("Could not load execution logs");
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -212,6 +240,13 @@ export default function AutomationsPage() {
               </div>
 
               <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={fetchLogs}
+                  className="bg-card hover:bg-muted border-border"
+                >
+                  <FileText className="w-4 h-4 mr-2" /> Execution Logs
+                </Button>
                 <Button
                   onClick={runAll}
                   className="bg-secondary/50 hover:bg-secondary text-secondary-foreground border border-border"
@@ -431,6 +466,70 @@ export default function AutomationsPage() {
             <Button onClick={handleCreate} disabled={loading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {loading ? "Creating..." : "Launch Automation"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logs Modal */}
+      <Dialog open={isLogsOpen} onOpenChange={setIsLogsOpen}>
+        <DialogContent className="sm:max-w-3xl bg-card border border-border text-card-foreground p-0 overflow-hidden rounded-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader className="p-6 pb-2 border-b border-border bg-muted/50 shrink-0">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" /> Execution Logs
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-0 overflow-y-auto flex-1">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground uppercase bg-muted/30 sticky top-0">
+                <tr>
+                  <th className="px-6 py-3">Time</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Processed</th>
+                  <th className="px-6 py-3">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {logsLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">Loading logs...</td>
+                  </tr>
+                ) : logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">No execution history found.</td>
+                  </tr>
+                ) : (
+                  logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-6 py-4 font-medium whitespace-nowrap">
+                        {new Date(log.run_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        {log.status === "success" ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Success
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500">
+                            <XCircle className="w-3 h-3 mr-1" /> Failed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {log.automations_processed} items
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground max-w-[200px] truncate" title={log.error_details || "No errors"}>
+                        {log.error_details ? (
+                          <span className="flex items-center text-red-400">
+                            <AlertTriangle className="w-3 h-3 mr-1" /> {log.error_details}
+                          </span>
+                        ) : "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </DialogContent>
       </Dialog>

@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ScheduledPost from "@/models/ScheduledPost";
 
+// Helper: notify Python backend to sync schedule data
+async function triggerPythonSync() {
+  const pythonUrl = process.env.PYTHON_BACKEND_URL;
+  if (!pythonUrl) return; // Skip if not configured
+
+  try {
+    await fetch(`${pythonUrl}/sync-schedules`, {
+      method: "POST",
+      headers: {
+        "x-cron-secret": process.env.VERCEL_CRON_SECRET || "",
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (err) {
+    console.warn("Failed to sync with Python backend:", err);
+    // Don't block the response — sync failure is non-critical
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -44,6 +63,9 @@ export async function POST(request: NextRequest) {
       scheduledAt: new Date(scheduledAt),
       posted: false,
     });
+
+    // Sync to Python backend for execution tracking
+    triggerPythonSync();
 
     return NextResponse.json(doc);
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ScheduledPost from "@/models/ScheduledPost";
-import { publishToLinkedIn } from "@/lib/publishLinkedIn";
+import { postToLinkedIn } from "@/lib/postToLinkedIn";
 
 export async function GET() {
   try {
@@ -15,7 +15,19 @@ export async function GET() {
     let processed = 0;
     for (const p of due) {
       try {
-        await publishToLinkedIn(p as any);
+        if (!p.linkedinId) {
+          p.error = "No LinkedIn member ID on post";
+          await p.save();
+          continue;
+        }
+
+        await postToLinkedIn({
+          memberId: p.linkedinId,
+          content: p.content,
+          media: p.media || undefined,
+          mediaType: p.mediaType as "image" | "video" | undefined,
+        });
+
         p.posted = true;
         p.error = null;
         await p.save();

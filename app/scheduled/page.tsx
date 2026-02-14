@@ -21,7 +21,8 @@ import {
   BarChart3,
   Target,
   Layers,
-  Users
+  Users,
+  Pencil
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
@@ -81,6 +82,13 @@ export default function ScheduledPage() {
   const [quickPostContent, setQuickPostContent] = useState("");
   const [quickPostTime, setQuickPostTime] = useState("09:00");
   const [quickPostLoading, setQuickPostLoading] = useState(false);
+
+  // Edit Post State
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [isEditSaving, setIsEditSaving] = useState(false);
 
   useEffect(() => {
     fetchScheduled();
@@ -183,6 +191,43 @@ export default function ScheduledPage() {
       toast.error("Failed to schedule post");
     } finally {
       setQuickPostLoading(false);
+    }
+  };
+
+  const openEditModal = (post: any) => {
+    const date = new Date(post.scheduledAt);
+    setEditContent(post.content);
+    setEditDate(format(date, "yyyy-MM-dd"));
+    setEditTime(format(date, "HH:mm"));
+    setEditingPost(post);
+  };
+
+  const handleUpdatePost = async () => {
+    if (!editingPost) return;
+    if (!editContent.trim()) return toast.error("Content required");
+
+    setIsEditSaving(true);
+    try {
+      const dateTime = new Date(`${editDate}T${editTime}:00`);
+
+      const res = await fetch(`/api/schedule/${editingPost._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: editContent,
+          scheduledAt: dateTime
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to update");
+
+      toast.success("Post updated!");
+      setEditingPost(null);
+      fetchScheduled();
+    } catch (e) {
+      toast.error("Failed to update post");
+    } finally {
+      setIsEditSaving(false);
     }
   };
 
@@ -329,6 +374,9 @@ export default function ScheduledPage() {
                                 <DropdownMenuContent align="start" className="w-56 text-xs">
                                   <DropdownMenuItem disabled className="text-xs font-bold opacity-100 mb-1">
                                     {format(new Date(post.scheduledAt), "h:mm a")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openEditModal(post)}>
+                                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Post
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleDelete(post._id)} className="text-destructive">
                                     <Trash2 className="w-3.5 h-3.5 mr-2" /> Cancel Post
@@ -595,6 +643,66 @@ export default function ScheduledPage() {
                   <Button onClick={handleQuickPost} disabled={!quickPostContent.trim() || quickPostLoading} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">
                     {quickPostLoading && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
                     Schedule Post
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Edit Post Modal */}
+        {editingPost && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card w-[95%] sm:w-full max-w-md rounded-2xl border border-border shadow-2xl overflow-hidden mx-auto"
+            >
+              <div className="p-5 border-b border-border bg-muted/20 flex justify-between items-center">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  Edit Post
+                </h3>
+                <button onClick={() => setEditingPost(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Post Content</label>
+                  <textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    className="w-full bg-background border border-border rounded-xl p-3 min-h-[100px] text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                    placeholder="Write your post here..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date</label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={e => setEditDate(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time</label>
+                    <input
+                      type="time"
+                      value={editTime}
+                      onChange={e => setEditTime(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setEditingPost(null)}>Cancel</Button>
+                  <Button onClick={handleUpdatePost} disabled={!editContent.trim() || isEditSaving} className="bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                    {isEditSaving && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
+                    Save Changes
                   </Button>
                 </div>
               </div>

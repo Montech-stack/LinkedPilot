@@ -7,6 +7,24 @@ import mongoose from "mongoose";
 
 export const runtime = "nodejs";
 
+// Helper: notify Python backend to sync automation data
+async function triggerPythonSync() {
+  const pythonUrl = process.env.PYTHON_BACKEND_URL;
+  if (!pythonUrl) return;
+
+  try {
+    await fetch(`${pythonUrl}/sync-automations`, {
+      method: "POST",
+      headers: {
+        "x-cron-secret": process.env.VERCEL_CRON_SECRET || "",
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (err) {
+    console.warn("Failed to sync with Python backend:", err);
+  }
+}
+
 export async function GET() {
   try {
     await connectToDatabase();
@@ -72,6 +90,10 @@ export async function POST(req: Request) {
       frequency: frequency || 'daily',
       customDays: customDays || [],
     });
+
+    // Sync to Python backend
+    triggerPythonSync();
+
     return NextResponse.json(record);
   } catch (error: any) {
     console.error("Error creating automation:", error);
@@ -107,6 +129,10 @@ export async function PUT(req: Request) {
     }
     Object.assign(automation, updates);
     await automation.save();
+
+    // Sync to Python backend
+    triggerPythonSync();
+
     return NextResponse.json(automation);
   } catch (error) {
     console.error("Error updating automation:", error);
@@ -131,6 +157,9 @@ export async function DELETE(req: Request) {
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Automation not found." }, { status: 404 });
     }
+    // Sync to Python backend
+    triggerPythonSync();
+
     return NextResponse.json({ message: "Automation deleted." });
   } catch (error) {
     console.error("Error deleting automation:", error);
