@@ -40,7 +40,7 @@ interface ScheduledPost {
 interface Automation {
   id: string;
   title: string;
-  type: string;
+  type: "content" | "response" | "analytics" | "crosspost" | "schedule";
   isActive: boolean;
   lastRun: string;
   icon: any;
