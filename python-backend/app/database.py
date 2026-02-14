@@ -6,8 +6,13 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# Fix common issue: Render/Neon sometimes give postgres:// but SQLAlchemy needs postgresql://
+db_url = settings.database_url
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(
-    settings.database_url,
+    db_url,
     pool_pre_ping=True,
     pool_size=5,
     max_overflow=10,
