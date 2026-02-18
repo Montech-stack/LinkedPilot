@@ -1,0 +1,282 @@
+/* Base Node Styles */
+.node {
+    position: absolute;
+    background-color: var(--surface2);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    animation: appear 0.5s var(--ease-spring) forwards;
+    user-select: none;
+    cursor: pointer;
+    transition: transform 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth), border-color 0.25s;
+}
+
+.node:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    z-index: 10;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.3);
+        filter: blur(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+        filter: blur(0);
+    }
+}
+
+/* ─── Central Node ─── */
+.central {
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--surface2), var(--surface2)) padding-box,
+        linear-gradient(135deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan)) border-box;
+    background-size: 100%, 200% 200%;
+    animation: appear 0.6s var(--ease-spring) forwards, centralGradient 6s ease infinite;
+    box-shadow:
+        0 0 30px rgba(0, 212, 255, 0.15),
+        0 0 60px rgba(124, 58, 237, 0.08),
+        inset 0 0 30px rgba(0, 212, 255, 0.05);
+    z-index: 5;
+}
+
+.central:hover {
+    box-shadow:
+        0 0 40px rgba(0, 212, 255, 0.25),
+        0 0 80px rgba(124, 58, 237, 0.12),
+        inset 0 0 40px rgba(0, 212, 255, 0.08);
+}
+
+@keyframes centralGradient {
+    0% {
+        background-position: 100% 100%, 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 100%, 100% 50%;
+    }
+
+    100% {
+        background-position: 100% 100%, 0% 50%;
+    }
+}
+
+/* Orbital ring */
+.central::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    border-top-color: var(--accent-cyan);
+    border-right-color: rgba(124, 58, 237, 0.4);
+    animation: spin 10s linear infinite;
+    opacity: 0.6;
+}
+
+/* Second orbital ring (reversed) */
+.central::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    right: -14px;
+    bottom: -14px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    border-bottom-color: rgba(124, 58, 237, 0.3);
+    border-left-color: rgba(0, 212, 255, 0.15);
+    animation: spin 15s linear infinite reverse;
+    opacity: 0.4;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.centralIcon {
+    font-size: 36px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.3));
+}
+
+.centralTitle {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    padding: 0 14px;
+    background: linear-gradient(135deg, #fff, var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ─── Branch Node ─── */
+.branch {
+    width: 170px;
+    min-height: 85px;
+    border-radius: 14px;
+    border: 1px solid var(--node-color);
+    padding: 14px;
+    background:
+        linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(19, 24, 32, 0.85));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+        0 0 20px var(--node-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--node-color);
+}
+
+.branch:hover {
+    box-shadow:
+        0 0 30px var(--node-glow),
+        0 0 60px var(--node-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-color: var(--node-color);
+}
+
+.branchCategory {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--node-color);
+    margin-bottom: 6px;
+    opacity: 0.8;
+}
+
+.branchTitle {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 5px;
+    line-height: 1.3;
+}
+
+.branchSummary {
+    font-family: var(--font-body);
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    opacity: 0.8;
+}
+
+/* ─── Sub Node ─── */
+.sub {
+    width: 140px;
+    min-height: 52px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 12px;
+    background: linear-gradient(145deg, rgba(13, 17, 23, 0.9), rgba(19, 24, 32, 0.8));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    align-items: flex-start;
+    text-align: left;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* Color accent strip */
+.sub::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--node-color);
+    border-radius: 3px 0 0 3px;
+}
+
+.sub:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 15px var(--node-glow);
+}
+
+.subTitle {
+    font-family: var(--font-body);
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 500;
+    padding-left: 6px;
+}
+
+/* ─── Expand Node ─── */
+.expand {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--accent-cyan);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(124, 58, 237, 0.03));
+    color: var(--accent-cyan);
+    transform: translate(-50%, -50%);
+    animation: breathe 3s ease-in-out infinite, appear 0.5s var(--ease-spring) forwards;
+    position: relative;
+}
+
+.expand::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    animation: expandRing 3s ease-in-out infinite;
+}
+
+.expand:hover {
+    background: rgba(0, 212, 255, 0.12);
+    border-style: solid;
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.3);
+}
+
+@keyframes breathe {
+    0% {
+        box-shadow: 0 0 0 rgba(0, 212, 255, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.25);
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(0, 212, 255, 0);
+    }
+}
+
+@keyframes expandRing {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: scale(1.15);
+        opacity: 0.6;
+    }
+}

@@ -1,0 +1,404 @@
+import { useState, useCallback, useReducer, useEffect } from 'react';
+import { generateMap, expandBranch } from '../services/api';
+
+const INITIAL_STATE = {
+    nodes: [],
+    connections: [],
+    loading: false,
+    error: null,
+    depth: 1,
+    topic: '',
+    mode: 'research'
+};
+
+// Action types
+const ACTIONS = {
+    START_LOADING: 'START_LOADING',
+    SET_ERROR: 'SET_ERROR',
+    SET_MAP: 'SET_MAP',
+    APPEND_CLUSTER: 'APPEND_CLUSTER',
+    RESET: 'RESET'
+};
+
+const mapReducer = (state, action) => {
+    switch (action.type) {
+        case ACTIONS.START_LOADING:
+            return { ...state, loading: true, error: null };
+        case ACTIONS.SET_ERROR:
+            return { ...state, loading: false, error: action.payload };
+        case ACTIONS.SET_MAP:
+            console.log("Setting Map Data:", action.payload); // DEBUG
+            return {
+                ...state,
+                loading: false,
+                nodes: action.payload.nodes,
+                connections: action.payload.connections,
+                topic: action.payload.topic,
+                mode: action.payload.mode || state.mode,
+                depth: 1
+            };
+        case ACTIONS.APPEND_CLUSTER:
+            return {
+                ...state,
+                loading: false,
+                nodes: [...state.nodes, ...action.payload.nodes],
+                connections: [...state.connections, ...action.payload.connections],
+                depth: state.depth + 1
+            };
+        case ACTIONS.RESET:
+            return INITIAL_STATE;
+        default:
+            return state;
+    }
+};
+
+// Layout configurations
+const LAYOUT = {
+    CENTRAL_RADIUS: 0,
+    BRANCH_RADIUS: 260,
+    SUB_RADIUS: 420,
+    EXPAND_RADIUS_FROM_CENTER: 540,
+    EXPAND_ANGLE: 135 * (Math.PI / 180), // 135 degrees in radians
+    EXPANSION_NODE_RADIUS: 220, // Distance from expand node to new nodes
+    EXPANSION_SPREAD: 120 * (Math.PI / 180) // Total spread of +/- 60 deg
+};
+
+export const useMapData = () => {
+    // Hook to manage map state and persistence
+    // 1. Manage the list of saved maps
+    const [savedMaps, setSavedMaps] = useState(() => {
+        try {
+            const item = window.localStorage.getItem('neuronMaps');
+            const parsed = item ? JSON.parse(item) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+            console.warn("Error reading neuronMaps:", error);
+            return {};
+        }
+    });
+
+    const [currentMapId, setCurrentMapId] = useState(() => {
+        try {
+            return window.localStorage.getItem('currentMapId') || null;
+        } catch (error) {
+            return null;
+        }
+    });
+
+    // 2. Initialize current map state based on ID
+    const getInitialState = () => {
+        if (currentMapId && savedMaps[currentMapId]) {
+            return savedMaps[currentMapId];
+        }
+        return INITIAL_STATE;
+    };
+
+    const [state, dispatch] = useReducer(mapReducer, getInitialState());
+
+    // Effect: Update state when currentMapId changes (Loading a map)
+    useEffect(() => {
+        if (currentMapId && savedMaps[currentMapId]) {
+            // If we switched map, we need to reset/load the state
+            // But useReducer state is independent. We need to force an update or re-initialize.
+            // A common pattern is keying the hook or dispatching a LOAD action.
+            dispatch({ type: ACTIONS.SET_MAP, payload: savedMaps[currentMapId] });
+        } else if (!currentMapId) {
+            dispatch({ type: ACTIONS.RESET });
+        }
+    }, [currentMapId]); // Be careful of dependency loops if savedMaps changes
+
+    // Effect: Auto-save current state to savedMaps and localStorage
+    useEffect(() => {
+        if (!currentMapId && state.nodes.length > 0) {
+            // First save of a new map? Or just unsaved state?
+            // User flow: "Input topic" -> Generate -> creates map.
+            // We should generate an ID when "Generate" happens?
+        }
+
+        if (currentMapId && state.nodes.length > 0) {
+            setSavedMaps(prev => {
+                const updated = {
+                    ...prev,
+                    [currentMapId]: {
+                        ...state,
+                        lastModified: Date.now(),
+                        id: currentMapId
+                    }
+                };
+                window.localStorage.setItem('neuronMaps', JSON.stringify(updated));
+                return updated;
+            });
+        }
+    }, [state]);
+
+    // Persist currentMapId
+    useEffect(() => {
+        if (currentMapId) {
+            window.localStorage.setItem('currentMapId', currentMapId);
+        } else {
+            window.localStorage.removeItem('currentMapId');
+        }
+    }, [currentMapId]);
+
+    // Helpers
+    const createNewMap = () => {
+        setCurrentMapId(null);
+        dispatch({ type: ACTIONS.RESET });
+    };
+
+    const deleteMap = (id) => {
+        const newMaps = { ...savedMaps };
+        delete newMaps[id];
+        setSavedMaps(newMaps);
+        window.localStorage.setItem('neuronMaps', JSON.stringify(newMaps));
+
+        if (currentMapId === id) {
+            setCurrentMapId(null);
+            dispatch({ type: ACTIONS.RESET });
+        }
+    };
+
+    const loadMap = (id) => {
+        setCurrentMapId(id);
+    };
+
+    // Helper to convert polar to cartesian
+    const polarToCartesian = (radius, angle) => ({
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle)
+    });
+
+    const generateNewMap = useCallback(async (topicInput, modeId = 'research') => {
+        dispatch({ type: ACTIONS.START_LOADING });
+        try {
+            const data = await generateMap(topicInput, modeId);
+
+            // Create new Map ID
+            const newId = Date.now().toString();
+            setCurrentMapId(newId);
+
+            // ... generation logic ...
+            // (Pass through normally, state effect will catch it and save)
+
+
+            const nodes = [];
+            const connections = [];
+
+            // 1. Central Node
+            const centralNode = {
+                id: 'central',
+                type: 'central',
+                x: 0,
+                y: 0,
+                data: {
+                    type: 'central',
+                    title: data.central.title,
+                    icon: data.central.icon,
+                    category: 'Core Topic',
+                    detail: `Central hub for ${data.central.title}. Explore branches to discover more.`,
+                    // Assign random color just for fun or use default
+                    color: 'var(--accent-cyan)'
+                }
+            };
+            nodes.push(centralNode);
+
+            // 2. Branch Nodes (6 of them, 60 deg apart)
+            data.branches.forEach((branch, i) => {
+                const angle = (i * 60) * (Math.PI / 180);
+                const pos = polarToCartesian(LAYOUT.BRANCH_RADIUS, angle);
+
+                // Cyclical colors
+                const colors = [
+                    'var(--accent-cyan)',
+                    'var(--accent-purple)',
+                    'var(--accent-orange)',
+                    'var(--accent-green)',
+                    'var(--accent-pink)',
+                    'var(--accent-yellow)'
+                ];
+                const color = colors[i % 6];
+
+                const branchNode = {
+                    id: branch.id || `b${i}`,
+                    type: 'branch',
+                    x: pos.x,
+                    y: pos.y,
+                    data: { ...branch, color, type: 'branch' }
+                };
+                nodes.push(branchNode);
+                connections.push({ from: centralNode.id, to: branchNode.id, type: 'central', id: `c-${centralNode.id}-${branchNode.id}` });
+
+                // 3. Sub Nodes - REMOVED for clarity (User Request)
+                // Users will expand branches manually via "Expand with AI"
+                /* 
+                if (branch.children) {
+                    branch.children.forEach((child, j) => {
+                       // ... logic removed ...
+                    });
+                }
+                */
+            });
+
+            // 4. Expand Node
+            // "placed at radius 540px from centre, positioned at 135° angle from centre"
+            const expandPos = polarToCartesian(LAYOUT.EXPAND_RADIUS_FROM_CENTER, LAYOUT.EXPAND_ANGLE);
+
+            // We need to know who it connects to?
+            // PRD says "positioned at outer edge of the last branch cluster".
+            // 135 degrees is between branch 2 (120) and branch 3 (180).
+            // Let's connect it to the nearest branch for visual consistency, or just the central node?
+            // PRD: "Connections... Branch -> Expand node: Cyan dashed line".
+            // So it connects to a branch. At 135 deg, nearest branch is at 120 (Branch 2).
+            // Let's find branch at index 2.
+            const parentBranch = nodes.find(n => n.type === 'branch' && n.id === data.branches[2]?.id) || nodes[0];
+
+            const expandNode = {
+                id: 'expand-1',
+                type: 'expand',
+                x: expandPos.x,
+                y: expandPos.y,
+                data: { parentId: parentBranch.id } // Keep track of context
+            };
+
+            nodes.push(expandNode);
+            connections.push({ from: parentBranch.id, to: expandNode.id, type: 'expand', id: `c-exp-1` });
+
+            dispatch({
+                type: ACTIONS.SET_MAP,
+                payload: { nodes, connections, topic: topicInput, mode: modeId }
+            });
+
+        } catch (err) {
+            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+        }
+    }, []);
+
+    const handleExpand = useCallback(async (targetNodeId) => {
+        const targetNode = state.nodes.find(n => n.id === targetNodeId);
+        if (!targetNode) return;
+
+        // Determine parent topic and context
+        let parentTopic = targetNode.data.title;
+        let baseX = targetNode.x;
+        let baseY = targetNode.y;
+        let baseAngle = 0;
+
+        // If it's an 'expand' node (the + button), find the parent it connects from
+        if (targetNode.type === 'expand') {
+            const connection = state.connections.find(c => {
+                const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+                return toId === targetNode.id;
+            });
+            const parentId = connection ? (typeof connection.from === 'string' ? connection.from : connection.from?.id) : null;
+            const parentNode = parentId ? state.nodes.find(n => n.id === parentId) : state.nodes[0];
+            parentTopic = parentNode?.data?.title || state.topic;
+            baseAngle = Math.atan2(targetNode.y, targetNode.x);
+        } else {
+            // If expanding a normal branch/sub node directly
+            baseAngle = Math.atan2(targetNode.y, targetNode.x);
+            // Project OUTWARDS from this node to place the new cluster
+            // So we don't overlap the existing node.
+            const projectionDist = 180; // Distance to center of new cluster
+            baseX = targetNode.x + projectionDist * Math.cos(baseAngle);
+            baseY = targetNode.y + projectionDist * Math.sin(baseAngle);
+        }
+
+        dispatch({ type: ACTIONS.START_LOADING });
+
+        try {
+            const newSubTopics = await expandBranch(parentTopic, state.topic, state.mode);
+
+            const newNodes = [];
+            const newConnections = [];
+
+            // 5 nodes cluster
+            newSubTopics.forEach((topic, i) => {
+                // Spread +/- 60 degrees
+                const offsetAngle = ((i - 2) * 30) * (Math.PI / 180);
+                const angle = baseAngle + offsetAngle;
+
+                // Radius from the *center of the new cluster*
+                const r = LAYOUT.EXPANSION_NODE_RADIUS;
+                // Wait, logic above: x,y was expandNode.x,y.
+                // If we are expanding a branch, we want new nodes around it? 
+                // Or around a new center point?
+                // Let's stick to the "Cluster center" concept.
+
+                // If target was 'expand' node, it *is* the center.
+                // If target was 'branch', we projected a new center (baseX, baseY).
+
+                // Use targetNode if it is 'expand', effectively.
+                const centerX = targetNode.type === 'expand' ? targetNode.x : baseX;
+                const centerY = targetNode.type === 'expand' ? targetNode.y : baseY;
+
+                const x = centerX + r * Math.cos(angle);
+                const y = centerY + r * Math.sin(angle);
+
+                const node = {
+                    id: `exp-${Date.now()}-${i}`,
+                    type: 'sub',
+                    x,
+                    y,
+                    data: { ...topic, color: targetNode.data.color || 'var(--accent-cyan)', type: 'sub' }
+                };
+
+                newNodes.push(node);
+                newConnections.push({
+                    from: targetNode.id,
+                    to: node.id,
+                    type: 'sub',
+                    color: targetNode.data.color || 'var(--accent-cyan)',
+                    id: `c-${targetNode.id}-${node.id}`
+                });
+            });
+
+            // Spawn new Expand Node at edge of new cluster
+            const centerX = targetNode.type === 'expand' ? targetNode.x : baseX;
+            const centerY = targetNode.type === 'expand' ? targetNode.y : baseY;
+
+            // Project further out
+            const newExpandDist = LAYOUT.EXPANSION_NODE_RADIUS + 120;
+            const newExpandX = centerX + newExpandDist * Math.cos(baseAngle);
+            const newExpandY = centerY + newExpandDist * Math.sin(baseAngle);
+
+            const newExpandNode = {
+                id: `expand-${Date.now()}`,
+                type: 'expand',
+                x: newExpandX,
+                y: newExpandY,
+                data: { parentId: targetNode.id }
+            };
+
+            newNodes.push(newExpandNode);
+            // Connect new expand node to... the target node? or the new cluster?
+            // "Connections... Branch -> Expand node". 
+            // Let's connect to the source of this expansion.
+            newConnections.push({
+                from: targetNode.id,
+                to: newExpandNode.id,
+                type: 'expand',
+                id: `c-${targetNode.id}-${newExpandNode.id}`
+            });
+
+            dispatch({
+                type: ACTIONS.APPEND_CLUSTER,
+                payload: { nodes: newNodes, connections: newConnections }
+            });
+
+        } catch (err) {
+            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+        }
+
+    }, [state.nodes, state.connections, state.topic]);
+
+    return {
+        ...state,
+        generateNewMap,
+        handleExpand,
+        savedMaps,
+        currentMapId,
+        createNewMap,
+        deleteMap,
+        loadMap
+    };
+};

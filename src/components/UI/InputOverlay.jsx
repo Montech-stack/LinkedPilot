@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { Search, Loader2, Sparkles, Network } from 'lucide-react';
+import { MODE_LIST, DEFAULT_MODE, getModeIcon } from '../../config/modes';
+
+const SUGGESTIONS = [
+    "Quantum Computing",
+    "Machine Learning",
+    "Climate Change",
+    "Blockchain Technology",
+    "Human Psychology",
+    "Space Exploration",
+    "Artificial Intelligence",
+    "Genetic Engineering"
+];
+
+const InputOverlay = ({ onSubmit, loading }) => {
+    const [value, setValue] = useState('');
+    const [selectedMode, setSelectedMode] = useState(DEFAULT_MODE);
+    const [placeholderIdx, setPlaceholderIdx] = useState(0);
+    const [showPlaceholder, setShowPlaceholder] = useState(true);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setShowPlaceholder(false);
+            setTimeout(() => {
+                setPlaceholderIdx(prev => (prev + 1) % SUGGESTIONS.length);
+                setShowPlaceholder(true);
+            }, 300);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (value.trim()) {
+            onSubmit(value, selectedMode);
+        }
+    };
+
+    const activeMode = MODE_LIST.find(m => m.id === selectedMode);
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '28px',
+            pointerEvents: 'none',
+            zIndex: 100
+        }}>
+            {/* Hero Title */}
+            <div style={{
+                pointerEvents: 'none',
+                textAlign: 'center',
+                animation: 'fadeInUp 0.8s ease-out'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    marginBottom: '16px'
+                }}>
+                    <Network size={28} style={{
+                        color: 'var(--accent-cyan)',
+                        filter: 'drop-shadow(0 0 12px rgba(0, 212, 255, 0.4))'
+                    }} />
+                    <h1 style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '32px',
+                        fontWeight: '800',
+                        background: 'linear-gradient(135deg, var(--text) 0%, var(--accent-cyan) 50%, var(--accent-purple) 100%)',
+                        backgroundSize: '200% 200%',
+                        animation: 'gradient-shift 5s ease infinite',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        letterSpacing: '-0.5px'
+                    }}>
+                        NeuroMap
+                    </h1>
+                </div>
+                <p style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '15px',
+                    color: 'var(--text-secondary)',
+                    fontWeight: '400',
+                    letterSpacing: '0.2px'
+                }}>
+                    Turn any topic into a visual knowledge universe
+                </p>
+            </div>
+
+            {/* Mode Selector */}
+            <div style={{
+                pointerEvents: 'auto',
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                maxWidth: '560px',
+                animation: 'fadeInUp 0.8s ease-out 0.1s backwards'
+            }}>
+                {MODE_LIST.map(mode => {
+                    const Icon = getModeIcon(mode.id);
+                    const isActive = selectedMode === mode.id;
+                    return (
+                        <button
+                            key={mode.id}
+                            onClick={() => setSelectedMode(mode.id)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                border: `1px solid ${isActive ? mode.color : 'var(--glass-border)'}`,
+                                background: isActive
+                                    ? `linear-gradient(135deg, ${mode.color}18, ${mode.color}08)`
+                                    : 'var(--glass)',
+                                backdropFilter: 'blur(var(--glass-blur))',
+                                WebkitBackdropFilter: 'blur(var(--glass-blur))',
+                                color: isActive ? mode.color : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontFamily: 'var(--font-body)',
+                                fontWeight: isActive ? '600' : '400',
+                                transition: 'all 0.2s var(--ease-smooth)',
+                                boxShadow: isActive ? `0 0 15px ${mode.color}20` : 'none'
+                            }}
+                            title={mode.description}
+                        >
+                            <span style={{ fontSize: '14px' }}>{mode.emoji}</span>
+                            {mode.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Mode Description */}
+            {activeMode && (
+                <p style={{
+                    pointerEvents: 'none',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '12px',
+                    color: 'var(--muted)',
+                    textAlign: 'center',
+                    animation: 'fadeInUp 0.4s ease-out',
+                    marginTop: '-16px'
+                }}>
+                    {activeMode.description}
+                </p>
+            )}
+
+            {/* Search Input */}
+            <form
+                onSubmit={handleSubmit}
+                style={{
+                    pointerEvents: 'auto',
+                    background: 'var(--glass)',
+                    backdropFilter: 'blur(var(--glass-blur))',
+                    WebkitBackdropFilter: 'blur(var(--glass-blur))',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '16px',
+                    padding: '6px 8px 6px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: 'var(--shadow-lg), 0 0 0 1px rgba(0, 212, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+                    maxWidth: '520px',
+                    width: '90%',
+                    transition: 'all 0.3s var(--ease-smooth)',
+                    animation: 'fadeInUp 0.8s ease-out 0.2s backwards'
+                }}
+            >
+                {loading
+                    ? <Loader2 className="animate-spin" size={20} color="var(--accent-cyan)" />
+                    : <Search size={18} color="var(--muted)" />
+                }
+
+                <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    placeholder={`Explore "${SUGGESTIONS[placeholderIdx]}"...`}
+                    disabled={loading}
+                    autoFocus
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: 'var(--text)',
+                        fontSize: '15px',
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: '400',
+                        width: '100%',
+                        padding: '12px 0',
+                        transition: 'opacity 0.3s',
+                        opacity: showPlaceholder || value ? 1 : 0.7
+                    }}
+                />
+
+                <button
+                    type="submit"
+                    disabled={!value.trim() || loading}
+                    style={{
+                        background: value.trim()
+                            ? `linear-gradient(135deg, ${activeMode?.color || 'var(--accent-cyan)'}, #0EA5E9)`
+                            : 'rgba(255, 255, 255, 0.06)',
+                        color: value.trim() ? '#050709' : 'var(--muted)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '10px 18px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: value.trim() ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.25s var(--ease-smooth)',
+                        fontFamily: 'var(--font-display)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        boxShadow: value.trim() ? `0 0 20px ${activeMode?.color || 'var(--accent-cyan)'}33` : 'none'
+                    }}
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 size={14} className="animate-spin" />
+                            Thinking...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles size={14} />
+                            Explore
+                        </>
+                    )}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+export default InputOverlay;
