@@ -74,7 +74,7 @@ export const askNodeQuestion = async (node, question, contextTopic, modeId = 're
 
     User Question: "${question}"
 
-    Answer the question concisely (max 3-4 sentences). Be helpful, specific, and use the tone of the current mode (e.g., if Debate, be balanced; if Career, be actionable).
+    Answer the question in DETAIL. Do not summarize. Provide comprehensive information, context, and examples if relevant. Break down complex points. Use the tone of the current mode.
     Return PLAIN TEXT.
   `;
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Sparkles, Loader2, Send, MessageSquare, Bot } from 'lucide-react';
 import { askNodeQuestion } from '../../services/api';
+import styles from './InfoPanel.module.css';
 
 const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
     const [visible, setVisible] = useState(false);
@@ -47,38 +48,20 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
 
     return (
         <div
-            style={{
-                position: 'fixed',
-                top: '76px',
-                right: '20px',
-                width: '320px',
-                maxWidth: 'calc(100vw - 60px)',
-                background: 'var(--glass)',
-                backdropFilter: 'blur(var(--glass-blur))',
-                WebkitBackdropFilter: 'blur(var(--glass-blur))',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '16px',
-                padding: '0',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 200,
-                transform: visible && node ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.97)',
-                opacity: visible && node ? 1 : 0,
-                pointerEvents: visible && node ? 'auto' : 'none',
-                transition: 'transform 0.3s var(--ease-spring), opacity 0.25s var(--ease-smooth)',
-                overflow: 'hidden'
-            }}
+            className={`${styles.panel} ${visible && node ? styles.visible : ''}`}
         >
             {/* Gradient Top Accent */}
             <div style={{
                 height: '3px',
                 background: `linear-gradient(90deg, ${accentColor}, var(--accent-purple), ${accentColor})`,
                 backgroundSize: '200% 100%',
-                animation: 'gradient-shift 4s ease infinite'
+                animation: 'gradient-shift 4s ease infinite',
+                flexShrink: 0
             }} />
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className={styles.contentContainer}>
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexShrink: 0 }}>
                     <div style={{ flex: 1 }}>
                         {category && (
                             <div style={{
@@ -138,7 +121,8 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                 {/* Divider */}
                 <div style={{
                     height: '1px',
-                    background: 'var(--glass-border)'
+                    background: 'var(--glass-border)',
+                    flexShrink: 0
                 }} />
 
                 {/* Detail Text */}
@@ -174,7 +158,8 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                             fontWeight: '600',
                             transition: 'all 0.25s var(--ease-smooth)',
                             letterSpacing: '0.3px',
-                            marginBottom: '16px'
+                            marginBottom: '16px',
+                            flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
                             if (!loading) {
@@ -209,7 +194,8 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                     paddingTop: '16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px'
+                    gap: '12px',
+                    flexShrink: 0
                 }}>
                     <div style={{
                         display: 'flex',
