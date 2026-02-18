@@ -200,18 +200,26 @@ export default function Dashboard() {
     autoResize();
   };
 
-  // Local Storage Persistence
+  // Local Storage & URL Params Persistence
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const draftContent = searchParams.get("draft");
+
     const saved = localStorage.getItem("maxis_state");
     if (saved) {
       try {
         const s = JSON.parse(saved);
-        setInput(s.input || "");
+        // If URL param exists, override the saved input
+        setInput(draftContent || s.input || "");
         setPlatforms(s.platforms || ["LinkedIn"]);
         setPostCount(s.postCount || 1);
         setPostLength(s.postLength || "medium");
         setGeneratedPosts(s.generatedPosts || []);
-      } catch { }
+      } catch {
+        if (draftContent) setInput(draftContent);
+      }
+    } else if (draftContent) {
+      setInput(draftContent);
     }
     setIsLoaded(true);
   }, []);

@@ -40,25 +40,51 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const { prompt, style = "professional", aspectRatio = "1:1" } = await req.json();
+        const reqBody = await req.json();
+        const { prompt, style = "professional", aspectRatio = "1:1" } = reqBody;
 
         if (!prompt || prompt.trim().length === 0) {
             return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
         }
 
         // Build an enhanced prompt for social media images
+        // Build an enhanced prompt for social media images
         const enhancedPrompt = buildImagePrompt(prompt, style, aspectRatio);
+
+        // Prepare content parts
+        const parts: any[] = [{ text: enhancedPrompt }];
+
+        // Add reference image if provided (Base64 or URL)
+        // Note: For this implementation, we assume frontend sends base64 or we fetch the URL
+        // Real-world: optimize this to handle URLs directly if Gemini supports it or fetch on server
+        if (reqBody.refImage) {
+            // Basic handling for data URL
+            if (reqBody.refImage.startsWith("data:image")) {
+                const base64Data = reqBody.refImage.split(",")[1];
+                const mimeType = reqBody.refImage.split(";")[0].split(":")[1];
+                parts.push({
+                    inlineData: {
+                        data: base64Data,
+                        mimeType: mimeType
+                    }
+                });
+            }
+            // If it's a remote URL, we might need to fetch it first. 
+            // For now, simpler to rely on frontend passing base64 or skipping if complexity is too high for this turn.
+        }
 
         // Use Gemini's image generation model
         // Note: Gemini 2.0 Flash has native image generation
         const model = genAI.getGenerativeModel({
             model: "gemini-2.0-flash-exp",
             generationConfig: {
-                responseModalities: ["Text", "Image"]
+                responseModalities: ["Image"] // Force Image output
             }
         } as any);
 
-        const result = await model.generateContent(enhancedPrompt);
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts }]
+        });
         const response = await result.response;
 
         // Extract the image from the response
@@ -67,11 +93,14 @@ export async function POST(req: NextRequest) {
 
         if (response.candidates && response.candidates[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
+                // Check for inline data (legacy/standard)
                 if (part.inlineData) {
                     imageData = part.inlineData.data;
                     imageType = part.inlineData.mimeType;
                     break;
                 }
+                // Check for executable code that might generate image (rare but possible in some modes)
+                // For "Image" modality, it usually returns inlineData.
             }
         }
 

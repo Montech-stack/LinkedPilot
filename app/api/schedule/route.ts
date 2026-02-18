@@ -67,9 +67,50 @@ export async function POST(request: NextRequest) {
     // Sync to Python backend for execution tracking
     triggerPythonSync();
 
+
     return NextResponse.json(doc);
   } catch (error) {
     console.log(error);
     return NextResponse.json({ error: "Failed creating post" }, { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, content, scheduledAt, isDraft, media, mediaType, platform } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    const updateData: any = {};
+    if (content !== undefined) updateData.content = content;
+    if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+    if (isDraft !== undefined) updateData.isDraft = isDraft;
+    if (media !== undefined) updateData.media = media;
+    if (mediaType !== undefined) updateData.mediaType = mediaType;
+    if (platform !== undefined) updateData.platform = platform;
+
+    const doc = await ScheduledPost.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+
+    if (!doc) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    // Sync to Python backend
+    triggerPythonSync();
+
+    return NextResponse.json(doc);
+  } catch (error) {
+    console.log(error);
+    return NextResponse.json({ error: "Failed updating post" }, { status: 500 });
+  }
+}
+

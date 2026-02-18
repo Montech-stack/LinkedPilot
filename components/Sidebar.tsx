@@ -32,7 +32,7 @@ const navigationGroups: NavGroup[] = [
     title: "Create",
     items: [
       { icon: Sparkles, label: "Studio", href: "/dashboard", access: 'free' },
-      { icon: Dna, label: "Writing DNA", href: "/voice-clone", access: 'paid' },
+      { icon: Dna, label: "Writing DNA", href: "/writingdna", access: 'paid' },
       { icon: Target, label: "Viral Labs", href: "/hooks", access: 'free' },
     ]
   },

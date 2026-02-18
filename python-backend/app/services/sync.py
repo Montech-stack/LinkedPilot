@@ -20,9 +20,13 @@ def sync_scheduled_posts(db: Session) -> dict:
     """Sync ScheduledPost documents from MongoDB to PostgreSQL."""
     mongo_db = get_mongo_db()
 
-    # Get all unposted posts from MongoDB
+    # Get all unposted posts from MongoDB (exclude drafts)
     mongo_posts = list(
-        mongo_db.scheduledposts.find({"posted": False}).sort("scheduledAt", 1)
+        mongo_db.scheduledposts.find({
+            "posted": False,
+            "scheduledAt": {"$ne": None},
+            "isDraft": {"$ne": True}
+        }).sort("scheduledAt", 1)
     )
 
     synced = 0

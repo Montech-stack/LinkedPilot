@@ -5,7 +5,8 @@ export interface IScheduledPost extends Document {
   content: string;
   media?: string | null;
   mediaType?: "image" | "video" | null;
-  scheduledAt: Date;
+  scheduledAt?: Date;
+  isDraft?: boolean;
   posted: boolean;
   error?: string | null;
   platform?: string;
@@ -20,7 +21,8 @@ const ScheduledPostSchema = new Schema<IScheduledPost>(
     content: { type: String, required: true },
     media: { type: String, default: null },
     mediaType: { type: String, enum: ["image", "video", null], default: null },
-    scheduledAt: { type: Date, required: true },
+    scheduledAt: { type: Date, required: false },
+    isDraft: { type: Boolean, default: false },
     posted: { type: Boolean, default: false },
     error: { type: String, default: null },
     platform: { type: String, default: "linkedin" },
