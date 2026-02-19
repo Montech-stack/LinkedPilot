@@ -40,7 +40,7 @@ RULES:
 8. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are diving deeper into "${branchTitle}" within "${contextTopic}".
-Generate 5 specific sub-concepts as JSON array:
+Generate between 3 to 7 specific sub-concepts as JSON array:
 [{ "id": "unique-id", "title": "Concept (2-4 words)", "summary": "Hook (max 5 words)", "detail": "2-3 sentences with analogy/example. Explain WHY it matters." }]
 Be SPECIFIC. Use simple language. Return ONLY JSON.`
   },
@@ -82,7 +82,7 @@ RULES:
 6. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are a tutor expanding on "${branchTitle}" in the learning path for "${contextTopic}".
-Generate 5 specific LESSONS or SKILLS to learn as JSON array:
+Generate between 3 to 7 specific LESSONS or SKILLS to learn as JSON array:
 [{ "id": "unique-id", "title": "Skill/Lesson (2-4 words)", "summary": "Quick hook (max 5 words)", "detail": "2-3 sentences. What to learn, HOW to practice it, and a real-world analogy." }]
 Make it ACTIONABLE. Return ONLY JSON.`
   },
@@ -122,7 +122,7 @@ RULES:
 4. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are a creative consultant expanding "${branchTitle}" for brainstorming "${contextTopic}".
-Generate 5 specific creative ideas or approaches as JSON array:
+Generate between 3 to 7 specific creative ideas or approaches as JSON array:
 [{ "id": "unique-id", "title": "Idea (2-4 words)", "summary": "Spark (max 5 words)", "detail": "2-3 sentences. Be CREATIVE and UNEXPECTED. Use 'What if...' framing." }]
 Think WILD. Return ONLY JSON.`
   },
@@ -162,7 +162,7 @@ RULES:
 4. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are expanding the study guide section "${branchTitle}" for "${contextTopic}".
-Generate 5 specific study items as JSON array:
+Generate between 3 to 7 specific study items as JSON array:
 [{ "id": "unique-id", "title": "Study item (2-4 words)", "summary": "Key point (max 5 words)", "detail": "2-3 sentences. Include a mnemonic, practice question, or common mistake to avoid." }]
 Return ONLY JSON.`
   },
@@ -203,7 +203,7 @@ RULES:
 5. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are exploring connections in "${branchTitle}" between the topics in "${contextTopic}".
-Generate 5 specific cross-connections as JSON array:
+Generate between 3 to 7 specific cross-connections as JSON array:
 [{ "id": "unique-id", "title": "Connection (2-4 words)", "summary": "Bridge (max 5 words)", "detail": "2-3 sentences on a surprising link. Use a concrete example." }]
 Be SURPRISING. Return ONLY JSON.`
   },
@@ -249,7 +249,7 @@ RULES:
 10. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are analyzing "${branchTitle}" in the debate on "${contextTopic}".
-Generate 5 specific arguments or evidence points as JSON array:
+Generate between 3 to 7 specific arguments or evidence points as JSON array:
 [{ "id": "unique-id", "title": "Point (2-4 words)", "summary": "Key claim (max 5 words)", "detail": "2-3 sentences with specific evidence, data, or logical reasoning." }]
 Be BALANCED and EVIDENCE-BASED. Return ONLY JSON.`
   },
@@ -295,7 +295,7 @@ RULES:
 10. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are expanding "${branchTitle}" in the career guide for "${contextTopic}".
-Generate 5 specific career insights as JSON array:
+Generate between 3 to 7 specific career insights as JSON array:
 [{ "id": "unique-id", "title": "Insight (2-4 words)", "summary": "Key takeaway (max 5 words)", "detail": "2-3 sentences with SPECIFIC advice — mention real tools, job titles, or salary figures when relevant." }]
 Be ACTIONABLE and SPECIFIC. Return ONLY JSON.`
   }

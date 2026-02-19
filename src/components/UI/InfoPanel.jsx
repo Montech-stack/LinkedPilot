@@ -216,15 +216,44 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                             style={{
                                 background: 'rgba(255, 255, 255, 0.03)',
                                 borderRadius: '10px',
-                                padding: '12px',
-                                fontSize: '12.5px',
+                                padding: '16px',
+                                fontSize: '13px',
                                 lineHeight: '1.6',
                                 color: 'var(--text)',
                                 borderLeft: `3px solid ${accentColor}`,
                                 animation: 'fadeInUp 0.3s ease-out'
                             }}
                         >
-                            {answer}
+                            {answer.split('\n').map((line, i) => {
+                                // Headlines (using ### or similar if AI generates them, mostly standard markdown)
+                                if (line.startsWith('### ')) return <h4 key={i} style={{ margin: '12px 0 6px', fontSize: '14px', color: 'var(--text)' }}>{line.replace('### ', '')}</h4>;
+                                // List items
+                                if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                                    return (
+                                        <div key={i} style={{ display: 'flex', gap: '8px', marginLeft: '4px', marginBottom: '4px' }}>
+                                            <span style={{ color: accentColor }}>•</span>
+                                            <span>
+                                                {line.replace(/^[\-\*]\s+/, '').split(/(\*\*.*?\*\*)/).map((part, j) =>
+                                                    part.startsWith('**') && part.endsWith('**')
+                                                        ? <strong key={j} style={{ color: 'var(--text)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+                                                        : part
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                }
+                                // Standard paragraphs with bold support
+                                if (line.trim() === '') return <div key={i} style={{ height: '8px' }} />;
+                                return (
+                                    <p key={i} style={{ margin: '0 0 8px' }}>
+                                        {line.split(/(\*\*.*?\*\*)/).map((part, j) =>
+                                            part.startsWith('**') && part.endsWith('**')
+                                                ? <strong key={j} style={{ color: 'var(--text)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+                                                : part
+                                        )}
+                                    </p>
+                                );
+                            })}
                         </div>
                     )}
 
