@@ -11,6 +11,8 @@ import InputOverlay from './components/UI/InputOverlay';
 import Toolbar from './components/UI/Toolbar';
 import InfoPanel from './components/UI/InfoPanel';
 import Sidebar from './components/UI/Sidebar';
+import DPad from './components/UI/DPad';
+import QuizModal from './components/UI/QuizModal';
 import LandingPage from './components/Auth/LandingPage';
 import styles from './App.module.css';
 
@@ -57,7 +59,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     handleMouseMove,
     handleMouseUp,
     setScale,
-    setOffset
+    setOffset,
+    flyTo
   } = useCanvas();
 
   const {
@@ -73,10 +76,24 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     deleteMap,
     loadMap,
     topic,
-    mode
+    mode,
+    shareMap,
+    loadSharedMap
   } = useMapData();
 
   const [selectedNode, setSelectedNode] = useState(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+
+  // Handle URL params for shared maps
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mapId = params.get('mapId');
+    if (mapId) {
+      loadSharedMap(mapId);
+    }
+  }, [loadSharedMap]);
+
+
 
   // Ensure body doesn't scroll in workspace
   useEffect(() => {
@@ -91,6 +108,86 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     setSelectedNode(null);
   }, []);
 
+  const handleNavigate = useCallback((dx, dy) => {
+    const current = selectedNode || nodes.find(n => n.id === 'central') || nodes[0];
+    if (!current) return;
+
+    // Target angle from direction inputs (0,-1=Up, etc.)
+    const targetAngle = Math.atan2(dy, dx);
+
+    let bestNode = null;
+    let minDist = Infinity;
+
+    nodes.forEach(node => {
+      if (node.id === current.id) return;
+
+      const dist = Math.sqrt(Math.pow(node.x - current.x, 2) + Math.pow(node.y - current.y, 2));
+      const angle = Math.atan2(node.y - current.y, node.x - current.x);
+
+      // Angle difference (shortest path)
+      let diff = angle - targetAngle;
+      while (diff <= -Math.PI) diff += 2 * Math.PI;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+
+      // Cone of +/- 60 degrees
+      if (Math.abs(diff) < Math.PI / 3) {
+        if (dist < minDist) {
+          minDist = dist;
+          bestNode = node;
+        }
+      }
+    });
+
+    if (bestNode) {
+      setSelectedNode(bestNode);
+      flyTo(bestNode.x, bestNode.y, 1.5, 800);
+    }
+  }, [nodes, selectedNode, flyTo]);
+
+  const handleExpandWrapper = useCallback(async (nodeId) => {
+    // Return result from handleExpand (requires modification in useMapData)
+    const result = await handleExpand(nodeId);
+
+    if (result && result.nodes && result.nodes.length > 0) {
+      // Calculate center of NEW nodes
+      // Filter out the "expand" node if we want to focus on content?
+      // The last node is the new expand node. The others are content.
+      const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
+
+      if (contentNodes.length > 0) {
+        const xs = contentNodes.map(n => n.x);
+        const ys = contentNodes.map(n => n.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        // Zoom in to see them
+        flyTo(centerX, centerY, 1.2, 1500);
+      } else {
+        // Fallback if no content nodes (e.g. just expand node?)
+        const node = result.nodes[0];
+        flyTo(node.x, node.y, 1.2, 1000);
+      }
+    } else {
+      // Fallback or error
+    }
+  }, [handleExpand, flyTo]);
+
+  const handleShare = async () => {
+    try {
+      const id = await shareMap(user);
+      const link = `${window.location.origin}?mapId=${id}`;
+      await navigator.clipboard.writeText(link);
+      alert("Link copied to clipboard! Share it with the world.");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const onZoomIn = () => setScale(s => Math.min(3.0, s * 1.2));
   const onZoomOut = () => setScale(s => Math.max(0.3, s / 1.2));
   const onReset = () => {
@@ -98,6 +195,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     setScale(1);
     setSelectedNode(null);
   };
+
+  const handlePan = (dx, dy) => {
+    setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+  };
+
+
 
   return (
     <div
@@ -116,6 +219,20 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         user={user}
         onSignOut={signOut}
       />
+
+      <DPad onNavigate={handleNavigate} onReset={onReset} />
+
+      {/* Quiz Modal */}
+      {showQuiz && (
+        <QuizModal
+          topic={topic || "General Knowledge"}
+          onClose={() => setShowQuiz(false)}
+          onFindNode={(t) => {
+            if (handleFindNode(t)) setShowQuiz(false);
+            else alert("Topic not found on map!");
+          }}
+        />
+      )}
 
       {/* Input Overlay */}
       {!nodes.length && !loading && (
@@ -136,7 +253,13 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
       {/* Toolbar */}
       {nodes.length > 0 && (
-        <Toolbar onZoomIn={onZoomIn} onZoomOut={onZoomOut} onReset={onReset} />
+        <Toolbar
+          onZoomIn={onZoomIn}
+          onZoomOut={onZoomOut}
+          onReset={onReset}
+          onQuiz={() => setShowQuiz(true)}
+          onShare={handleShare}
+        />
       )}
 
       {/* Info Panel */}
@@ -186,7 +309,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
                   top: node.y,
                   position: 'absolute'
                 }}
-                onClick={() => handleExpand(node.id)}
+                onClick={() => handleExpandWrapper(node.id)}
               />
             );
           }

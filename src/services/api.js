@@ -87,3 +87,31 @@ export const askNodeQuestion = async (node, question, contextTopic, modeId = 're
     return "Sorry, I couldn't generate an answer at this moment.";
   }
 };
+
+export const generateQuiz = async (topic, levelTitle) => {
+  if (useMock) {
+    return new Promise(resolve => setTimeout(() => resolve({
+      question: `What is a key concept related to "${topic}"?`,
+      options: ["Concept A", "Concept B", "Concept C", "Concept D"],
+      correctIndex: 1,
+      explanation: `Concept B is the most relevant because it directly addresses the core principles of ${topic}.`
+    }), 800));
+  }
+
+  const prompt = `
+    Create a single multiple-choice question about "${topic}" for the rank of "${levelTitle}".
+    - Difficulty should match the rank (Novice = easy, Grandmaster = very hard/abstract).
+    - JSON Format: { "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 0, "explanation": "Brief sentence explaining the correct answer." }
+    - Return ONLY valid JSON, no markdown.
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    return parseResponse(text);
+  } catch (error) {
+    console.error("Quiz generation failed:", error);
+    throw error;
+  }
+};

@@ -1,5 +1,6 @@
 import { useState, useCallback, useReducer, useEffect } from 'react';
 import { generateMap, expandBranch } from '../services/api';
+import { supabase } from '../services/supabase';
 
 const INITIAL_STATE = {
     nodes: [],
@@ -385,11 +386,67 @@ export const useMapData = () => {
                 payload: { nodes: newNodes, connections: newConnections }
             });
 
+            return { nodes: newNodes, connections: newConnections };
+
         } catch (err) {
             dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+            return null;
         }
 
     }, [state.nodes, state.connections, state.topic]);
+
+
+    const shareMap = async (user) => {
+        if (!user) throw new Error("Please log in to share maps.");
+        if (!state.nodes.length) throw new Error("Map is empty.");
+
+        try {
+            // Upsert based on currentMapId if it exists?
+            // For now, let's just insert a new one or update if we own it.
+            // Simplified: insert new row
+            const { data, error } = await supabase.from('maps').insert({
+                user_id: user.id,
+                title: state.topic || 'Untitled Map',
+                content: { nodes: state.nodes, connections: state.connections, topic: state.topic, mode: state.mode },
+                is_public: true
+            }).select().single();
+
+            if (error) throw error;
+            return data.id; // Return the shared ID
+        } catch (err) {
+            console.error("Share error:", err);
+            throw err;
+        }
+    };
+
+
+    const loadSharedMap = useCallback(async (id) => {
+        dispatch({ type: ACTIONS.START_LOADING });
+        try {
+            const { data, error } = await supabase
+                .from('maps')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error("Map not found");
+
+            dispatch({
+                type: ACTIONS.SET_MAP,
+                payload: {
+                    nodes: data.content.nodes,
+                    connections: data.content.connections,
+                    topic: data.content.topic,
+                    mode: data.content.mode
+                }
+            });
+            setCurrentMapId(null); // It's a shared map, not one of "ours" in local storage effectively (unless we import it)
+        } catch (err) {
+            console.error("Load shared error:", err);
+            dispatch({ type: ACTIONS.SET_ERROR, payload: "Failed to load shared map." });
+        }
+    }, []);
 
     return {
         ...state,
@@ -399,6 +456,8 @@ export const useMapData = () => {
         currentMapId,
         createNewMap,
         deleteMap,
-        loadMap
+        loadMap,
+        shareMap,
+        loadSharedMap
     };
 };

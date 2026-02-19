@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight, Network, Sparkles, Sun, Moon, LogOut } from 'lucide-react';
+import NeuroAvatar from './NeuroAvatar';
 
 const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, theme, onToggleTheme, user, onSignOut }) => {
     const [collapsed, setCollapsed] = useState(false);
@@ -58,39 +59,28 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
                 transition: 'transform 0.3s var(--ease-smooth), opacity 0.25s var(--ease-smooth)',
                 pointerEvents: collapsed ? 'none' : 'auto'
             }}>
-                {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '4px' }}>
-                    <div style={{
-                        width: '36px',
-                        height: '36px',
-                        background: 'var(--gradient-cyan)',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'var(--shadow-glow-cyan)'
-                    }}>
-                        <Network size={20} color="#050709" strokeWidth={2.5} />
-                    </div>
+                    <NeuroAvatar state="idle" size={36} />
                     <div>
                         <h1 style={{
-                            fontSize: '18px',
+                            fontSize: '22px', // Larger font
                             fontFamily: 'var(--font-display)',
                             fontWeight: '800',
                             background: 'linear-gradient(135deg, var(--text), var(--accent-cyan))',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
-                            lineHeight: 1.2
+                            lineHeight: 1.2,
+                            letterSpacing: '-0.5px'
                         }}>
-                            NeuroMap
+                            Neuro
                         </h1>
                         <span style={{
-                            fontSize: '10px',
+                            fontSize: '11px',
                             color: 'var(--muted)',
                             fontFamily: 'var(--font-mono)',
                             letterSpacing: '0.5px'
                         }}>
-                            AI Mind Mapping
+                            AI Learning Companion
                         </span>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Sparkles, Loader2, Send, MessageSquare, Bot } from 'lucide-react';
+import NeuroAvatar from './NeuroAvatar';
 import { askNodeQuestion } from '../../services/api';
 import styles from './InfoPanel.module.css';
 
@@ -197,17 +198,16 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                     gap: '12px',
                     flexShrink: 0
                 }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: '600',
-                        color: 'var(--text-secondary)'
-                    }}>
-                        <Bot size={14} color={accentColor} />
-                        Ask AI about this node
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <NeuroAvatar state={asking ? 'thinking' : (answer ? 'happy' : 'idle')} size={32} />
+                        <span style={{
+                            fontSize: '14px',
+                            fontWeight: '700',
+                            color: 'var(--text)',
+                            fontFamily: 'var(--font-display)'
+                        }}>
+                            Ask Neuro
+                        </span>
                     </div>
 
                     {answer && (

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, Minus, RotateCcw } from 'lucide-react';
+import { Plus, Minus, RotateCcw, Trophy, Share2 } from 'lucide-react';
 
-const Toolbar = ({ onZoomIn, onZoomOut, onReset }) => {
+const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare }) => {
     const btnStyle = {
         background: 'var(--glass)',
         backdropFilter: 'blur(var(--glass-blur))',
@@ -48,6 +48,26 @@ const Toolbar = ({ onZoomIn, onZoomOut, onReset }) => {
             borderRadius: '14px',
             boxShadow: 'var(--shadow-md)'
         }}>
+            <button
+                style={btnStyle}
+                onClick={onShare}
+                title="Share Map"
+                onMouseEnter={(e) => handleHover(e, true)}
+                onMouseLeave={(e) => handleHover(e, false)}
+            >
+                <Share2 size={16} color="var(--accent-purple)" />
+            </button>
+            <div style={{ width: '1px', background: 'var(--glass-border)', margin: '4px 2px' }} />
+            <button
+                style={btnStyle}
+                onClick={onQuiz}
+                title="Start Neuro Quiz"
+                onMouseEnter={(e) => handleHover(e, true)}
+                onMouseLeave={(e) => handleHover(e, false)}
+            >
+                <Trophy size={16} color="var(--accent-yellow)" />
+            </button>
+            <div style={{ width: '1px', background: 'var(--glass-border)', margin: '4px 2px' }} />
             <button
                 style={btnStyle}
                 onClick={onZoomIn}

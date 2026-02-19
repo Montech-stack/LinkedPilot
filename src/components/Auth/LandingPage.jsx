@@ -83,9 +83,8 @@ const LandingPage = ({ onAuth }) => {
                         fontSize: '18px',
                         fontWeight: '800',
                         background: 'linear-gradient(135deg, var(--text), var(--accent-cyan))',
-                        WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
-                    }}>NeuroMap</span>
+                    }}>Neuro</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -137,6 +136,26 @@ const LandingPage = ({ onAuth }) => {
                 gap: '24px'
             }}>
 
+
+                {/* Neuro Avatar */}
+                <div style={{ marginBottom: '20px', animation: 'float 6s ease-in-out infinite' }}>
+                    <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #050709, #1a202c)',
+                        border: '2px solid var(--accent-cyan)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 0 30px rgba(0, 212, 255, 0.4)'
+                    }}>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ width: '12px', height: '18px', background: 'var(--accent-cyan)', borderRadius: '50%' }} />
+                            <div style={{ width: '12px', height: '18px', background: 'var(--accent-cyan)', borderRadius: '50%' }} />
+                        </div>
+                    </div>
+                </div>
 
                 {/* Main Headline */}
                 <h1 style={{
