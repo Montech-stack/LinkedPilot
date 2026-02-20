@@ -364,7 +364,16 @@ Return ONLY JSON.`
   }
 };
 
-export const MODE_LIST = Object.values(MODES);
+export const MODE_LIST = [
+  MODES.research,
+  MODES.dataIntegration,
+  MODES.connect,
+  MODES.learning,
+  MODES.revision,
+  MODES.study,
+  MODES.career,
+  MODES.brainstorm
+];
 export const DEFAULT_MODE = 'research';
 
 // Get lucide icon component by mode id

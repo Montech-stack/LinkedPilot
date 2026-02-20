@@ -188,7 +188,11 @@ const InputOverlay = ({ onSubmit, loading }) => {
                     type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    placeholder={isDataMode ? 'Click Explore to upload your Document/Database...' : `Explore "${SUGGESTIONS[placeholderIdx]}"...`}
+                    placeholder={
+                        isDataMode ? 'Click Explore to upload your Document/Database...' :
+                            selectedMode === 'connect' ? 'Enter two or more topics to connect (e.g. AI + Biology)...' :
+                                `Explore "${SUGGESTIONS[placeholderIdx]}"...`
+                    }
                     disabled={loading || isDataMode}
                     autoFocus
                     style={{
