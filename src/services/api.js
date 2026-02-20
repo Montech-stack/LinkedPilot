@@ -20,14 +20,14 @@ const parseResponse = (text) => {
   }
 };
 
-export const generateMap = async (topic, modeId = 'research') => {
+export const generateMap = async (topic, modeId = 'research', rawDataContent = null) => {
   if (useMock) {
     console.log("Using Mock API for Map Generation");
     return new Promise(resolve => setTimeout(() => resolve(MOCK_INITIAL_MAP), 1500));
   }
 
   const mode = MODES[modeId] || MODES.research;
-  const prompt = mode.generatePrompt(topic);
+  const prompt = mode.generatePrompt(topic, rawDataContent);
 
   try {
     const result = await model.generateContent(prompt);
@@ -40,14 +40,14 @@ export const generateMap = async (topic, modeId = 'research') => {
   }
 };
 
-export const expandBranch = async (branchTitle, contextTopic, modeId = 'research') => {
+export const expandBranch = async (branchTitle, contextTopic, modeId = 'research', rawDataContent = null) => {
   if (useMock) {
     console.log("Using Mock API for Expansion");
     return new Promise(resolve => setTimeout(() => resolve(MOCK_EXPANSION), 1000));
   }
 
   const mode = MODES[modeId] || MODES.research;
-  const prompt = mode.expandPrompt(branchTitle, contextTopic);
+  const prompt = mode.expandPrompt(branchTitle, contextTopic, rawDataContent);
 
   try {
     const result = await model.generateContent(prompt);

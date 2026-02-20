@@ -195,10 +195,10 @@ export const useMapData = () => {
         y: radius * Math.sin(angle)
     });
 
-    const generateNewMap = useCallback(async (topicInput, modeId = 'research') => {
+    const generateNewMap = useCallback(async (topicInput, modeId = 'research', rawDataContent = null) => {
         dispatch({ type: ACTIONS.START_LOADING });
         try {
-            const data = await generateMap(topicInput, modeId);
+            const data = await generateMap(topicInput, modeId, rawDataContent);
 
             // Create new Map ID
             const newId = Date.now().toString();

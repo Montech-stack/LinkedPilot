@@ -312,14 +312,65 @@ Number each by career impact (1 = most impactful).
 JSON array format:
 [{ "id": "unique-id", "rank": 1, "title": "Insight (2-4 words)", "summary": "Key takeaway (max 5 words)", "detail": "2-3 sentences with SPECIFIC advice — mention real tools, job titles, or salary figures when relevant." }]
 Be ACTIONABLE and SPECIFIC. Return ONLY JSON.`
+  },
+  dataIntegration: {
+    id: 'data-integration',
+    label: 'Data Explorer',
+    icon: 'Database',
+    emoji: '🗄️',
+    description: 'Map out personal documents, Drive folders, or Database schemas',
+    color: 'var(--accent-cyan)',
+    categories: ['Core Structure', 'Key Entities', 'Relationships', 'Main Concepts', 'Attributes', 'Summary Insights'],
+    generatePrompt: (topic, rawDataContent) => `
+You are an expert data architect analyzing the following raw user data.
+Topic/Source: "${topic}"
+
+RAW DATA CONTENT:
+${rawDataContent || "No data provided."}
+
+Your goal is to organize this raw text/schema into a structured mind map to help the user understand its architecture or main ideas.
+
+Generate JSON:
+{
+  "central": { "title": "Data: (short 2-3 words)", "icon": "🗃️" },
+  "branches": [
+    {
+      "id": "b1", "category": "Core Structure",
+      "title": "Main Area (e.g. Users Table or Chapter 1)",
+      "summary": "Brief observation (max 8 words)",
+      "detail": "3-4 sentences summarizing this specific section of the data.",
+      "icon": "📊",
+      "children": [{ "id": "b1-1", "title": "Specific Column or Sub-concept", "detail": "2-3 sentences explaining this attribute." }]
+    }
+  ]
+}
+
+RULES:
+1. Exactly 6 branches representing the main groupings (e.g., schemas, logical document sections).
+2. Each branch has exactly 3 children (e.g., specific columns, specific facts).
+3. If the data is a Database Schema, group by conceptual tables. If it's a Text Document, group by themes or chapters.
+4. Return ONLY valid JSON.`,
+    expandPrompt: (branchTitle, contextTopic, rawDataContent) => `
+You are expanding on "${branchTitle}" from the data source "${contextTopic}".
+Use the following RAW DATA to provide deeper insights:
+
+RAW DATA CONTENT:
+${rawDataContent || "No data provided."}
+
+Generate ALL relevant specific details regarding this branch. No fixed limit.
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Detail (2-4 words)", "summary": "Quick note", "detail": "2-3 sentences explaining this specific column, entity, or document fact." }]
+Return ONLY JSON.`
   }
 };
 
 export const MODE_LIST = Object.values(MODES);
 export const DEFAULT_MODE = 'research';
 
+import { Search, BookOpen, Lightbulb, ClipboardList, Link2, RefreshCcw, Rocket, Database } from 'lucide-react';
+
 // Get lucide icon component by mode id
 export const getModeIcon = (modeId) => {
-  const icons = { research: Search, learning: BookOpen, brainstorm: Lightbulb, study: ClipboardList, connect: Link2, revision: RefreshCcw, career: Rocket };
+  const icons = { research: Search, learning: BookOpen, brainstorm: Lightbulb, study: ClipboardList, connect: Link2, revision: RefreshCcw, career: Rocket, 'data-integration': Database };
   return icons[modeId] || Search;
 };

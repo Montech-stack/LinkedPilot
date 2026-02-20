@@ -14,6 +14,7 @@ import Sidebar from './components/UI/Sidebar';
 import DPad from './components/UI/DPad';
 import QuizModal from './components/UI/QuizModal';
 import LandingPage from './components/Auth/LandingPage';
+import DataConnectModal from './components/UI/DataConnectModal';
 import { predictBranch } from './services/api';
 import styles from './App.module.css';
 
@@ -85,6 +86,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
   const [selectedNode, setSelectedNode] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showDataConnect, setShowDataConnect] = useState(false);
 
   // Handle URL params for shared maps
   useEffect(() => {
@@ -112,6 +114,18 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   const handleCanvasClick = useCallback(() => {
     setPanelNode(null);
   }, []);
+
+  const handleInputSubmit = (submittedTopic, selectedMode) => {
+    if (selectedMode === 'data-integration') {
+      setShowDataConnect(true);
+    } else {
+      generateNewMap(submittedTopic, selectedMode);
+    }
+  };
+
+  const handleDataConnect = (dataPayload) => {
+    generateNewMap(dataPayload.topic, 'data-integration', dataPayload.content);
+  };
 
   const handleNavigate = useCallback((dx, dy) => {
     // Determine current node (or mock central if none)
@@ -424,9 +438,17 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         />
       )}
 
+      {/* Data Integration Modal */}
+      {showDataConnect && (
+        <DataConnectModal
+          onClose={() => setShowDataConnect(false)}
+          onConnect={handleDataConnect}
+        />
+      )}
+
       {/* Input Overlay */}
-      {!nodes.length && !loading && (
-        <InputOverlay onSubmit={generateNewMap} loading={loading} />
+      {!nodes.length && !loading && !showDataConnect && (
+        <InputOverlay onSubmit={handleInputSubmit} loading={loading} />
       )}
 
       {nodes.length === 0 && loading && (
