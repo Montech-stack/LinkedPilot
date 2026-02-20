@@ -97,6 +97,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
 
 
+  const [panelNode, setPanelNode] = useState(null);
+
   // Ensure body doesn't scroll in workspace
   useEffect(() => {
     document.body.classList.remove('landing-page');
@@ -104,10 +106,11 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
+    setPanelNode(node); // Update panel content only on direct click
   }, []);
 
   const handleCanvasClick = useCallback(() => {
-    // setSelectedNode(null); // Keep panel open on canvas click
+    // setPanelNode(null); // Keep panel open on canvas click
   }, []);
 
   const handleNavigate = useCallback((dx, dy) => {
@@ -432,14 +435,14 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
       {/* Info Panel */}
       <InfoPanel
-        node={selectedNode}
-        onClose={() => setSelectedNode(null)}
-        onExpand={handleExpandWrapper}
-        onCollapse={collapseNode}
+        node={panelNode}
+        onClose={() => setPanelNode(null)}
         connections={connections}
-        loading={loading}
+        onExpand={handleExpandWrapper}
+        onCollapse={handleCollapseWrapper}
+        loading={expanding}
         topic={topic}
-        mode={mode}
+        mode={generateMode}
       />
 
       <Canvas
