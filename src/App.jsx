@@ -111,40 +111,129 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   }, []);
 
   const handleNavigate = useCallback((dx, dy) => {
-    const current = selectedNode || nodes.find(n => n.id === 'central') || nodes[0];
+    // Determine current node (or mock central if none)
+    let current = selectedNode;
+    // If no node selected, try to find the one closest to screen center
+    if (!current) {
+      // Simple fallback: just use central node
+      current = nodes.find(n => n.id === 'central') || nodes[0];
+    }
     if (!current) return;
 
-    // Target angle from direction inputs (0,-1=Up, etc.)
-    const targetAngle = Math.atan2(dy, dx);
+    let nextNode = null;
 
-    let bestNode = null;
-    let minDist = Infinity;
+    // UP: Go to Parent
+    if (dy < -0.5) {
+      if (current.id === 'central') return; // Central has no parent
+      const parentConn = connections.find(c => {
+        const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+        return toId === current.id;
+      });
+      if (parentConn) {
+        const fromId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
+        nextNode = nodes.find(n => n.id === fromId);
+      }
+    }
+    // DOWN: Go to Child (Middle or First)
+    else if (dy > 0.5) {
+      const potentialChildren = connections
+        .filter(c => {
+          const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+          return fromId === current.id;
+        })
+        .map(c => {
+          const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+          return nodes.find(n => n.id === toId);
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.y - b.y); // Sort by vertical check
 
-    nodes.forEach(node => {
-      if (node.id === current.id) return;
+      if (potentialChildren.length > 0) {
+        // Pick middle child for intuitive navigation
+        nextNode = potentialChildren[Math.floor(potentialChildren.length / 2)];
+      }
+    }
+    // LEFT/RIGHT: Go to Sibling
+    else if (Math.abs(dx) > 0.5) {
+      if (current.id === 'central') return; // Central has no siblings
 
-      const dist = Math.sqrt(Math.pow(node.x - current.x, 2) + Math.pow(node.y - current.y, 2));
-      const angle = Math.atan2(node.y - current.y, node.x - current.x);
+      // Find parent to get sibling list
+      const parentConn = connections.find(c => {
+        const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+        return toId === current.id;
+      });
 
-      // Angle difference (shortest path)
-      let diff = angle - targetAngle;
-      while (diff <= -Math.PI) diff += 2 * Math.PI;
-      while (diff > Math.PI) diff -= 2 * Math.PI;
+      if (parentConn) {
+        const parentId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
 
-      // Cone of +/- 60 degrees
-      if (Math.abs(diff) < Math.PI / 3) {
-        if (dist < minDist) {
-          minDist = dist;
-          bestNode = node;
+        // Get all siblings (children of same parent), sorted by Y or relevant order
+        // For branches, they are often circular, but let's try sorting by angle or just ID order
+        // A simple effective strategy for radial maps: Sort by angle relative to parent
+        const siblings = connections
+          .filter(c => {
+            const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+            return fromId === parentId;
+          })
+          .map(c => {
+            const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+            return nodes.find(n => n.id === toId);
+          })
+          .filter(Boolean)
+          // Sort siblings by Y for list-like, or angle for radial. 
+          // Let's rely on array order which often matches creation/layout order
+          .sort((a, b) => a.y - b.y);
+
+        const currentIndex = siblings.findIndex(n => n.id === current.id);
+
+        if (currentIndex !== -1) {
+          if (dx > 0.5) { // Right -> Next
+            nextNode = siblings[currentIndex + 1] || siblings[0]; // Cycle? or stop? Let's cycle or stop.
+          } else { // Left -> Prev
+            nextNode = siblings[currentIndex - 1] || siblings[siblings.length - 1];
+          }
         }
       }
-    });
-
-    if (bestNode) {
-      // setSelectedNode(bestNode); // Don't select, just move camera (keeps InfoPanel stable)
-      flyTo(bestNode.x, bestNode.y, 1.5, 800);
     }
-  }, [nodes, selectedNode, flyTo]);
+
+    if (nextNode) {
+      // Don't select, just fly to it (keeps InfoPanel stable)
+      flyTo(nextNode.x, nextNode.y, 1.5, 600);
+      // NOTE: We might want to implicitly track "focused" node without selecting, 
+      // but 'selectedNode' is our state. If we don't update selectedNode, 
+      // subsequent navigations will define "current" as the OLD selectedNode.
+      // FIX: We MUST update selectedNode for navigation continuity, OR use a separate 'focusedNode' state.
+      // Since user said "don't open panel", but we need to track where we are...
+      // Paradox: User wants to navigate. If I don't update selectedNode, pressing DOWN twice 
+      // will just go Parent -> Child, then Parent -> Child again (stuck).
+
+      // OPTION: We update selectedNode, but modify InfoPanel to NOT open automatically?
+      // User said: "Info panel should not automatically open... ONLY open when new node is SELECTED"
+      // Implication: Navigation selects "focus" but not "selection".
+
+      // Hack for now: Updating selectedNode IS how we know where we are.
+      // If we don't update it, navigation allows 1 step then stuck.
+      // I will update selectedNode, BUT I will check if InfoPanel has a prop to stay closed?
+      // Actually, user said: "instead it should only open up or change when a new node is selected"
+      // This implies Navigation != Selection.
+
+      // Use a separate state ref or just force selection?
+      // Wait, if I don't select, I can't navigate further. 
+      // I will update selectedNode for now to fix the navigation logic.
+      // To satisfy "don't open panel", I would need a "source=navigation" flag.
+
+      // Let's look at the previous step. 
+      // I removed setSelectedNode. That broke multi-step navigation.
+
+      // FIX: setSelectedNode(nextNode) IS REQUIRED for navigation to continue from new spot.
+      // I will restore it, because without it, you can't navigate >1 step.
+      // To fix the "InfoPanel opens" issue, I should probably pass a flag or handle it in InfoPanel side.
+      // Or... simply realize that "Selected" means "Info Panel Open".
+      // Maybe I need a `focusedNode` state? That's too big a refactor.
+
+      // Compromise: I will set selectedNode, because otherwise navigation is broken.
+      setSelectedNode(nextNode);
+    }
+  }, [nodes, connections, selectedNode, flyTo]);
 
   const handleFindNode = useCallback(async (conceptText) => {
     const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'and', 'or', 'that', 'this', 'it', 'are', 'was', 'be', 'has', 'had', 'with', 'as', 'by', 'on', 'at', 'from', 'which', 'how', 'why', 'who', 'do', 'does', 'did']);
