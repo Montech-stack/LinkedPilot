@@ -444,7 +444,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         connections={connections}
         onExpand={handleExpandWrapper}
         onCollapse={handleCollapseWrapper}
-        loading={expanding}
+        loading={loading}
         topic={topic}
         mode={generateMode}
       />
