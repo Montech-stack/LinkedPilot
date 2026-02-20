@@ -1,4 +1,4 @@
-import { Search, BookOpen, Lightbulb, ClipboardList, Link2, RefreshCcw, Rocket } from 'lucide-react';
+import { Search, BookOpen, Lightbulb, ClipboardList, Link2, RefreshCcw, Rocket, Database } from 'lucide-react';
 
 export const MODES = {
   research: {
@@ -366,8 +366,6 @@ Return ONLY JSON.`
 
 export const MODE_LIST = Object.values(MODES);
 export const DEFAULT_MODE = 'research';
-
-import { Search, BookOpen, Lightbulb, ClipboardList, Link2, RefreshCcw, Rocket, Database } from 'lucide-react';
 
 // Get lucide icon component by mode id
 export const getModeIcon = (modeId) => {
