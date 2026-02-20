@@ -104,28 +104,40 @@ export const generateQuiz = async (topic, levelTitle, modeId = 'research') => {
   let contextInstruction = "";
   switch (mode.id) {
     case 'career':
-      contextInstruction = "Focus on JOB ROLES, SKILLS, SALARIES, or INDUSTRY TRENDS.";
+      contextInstruction = "GOAL: Help the user understand the career landscape. Ask about REQUIRED SKILLS, JOB ROLES, SALARY EXPECTATIONS, and INDUSTRY TRENDS. Test their readiness for a job in this field.";
       break;
     case 'learning':
-      contextInstruction = "Focus on PREREQUISITES, CORE CONCEPTS, or LEARNING ORDER.";
+      contextInstruction = "GOAL: Take the user from beginner to mastery. Ask about PREREQUISITES, FUNDAMENTAL CONCEPTS, and ADVANCED TOPICS. Ensure they understand the 'why' and 'how'.";
       break;
     case 'revision':
-      contextInstruction = "Focus on MEMORIZATION, COMMON MISTAKES, or KEY FACTS.";
+      contextInstruction = "GOAL: Rapid-fire test of recall. Ask about KEY FACTS, DEFINITIONS, and MEMORIZATION items. Focus on things often forgotten.";
+      break;
+    case 'study':
+      contextInstruction = "GOAL: Prepare the user for an EXAM. Ask about CORE THEORIES, FORMULAS, and COMMON PITFALLS. Make the questions exam-style.";
       break;
     case 'brainstorm':
-      contextInstruction = "Focus on CREATIVE PROBLEM SOLVING or INNOVATIVE ANGLES.";
+      contextInstruction = "GOAL: Spark creative thinking. Ask about UNCONVENTIONAL SOLUTIONS, 'WHAT IF' SCENARIOS, and PROBLEM-SOLVING angles.";
       break;
-    default: // research, connect, study
-      contextInstruction = "Focus on TECHNICAL DEFINITIONS, CONCEPTS, or MECHANISMS.";
+    default: // research, connect
+      contextInstruction = "GOAL: Deep technical understanding. Ask about DEFINITIONS, MECHANISMS, and NUANCED DETAILS of the topic.";
   }
 
   const prompt = `
-    Create a single multiple-choice question about "${topic}" for the rank of "${levelTitle}".
-    CONTEXT: This is for a "${mode.label}" map. ${contextInstruction}
+    Act as an expert EXAMINER conducting a viva/oral exam on "${topic}".
     
-    - Difficulty should match the rank (Novice = easy, Grandmaster = very hard/abstract).
-    - JSON Format: { "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 0, "explanation": "Brief sentence explaining the correct answer." }
-    - Return ONLY valid JSON, no markdown.
+    ${contextInstruction}
+    
+    Your task is to generate a SINGLE multiple-choice question to test the user's mastery of the specific concept: "${topic}".
+    
+    CRITICAL RULES:
+    1. Test the USER'S KNOWLEDGE of the subject matter itself.
+    2. Do NOT ask about the "mind map", "nodes", or "structure".
+    3. Do NOT ask "What is a prerequisite for...?" -> instead, ask a question ABOUT that prerequisite.
+    4. Difficulty should match the rank: "${levelTitle}" (Novice = fundamental/easy, Grandmaster = complex/nuanced/application-based).
+    5. The question should be part of an infinite series covering the ENTIRE SCOPE of the topic.
+    
+    JSON Format: { "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 0, "explanation": "Brief, educational explanation of why the answer is correct." }
+    Return ONLY valid JSON.
   `;
 
   try {
