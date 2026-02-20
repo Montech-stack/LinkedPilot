@@ -22,11 +22,11 @@ const DPad = ({ onNavigate, onReset, selectedNode }) => {
         if (onNavigate) onNavigate(dx, dy);
     };
 
-    // On mobile: when InfoPanel (selectedNode) is open, move DPad to top-right
+    // On mobile: when InfoPanel (selectedNode) is open, move DPad to top-left
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const positionStyle = isMobile && selectedNode
-        ? { top: '20px', right: '20px', bottom: 'auto' }
-        : { bottom: '20px', right: '20px' };
+        ? { top: '20px', left: '20px', bottom: 'auto' }
+        : { bottom: '20px', left: '20px' };
 
     return (
         <div style={{

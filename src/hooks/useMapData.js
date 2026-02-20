@@ -18,6 +18,7 @@ const ACTIONS = {
     SET_ERROR: 'SET_ERROR',
     SET_MAP: 'SET_MAP',
     APPEND_CLUSTER: 'APPEND_CLUSTER',
+    REMOVE_CHILDREN: 'REMOVE_CHILDREN',
     RESET: 'RESET'
 };
 
@@ -48,6 +49,30 @@ const mapReducer = (state, action) => {
             };
         case ACTIONS.RESET:
             return INITIAL_STATE;
+        case ACTIONS.REMOVE_CHILDREN: {
+            const parentId = action.payload;
+            // Recursively find all descendant node IDs
+            const toRemove = new Set();
+            const findDescendants = (pid) => {
+                state.connections.forEach(c => {
+                    const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+                    const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+                    if (fromId === pid && !toRemove.has(toId)) {
+                        toRemove.add(toId);
+                        findDescendants(toId);
+                    }
+                });
+            };
+            findDescendants(parentId);
+            return {
+                ...state,
+                nodes: state.nodes.filter(n => !toRemove.has(n.id)),
+                connections: state.connections.filter(c => {
+                    const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+                    return fromId !== parentId && !toRemove.has(fromId);
+                })
+            };
+        }
         default:
             return state;
     }
@@ -231,7 +256,7 @@ export const useMapData = () => {
                 connections.push({ from: centralNode.id, to: branchNode.id, type: 'central', id: `c-${centralNode.id}-${branchNode.id}` });
 
                 // 3. Sub Nodes - REMOVED for clarity (User Request)
-                // Users will expand branches manually via "Expand with AI"
+                // Users will expand branches manually via "Expand with Neuro"
                 /* 
                 if (branch.children) {
                     branch.children.forEach((child, j) => {
@@ -305,8 +330,8 @@ export const useMapData = () => {
         try {
             const newSubTopics = await expandBranch(parentTopic, state.topic, state.mode);
 
-            // Sort by rank if available (1 = most important)
-            const sortedTopics = [...newSubTopics].sort((a, b) => (a.rank || 999) - (b.rank || 999));
+            // Sort by rank if available (1 = most important), keep top 5
+            const sortedTopics = [...newSubTopics].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 5);
 
             const newNodes = [];
             const newConnections = [];
@@ -476,6 +501,10 @@ export const useMapData = () => {
         }
     }, []);
 
+    const collapseNode = useCallback((nodeId) => {
+        dispatch({ type: ACTIONS.REMOVE_CHILDREN, payload: nodeId });
+    }, []);
+
     return {
         ...state,
         generateNewMap,
@@ -486,6 +515,7 @@ export const useMapData = () => {
         deleteMap,
         loadMap,
         shareMap,
-        loadSharedMap
+        loadSharedMap,
+        collapseNode
     };
 };

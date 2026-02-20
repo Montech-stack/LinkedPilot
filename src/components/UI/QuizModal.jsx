@@ -60,7 +60,9 @@ const saveDbProgress = async (userId, topic, level, streak) => {
     } catch (e) { console.warn("DB quiz save error:", e); }
 };
 
-const QuizModal = ({ topic, onClose, onFindNode, user }) => {
+const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
+    // Composite key: different mode = different quiz progress
+    const progressKey = `${topic}::${mode || 'research'}`;
     const [level, setLevel] = useState(1);
     const [loading, setLoading] = useState(false);
     const [questionData, setQuestionData] = useState(null);
@@ -86,17 +88,16 @@ const QuizModal = ({ topic, onClose, onFindNode, user }) => {
         setLoading(false);
     };
 
-    // Save to both localStorage and DB
     const saveProgress = (newLevel, newStreak) => {
-        saveLocalProgress(topic, newLevel, newStreak);
-        saveDbProgress(user?.id, topic, newLevel, newStreak);
+        saveLocalProgress(progressKey, newLevel, newStreak);
+        saveDbProgress(user?.id, progressKey, newLevel, newStreak);
     };
 
     // Load saved progress on mount
     useEffect(() => {
         const loadProgress = async () => {
-            const dbProgress = await getDbProgress(user?.id, topic);
-            const localProgress = getLocalProgress(topic);
+            const dbProgress = await getDbProgress(user?.id, progressKey);
+            const localProgress = getLocalProgress(progressKey);
             const saved = dbProgress || localProgress || { level: 1, streak: 0 };
 
             setLevel(saved.level);

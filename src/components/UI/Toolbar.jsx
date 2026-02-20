@@ -36,7 +36,7 @@ const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare }) => {
         <div style={{
             position: 'fixed',
             top: '20px',
-            right: '20px',
+            left: '80px',
             zIndex: 100,
             display: 'flex',
             gap: '6px',

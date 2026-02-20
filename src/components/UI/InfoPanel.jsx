@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Sparkles, Loader2, Send, MessageSquare, Bot } from 'lucide-react';
+import { X, Sparkles, Loader2, Send, MessageSquare, Bot, Minimize2 } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 import { askNodeQuestion } from '../../services/api';
 import styles from './InfoPanel.module.css';
 
-const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
+const InfoPanel = ({ node, onClose, onExpand, onCollapse, connections, loading, topic, mode }) => {
     const [visible, setVisible] = useState(false);
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
@@ -137,57 +137,80 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                     {detail}
                 </p>
 
-                {/* Expand Button */}
-                {(type === 'branch' || type === 'sub') && (
-                    <button
-                        onClick={() => onExpand(node.id)}
-                        disabled={loading}
-                        style={{
-                            marginTop: '4px',
-                            background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.06))',
-                            border: '1px solid rgba(0, 212, 255, 0.2)',
-                            color: 'var(--accent-cyan)',
-                            padding: '11px',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: '8px',
-                            cursor: loading ? 'wait' : 'pointer',
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            transition: 'all 0.25s var(--ease-smooth)',
-                            letterSpacing: '0.3px',
-                            marginBottom: '16px',
-                            flexShrink: 0
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!loading) {
-                                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(124, 58, 237, 0.12))';
-                                e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.4)';
-                                e.currentTarget.style.boxShadow = 'var(--shadow-glow-cyan)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.06))';
-                            e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.2)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={14} className="animate-spin" />
-                                Expanding...
-                            </>
-                        ) : (
-                            <>
-                                <Sparkles size={14} />
-                                Expand with AI
-                            </>
-                        )}
-                    </button>
-                )}
+                {/* Expand / Unexpand Button */}
+                {(type === 'branch' || type === 'sub') && (() => {
+                    const isExpanded = connections && node && connections.some(c => {
+                        const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+                        return fromId === node.id;
+                    });
+                    return (
+                        <button
+                            onClick={() => isExpanded ? onCollapse(node.id) : onExpand(node.id)}
+                            disabled={loading}
+                            style={{
+                                width: '100%',
+                                padding: '10px 16px',
+                                background: isExpanded
+                                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.06))'
+                                    : 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.06))',
+                                border: `1px solid ${isExpanded ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 212, 255, 0.2)'}`,
+                                borderRadius: '10px',
+                                color: isExpanded ? 'var(--accent-red, #EF4444)' : 'var(--accent-cyan)',
+                                cursor: loading ? 'wait' : 'pointer',
+                                fontFamily: 'var(--font-display)',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                transition: 'all 0.25s var(--ease-smooth)',
+                                letterSpacing: '0.3px',
+                                marginBottom: '16px',
+                                flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!loading) {
+                                    if (isExpanded) {
+                                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.12))';
+                                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                                    } else {
+                                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(124, 58, 237, 0.12))';
+                                        e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.4)';
+                                        e.currentTarget.style.boxShadow = 'var(--shadow-glow-cyan)';
+                                    }
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (isExpanded) {
+                                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.06))';
+                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                                } else {
+                                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.06))';
+                                    e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.2)';
+                                }
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    Expanding...
+                                </>
+                            ) : isExpanded ? (
+                                <>
+                                    <Minimize2 size={14} />
+                                    Unexpand
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles size={14} />
+                                    Expand with Neuro
+                                </>
+                            )}
+                        </button>
+                    );
+                })()}
 
                 {/* Q&A Section */}
                 <div style={{

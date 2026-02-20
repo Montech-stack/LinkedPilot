@@ -78,7 +78,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     topic,
     mode,
     shareMap,
-    loadSharedMap
+    loadSharedMap,
+    collapseNode
   } = useMapData();
 
   const [selectedNode, setSelectedNode] = useState(null);
@@ -309,6 +310,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         <QuizModal
           topic={topic || "General Knowledge"}
           user={user}
+          mode={mode}
           onClose={() => setShowQuiz(false)}
           onFindNode={async (concept) => {
             const found = await handleFindNode(concept);
@@ -350,6 +352,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         node={selectedNode}
         onClose={() => setSelectedNode(null)}
         onExpand={handleExpandWrapper}
+        onCollapse={collapseNode}
+        connections={connections}
         loading={loading}
         topic={topic}
         mode={mode}
