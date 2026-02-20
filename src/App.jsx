@@ -110,7 +110,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   }, []);
 
   const handleCanvasClick = useCallback(() => {
-    // setPanelNode(null); // Keep panel open on canvas click
+    setPanelNode(null);
   }, []);
 
   const handleNavigate = useCallback((dx, dy) => {
@@ -194,10 +194,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         const currentIndex = siblings.findIndex(n => n.id === current.id);
 
         if (currentIndex !== -1) {
-          if (dx > 0.5) { // Right -> Next
-            nextNode = siblings[currentIndex + 1] || siblings[0];
-          } else { // Left -> Prev
+          if (dx > 0.5) { // Right -> Prev (swap left and right based on user request)
             nextNode = siblings[currentIndex - 1] || siblings[siblings.length - 1];
+          } else { // Left -> Next
+            nextNode = siblings[currentIndex + 1] || siblings[0];
           }
         }
       }
@@ -299,27 +299,33 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     const result = await handleExpand(targetBranch.id);
 
     if (result && result.nodes && result.nodes.length > 0) {
-      // Find best match in expanded nodes
+      // Find best match in newly expanded sub-nodes
       let expandBest = null;
-      let expandBestScore = 0;
-      result.nodes.filter(n => n.type === 'sub').forEach(n => {
+      let expandBestScore = -1;
+
+      const subNodes = result.nodes.filter(n => n.type === 'sub');
+
+      subNodes.forEach(n => {
         const s = scoreNode(n);
-        if (s > expandBestScore) { expandBestScore = s; expandBest = n; }
+        if (s > expandBestScore) {
+          expandBestScore = s;
+          expandBest = n;
+        }
       });
 
-      if (expandBest) {
+      // If we found a reasonable text match in the newly expanded nodes
+      if (expandBest && expandBestScore > 0) {
         flyTo(expandBest.x, expandBest.y, 1.5, 1200);
         setSelectedNode(expandBest);
         setPanelNode(expandBest);
         return true;
       }
 
-      // If no text match, just go to the first expanded sub-node
-      const firstSub = result.nodes.find(n => n.type === 'sub');
-      if (firstSub) {
-        flyTo(firstSub.x, firstSub.y, 1.5, 1200);
-        setSelectedNode(firstSub);
-        setPanelNode(firstSub);
+      // If no text match at all, just go to the first expanded sub-node
+      if (subNodes.length > 0) {
+        flyTo(subNodes[0].x, subNodes[0].y, 1.5, 1200);
+        setSelectedNode(subNodes[0]);
+        setPanelNode(subNodes[0]);
         return true;
       }
     }
@@ -453,6 +459,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         connections={connections}
         onExpand={handleExpandWrapper}
         onCollapse={handleCollapseWrapper}
+        onNavigate={handleNavigate}
         loading={loading}
         topic={topic}
         mode={mode}

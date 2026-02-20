@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Sparkles, Loader2, Send, MessageSquare, Bot, Minimize2 } from 'lucide-react';
+import { X, Sparkles, Loader2, Send, MessageSquare, Bot, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 import { askNodeQuestion } from '../../services/api';
 import styles from './InfoPanel.module.css';
 
-const InfoPanel = ({ node, onClose, onExpand, onCollapse, connections, loading, topic, mode }) => {
+const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connections, loading, topic, mode }) => {
     const [visible, setVisible] = useState(false);
     const [question, setQuestion] = useState('');
     const [messages, setMessages] = useState([]); // Array of { type: 'user' | 'ai', content: string }
@@ -137,19 +137,51 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, connections, loading, 
                                 {title}
                             </h2>
                         </div>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                background: 'var(--surface2)', border: '1px solid var(--glass-border)',
-                                color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px',
-                                borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                        >
-                            <X size={14} />
-                        </button>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            {/* Navigation controls inside InfoPanel */}
+                            <button
+                                onClick={() => onNavigate && onNavigate(0, -1)}
+                                style={{
+                                    background: 'var(--surface2)', border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px',
+                                    borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                }}
+                                title="Go to Parent"
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                            >
+                                <ChevronUp size={14} />
+                            </button>
+                            <button
+                                onClick={() => onNavigate && onNavigate(0, 1)}
+                                style={{
+                                    background: 'var(--surface2)', border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px',
+                                    borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                }}
+                                title="Go to Child"
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                            >
+                                <ChevronDown size={14} />
+                            </button>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    background: 'var(--surface2)', border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px',
+                                    borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s', marginLeft: '4px'
+                                }}
+                                title="Close"
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ height: '1px', background: 'var(--glass-border)', marginBottom: '12px' }} />
