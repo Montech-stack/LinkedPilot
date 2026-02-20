@@ -107,7 +107,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   }, []);
 
   const handleCanvasClick = useCallback(() => {
-    setSelectedNode(null);
+    // setSelectedNode(null); // Keep panel open on canvas click
   }, []);
 
   const handleNavigate = useCallback((dx, dy) => {
