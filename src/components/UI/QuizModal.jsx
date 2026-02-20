@@ -12,7 +12,12 @@ const RANKS = [
     { level: 4, title: "Axon Adventurer", color: "#F472B6" },
     { level: 5, title: "Cortex Commander", color: "#A78BFA" },
     { level: 6, title: "Lobe Legend", color: "#F87171" },
-    { level: 7, title: "Neuro Grandmaster", color: "#FCD34D" } // Gold
+    { level: 7, title: "Myelin Master", color: "#6EE7B7" },
+    { level: 8, title: "Glial Guru", color: "#93C5FD" },
+    { level: 9, title: "Synaptic Sage", color: "#D8B4FE" },
+    { level: 10, title: "Neural Navigator", color: "#FCA5A5" },
+    { level: 11, title: "Cognitive Captain", color: "#FDE047" },
+    { level: 12, title: "Neuro Grandmaster", color: "#FCD34D" } // Gold
 ];
 
 const STORAGE_KEY = 'neuroQuizProgress';
@@ -117,7 +122,7 @@ const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
             const newStreak = streak + 1;
             setStreak(newStreak);
             // Save next level so quiz resumes there on reopen
-            saveProgress(Math.min(level + 1, 7), newStreak);
+            saveProgress(Math.min(level + 1, RANKS.length), newStreak);
             setShowConfetti(true);
         } else {
             setResult('incorrect');
@@ -127,7 +132,7 @@ const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
     };
 
     const handleNext = () => {
-        if (level < 7 && result === 'correct') {
+        if (level < RANKS.length && result === 'correct') {
             const newLevel = level + 1;
             setLevel(newLevel);
             saveProgress(newLevel, streak);
@@ -353,7 +358,7 @@ const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
                                                 gap: '8px'
                                             }}
                                         >
-                                            {level === 7 ? 'Victory' : 'Next Level'}
+                                            {level === RANKS.length ? 'Victory' : 'Next Level'}
                                             <ArrowRight size={16} />
                                         </button>
                                     )}
