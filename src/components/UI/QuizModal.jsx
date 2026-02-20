@@ -80,8 +80,8 @@ const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
         setResult(null);
         setShowConfetti(false);
         try {
-            const data = await generateQuiz(topic, RANKS[lvl - 1].title);
-            setQuestionData(data);
+            const quizData = await generateQuiz(topic, RANKS[lvl - 1].title, mode);
+            setQuestionData(quizData);
         } catch (error) {
             console.error("Quiz Error:", error);
         }

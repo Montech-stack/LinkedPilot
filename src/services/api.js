@@ -88,18 +88,41 @@ export const askNodeQuestion = async (node, question, contextTopic, modeId = 're
   }
 };
 
-export const generateQuiz = async (topic, levelTitle) => {
+export const generateQuiz = async (topic, levelTitle, modeId = 'research') => {
+  const mode = MODES[modeId] || MODES.research;
+
   if (useMock) {
     return new Promise(resolve => setTimeout(() => resolve({
-      question: `What is a key concept related to "${topic}"?`,
+      question: `[${mode.label}] What is a key concept related to "${topic}"?`,
       options: ["Concept A", "Concept B", "Concept C", "Concept D"],
       correctIndex: 1,
-      explanation: `Concept B is the most relevant because it directly addresses the core principles of ${topic}.`
+      explanation: `Concept B is critical in the context of ${mode.label} for ${topic}.`
     }), 800));
+  }
+
+  // Base prompt instructions based on mode
+  let contextInstruction = "";
+  switch (mode.id) {
+    case 'career':
+      contextInstruction = "Focus on JOB ROLES, SKILLS, SALARIES, or INDUSTRY TRENDS.";
+      break;
+    case 'learning':
+      contextInstruction = "Focus on PREREQUISITES, CORE CONCEPTS, or LEARNING ORDER.";
+      break;
+    case 'revision':
+      contextInstruction = "Focus on MEMORIZATION, COMMON MISTAKES, or KEY FACTS.";
+      break;
+    case 'brainstorm':
+      contextInstruction = "Focus on CREATIVE PROBLEM SOLVING or INNOVATIVE ANGLES.";
+      break;
+    default: // research, connect, study
+      contextInstruction = "Focus on TECHNICAL DEFINITIONS, CONCEPTS, or MECHANISMS.";
   }
 
   const prompt = `
     Create a single multiple-choice question about "${topic}" for the rank of "${levelTitle}".
+    CONTEXT: This is for a "${mode.label}" map. ${contextInstruction}
+    
     - Difficulty should match the rank (Novice = easy, Grandmaster = very hard/abstract).
     - JSON Format: { "question": "...", "options": ["A", "B", "C", "D"], "correctIndex": 0, "explanation": "Brief sentence explaining the correct answer." }
     - Return ONLY valid JSON, no markdown.
