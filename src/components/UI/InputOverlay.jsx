@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, Sparkles, Network } from 'lucide-react';
+import { Search, Loader2, Sparkles } from 'lucide-react';
+import NeuroAvatar from './NeuroAvatar';
 import { MODE_LIST, DEFAULT_MODE, getModeIcon } from '../../config/modes';
 
 const SUGGESTIONS = [
@@ -67,10 +68,7 @@ const InputOverlay = ({ onSubmit, loading }) => {
                     gap: '12px',
                     marginBottom: '16px'
                 }}>
-                    <Network size={28} style={{
-                        color: 'var(--accent-cyan)',
-                        filter: 'drop-shadow(0 0 12px rgba(0, 212, 255, 0.4))'
-                    }} />
+                    <NeuroAvatar state="idle" size={28} />
                     <h1 style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '32px',
@@ -82,7 +80,7 @@ const InputOverlay = ({ onSubmit, loading }) => {
                         WebkitTextFillColor: 'transparent',
                         letterSpacing: '-0.5px'
                     }}>
-                        NeuroMap
+                        Neuro
                     </h1>
                 </div>
                 <p style={{

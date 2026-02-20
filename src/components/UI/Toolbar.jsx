@@ -59,13 +59,22 @@ const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare }) => {
             </button>
             <div style={{ width: '1px', background: 'var(--glass-border)', margin: '4px 2px' }} />
             <button
-                style={btnStyle}
+                style={{
+                    ...btnStyle,
+                    width: 'auto',
+                    padding: '0 12px',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: '600'
+                }}
                 onClick={onQuiz}
                 title="Start Neuro Quiz"
                 onMouseEnter={(e) => handleHover(e, true)}
                 onMouseLeave={(e) => handleHover(e, false)}
             >
                 <Trophy size={16} color="var(--accent-yellow)" />
+                <span style={{ color: 'inherit' }}>Quiz</span>
             </button>
             <div style={{ width: '1px', background: 'var(--glass-border)', margin: '4px 2px' }} />
             <button

@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight, Network, Sparkles, Sun, Moon, LogOut } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 
+const MODE_META = {
+    research: { emoji: '🔬', label: 'Research', color: 'var(--accent-cyan)' },
+    learning: { emoji: '📚', label: 'Learning', color: 'var(--accent-green)' },
+    brainstorm: { emoji: '💡', label: 'Brainstorm', color: 'var(--accent-orange)' },
+    study: { emoji: '📋', label: 'Study', color: 'var(--accent-purple)' },
+    connect: { emoji: '🔗', label: 'Connect', color: 'var(--accent-pink)' },
+    revision: { emoji: '🔄', label: 'Revision', color: 'var(--accent-yellow)' },
+    career: { emoji: '🚀', label: 'Career', color: 'var(--accent-orange)' }
+};
+
 const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, theme, onToggleTheme, user, onSignOut }) => {
     const [collapsed, setCollapsed] = useState(false);
 
@@ -10,6 +20,18 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
 
     return (
         <>
+            {/* Click-outside overlay: closes sidebar when tapping anywhere outside */}
+            {!collapsed && (
+                <div
+                    onClick={() => setCollapsed(true)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 999,
+                        background: 'transparent'
+                    }}
+                />
+            )}
             {/* Toggle Button */}
             <button
                 onClick={() => setCollapsed(!collapsed)}
@@ -87,7 +109,7 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
 
                 {/* New Map Button */}
                 <button
-                    onClick={onNewMap}
+                    onClick={() => { onNewMap(); setCollapsed(true); }}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -152,7 +174,7 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
                                     cursor: 'pointer',
                                     transition: 'all 0.2s var(--ease-smooth)'
                                 }}
-                                onClick={() => onSelectMap(map.id)}
+                                onClick={() => { onSelectMap(map.id); setCollapsed(true); }}
                                 onMouseEnter={(e) => {
                                     if (map.id !== currentMapId) {
                                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
@@ -174,18 +196,36 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
                                         flexShrink: 0,
                                         transition: 'all 0.2s'
                                     }} />
-                                    <span style={{
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        fontSize: '13px',
-                                        fontFamily: 'var(--font-body)',
-                                        fontWeight: map.id === currentMapId ? '500' : '400',
-                                        color: map.id === currentMapId ? 'var(--text)' : 'var(--text-secondary)',
-                                        transition: 'color 0.2s'
-                                    }}>
-                                        {map.topic || 'Untitled Map'}
-                                    </span>
+                                    <div style={{ overflow: 'hidden', flex: 1 }}>
+                                        <span style={{
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            fontSize: '13px',
+                                            fontFamily: 'var(--font-body)',
+                                            fontWeight: map.id === currentMapId ? '500' : '400',
+                                            color: map.id === currentMapId ? 'var(--text)' : 'var(--text-secondary)',
+                                            transition: 'color 0.2s',
+                                            display: 'block'
+                                        }}>
+                                            {map.topic || 'Untitled Map'}
+                                        </span>
+                                        {map.mode && (
+                                            <span style={{
+                                                fontSize: '9px',
+                                                fontFamily: 'var(--font-mono)',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.8px',
+                                                color: MODE_META[map.mode]?.color || 'var(--muted)',
+                                                marginTop: '2px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px'
+                                            }}>
+                                                {MODE_META[map.mode]?.emoji || '📄'} {MODE_META[map.mode]?.label || map.mode}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onDeleteMap(map.id); }}

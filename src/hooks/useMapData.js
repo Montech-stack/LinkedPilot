@@ -59,9 +59,10 @@ const LAYOUT = {
     BRANCH_RADIUS: 260,
     SUB_RADIUS: 420,
     EXPAND_RADIUS_FROM_CENTER: 540,
-    EXPAND_ANGLE: 135 * (Math.PI / 180), // 135 degrees in radians
-    EXPANSION_NODE_RADIUS: 220, // Distance from expand node to new nodes
-    EXPANSION_SPREAD: 120 * (Math.PI / 180) // Total spread of +/- 60 deg
+    EXPAND_ANGLE: 135 * (Math.PI / 180),
+    EXPANSION_NODE_RADIUS: 220,
+    EXPANSION_SPREAD_BASE: 120 * (Math.PI / 180), // Base spread for small counts
+    EXPANSION_SPREAD_MAX: 300 * (Math.PI / 180)   // Max spread for large counts
 };
 
 export const useMapData = () => {
@@ -278,13 +279,11 @@ export const useMapData = () => {
         const targetNode = state.nodes.find(n => n.id === targetNodeId);
         if (!targetNode) return;
 
-        // Determine parent topic and context
         let parentTopic = targetNode.data.title;
         let baseX = targetNode.x;
         let baseY = targetNode.y;
         let baseAngle = 0;
 
-        // If it's an 'expand' node (the + button), find the parent it connects from
         if (targetNode.type === 'expand') {
             const connection = state.connections.find(c => {
                 const toId = typeof c.to === 'string' ? c.to : c.to?.id;
@@ -295,11 +294,8 @@ export const useMapData = () => {
             parentTopic = parentNode?.data?.title || state.topic;
             baseAngle = Math.atan2(targetNode.y, targetNode.x);
         } else {
-            // If expanding a normal branch/sub node directly
             baseAngle = Math.atan2(targetNode.y, targetNode.x);
-            // Project OUTWARDS from this node to place the new cluster
-            // So we don't overlap the existing node.
-            const projectionDist = 180; // Distance to center of new cluster
+            const projectionDist = 180;
             baseX = targetNode.x + projectionDist * Math.cos(baseAngle);
             baseY = targetNode.y + projectionDist * Math.sin(baseAngle);
         }
@@ -309,38 +305,44 @@ export const useMapData = () => {
         try {
             const newSubTopics = await expandBranch(parentTopic, state.topic, state.mode);
 
+            // Sort by rank if available (1 = most important)
+            const sortedTopics = [...newSubTopics].sort((a, b) => (a.rank || 999) - (b.rank || 999));
+
             const newNodes = [];
             const newConnections = [];
+            const count = sortedTopics.length;
 
-            // 5 nodes cluster
-            newSubTopics.forEach((topic, i) => {
-                // Spread +/- 60 degrees
-                const offsetAngle = ((i - 2) * 30) * (Math.PI / 180);
+            // Dynamic layout: adapt spread and radius based on count
+            const spread = Math.min(
+                LAYOUT.EXPANSION_SPREAD_MAX,
+                LAYOUT.EXPANSION_SPREAD_BASE + (count - 3) * (15 * Math.PI / 180)
+            );
+            const radius = LAYOUT.EXPANSION_NODE_RADIUS + Math.max(0, (count - 5) * 20);
+
+            sortedTopics.forEach((topic, i) => {
+                // Evenly distribute across the spread arc
+                const offsetAngle = count === 1
+                    ? 0
+                    : ((i / (count - 1)) - 0.5) * spread;
                 const angle = baseAngle + offsetAngle;
 
-                // Radius from the *center of the new cluster*
-                const r = LAYOUT.EXPANSION_NODE_RADIUS;
-                // Wait, logic above: x,y was expandNode.x,y.
-                // If we are expanding a branch, we want new nodes around it? 
-                // Or around a new center point?
-                // Let's stick to the "Cluster center" concept.
-
-                // If target was 'expand' node, it *is* the center.
-                // If target was 'branch', we projected a new center (baseX, baseY).
-
-                // Use targetNode if it is 'expand', effectively.
                 const centerX = targetNode.type === 'expand' ? targetNode.x : baseX;
                 const centerY = targetNode.type === 'expand' ? targetNode.y : baseY;
 
-                const x = centerX + r * Math.cos(angle);
-                const y = centerY + r * Math.sin(angle);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
 
                 const node = {
                     id: `exp-${Date.now()}-${i}`,
                     type: 'sub',
                     x,
                     y,
-                    data: { ...topic, color: targetNode.data.color || 'var(--accent-cyan)', type: 'sub' }
+                    data: {
+                        ...topic,
+                        rank: topic.rank || (i + 1),
+                        color: targetNode.data.color || 'var(--accent-cyan)',
+                        type: 'sub'
+                    }
                 };
 
                 newNodes.push(node);
@@ -353,12 +355,10 @@ export const useMapData = () => {
                 });
             });
 
-            // Spawn new Expand Node at edge of new cluster
+            // Spawn new expand node further out
             const centerX = targetNode.type === 'expand' ? targetNode.x : baseX;
             const centerY = targetNode.type === 'expand' ? targetNode.y : baseY;
-
-            // Project further out
-            const newExpandDist = LAYOUT.EXPANSION_NODE_RADIUS + 120;
+            const newExpandDist = radius + 120;
             const newExpandX = centerX + newExpandDist * Math.cos(baseAngle);
             const newExpandY = centerY + newExpandDist * Math.sin(baseAngle);
 
@@ -371,9 +371,6 @@ export const useMapData = () => {
             };
 
             newNodes.push(newExpandNode);
-            // Connect new expand node to... the target node? or the new cluster?
-            // "Connections... Branch -> Expand node". 
-            // Let's connect to the source of this expansion.
             newConnections.push({
                 from: targetNode.id,
                 to: newExpandNode.id,
@@ -397,22 +394,39 @@ export const useMapData = () => {
 
 
     const shareMap = async (user) => {
-        if (!user) throw new Error("Please log in to share maps.");
         if (!state.nodes.length) throw new Error("Map is empty.");
 
+        const mapData = {
+            nodes: state.nodes,
+            connections: state.connections,
+            topic: state.topic,
+            mode: state.mode
+        };
+
+        if (!supabase) {
+            // Local sharing: store snapshot in localStorage with a share key
+            const shareId = `share-${Date.now()}`;
+            try {
+                const shares = JSON.parse(window.localStorage.getItem('neuronShares') || '{}');
+                shares[shareId] = mapData;
+                window.localStorage.setItem('neuronShares', JSON.stringify(shares));
+            } catch (err) {
+                console.error("Share save error:", err);
+                throw new Error("Map is too large to share locally.");
+            }
+            return shareId;
+        }
+
         try {
-            // Upsert based on currentMapId if it exists?
-            // For now, let's just insert a new one or update if we own it.
-            // Simplified: insert new row
             const { data, error } = await supabase.from('maps').insert({
-                user_id: user.id,
+                user_id: user?.id || 'anonymous',
                 title: state.topic || 'Untitled Map',
-                content: { nodes: state.nodes, connections: state.connections, topic: state.topic, mode: state.mode },
+                content: mapData,
                 is_public: true
             }).select().single();
 
             if (error) throw error;
-            return data.id; // Return the shared ID
+            return data.id;
         } catch (err) {
             console.error("Share error:", err);
             throw err;
@@ -423,28 +437,42 @@ export const useMapData = () => {
     const loadSharedMap = useCallback(async (id) => {
         dispatch({ type: ACTIONS.START_LOADING });
         try {
-            const { data, error } = await supabase
-                .from('maps')
-                .select('*')
-                .eq('id', id)
-                .single();
+            let mapPayload;
 
-            if (error) throw error;
-            if (!data) throw new Error("Map not found");
+            if (id.startsWith('share-')) {
+                // Local share: load from localStorage
+                const shares = JSON.parse(window.localStorage.getItem('neuronShares') || '{}');
+                const sharedData = shares[id];
+                if (!sharedData) throw new Error("Shared map not found or expired.");
+                mapPayload = sharedData;
+            } else if (supabase) {
+                // Supabase share
+                const { data, error } = await supabase
+                    .from('maps')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                if (!data) throw new Error("Map not found");
+                mapPayload = data.content;
+            } else {
+                throw new Error("Cannot load shared map without a connection.");
+            }
+
+            // Fork: save to viewer's own local storage with a new ID
+            const forkId = `fork-${Date.now()}`;
+            setCurrentMapId(forkId);
 
             dispatch({
                 type: ACTIONS.SET_MAP,
-                payload: {
-                    nodes: data.content.nodes,
-                    connections: data.content.connections,
-                    topic: data.content.topic,
-                    mode: data.content.mode
-                }
+                payload: mapPayload
             });
-            setCurrentMapId(null); // It's a shared map, not one of "ours" in local storage effectively (unless we import it)
+
+            // The auto-save effect will persist this fork to localStorage
         } catch (err) {
             console.error("Load shared error:", err);
-            dispatch({ type: ACTIONS.SET_ERROR, payload: "Failed to load shared map." });
+            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message || "Failed to load shared map." });
         }
     }, []);
 

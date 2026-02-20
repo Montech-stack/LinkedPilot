@@ -1,7 +1,7 @@
 import React from 'react';
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Maximize } from 'lucide-react';
 
-const DPad = ({ onNavigate, onReset }) => {
+const DPad = ({ onNavigate, onReset, selectedNode }) => {
     const btnStyle = {
         background: 'var(--glass)',
         backdropFilter: 'blur(var(--glass-blur))',
@@ -22,11 +22,16 @@ const DPad = ({ onNavigate, onReset }) => {
         if (onNavigate) onNavigate(dx, dy);
     };
 
+    // On mobile: when InfoPanel (selectedNode) is open, move DPad to top-right
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const positionStyle = isMobile && selectedNode
+        ? { top: '20px', right: '20px', bottom: 'auto' }
+        : { bottom: '20px', right: '20px' };
+
     return (
         <div style={{
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
+            ...positionStyle,
             zIndex: 100,
             display: 'flex',
             flexDirection: 'column',
@@ -64,7 +69,7 @@ const DPad = ({ onNavigate, onReset }) => {
                 <button
                     onClick={onReset}
                     style={{ ...btnStyle, background: 'var(--surface2)' }}
-                    title="Reset View"
+                    title="Go to Central Node"
                 >
                     <Maximize size={18} />
                 </button>
@@ -90,8 +95,6 @@ const DPad = ({ onNavigate, onReset }) => {
                 </button>
                 <div />
             </div>
-
-            {/* Zoom Controls REMOVED (Duplicate) */}
         </div>
     );
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './Node.module.css';
 
 const Node = ({ data, onClick, style }) => {
-    const { type, title, category, summary, icon, color } = data;
+    const { type, title, category, summary, icon, color, rank } = data;
 
     // Dynamic style for color variations
     const dynamicStyle = {
@@ -53,6 +53,11 @@ const Node = ({ data, onClick, style }) => {
                 style={dynamicStyle}
                 onClick={handleClick}
             >
+                {rank && (
+                    <span className={styles.rankBadge} style={{ '--node-color': color }}>
+                        {rank}
+                    </span>
+                )}
                 <div className={styles.subTitle}>{title}</div>
             </div>
         );

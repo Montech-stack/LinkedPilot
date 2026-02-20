@@ -34,7 +34,7 @@ const NeuroAvatar = ({ state = 'idle', size = 40 }) => {
                 width: '100%',
                 height: '100%',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #050709, #1a202c)',
+                background: 'linear-gradient(135deg, var(--surface-solid), var(--surface2))',
                 border: '2px solid var(--accent-cyan)',
                 position: 'relative',
                 display: 'flex',
@@ -65,7 +65,8 @@ const NeuroAvatar = ({ state = 'idle', size = 40 }) => {
                         height: state === 'happy' ? size * 0.08 : size * 0.2,
                         background: 'var(--accent-cyan)',
                         borderRadius: state === 'happy' ? '4px' : '50%',
-                        boxShadow: '0 0 10px var(--accent-cyan)'
+                        boxShadow: '0 0 10px var(--accent-cyan)',
+                        animation: state !== 'thinking' ? 'blink 4s infinite 2.5s' : 'none'
                     }} />
                 </div>
 

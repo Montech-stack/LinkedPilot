@@ -24,13 +24,11 @@
     from {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.3);
-        filter: blur(4px);
     }
 
     to {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
-        filter: blur(0);
     }
 }
 
@@ -126,8 +124,9 @@
     font-weight: 800;
     font-size: 14px;
     padding: 0 14px;
-    background: linear-gradient(135deg, #fff, var(--accent-cyan));
+    background: linear-gradient(135deg, var(--text), var(--accent-cyan));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -138,10 +137,7 @@
     border-radius: 14px;
     border: 1px solid var(--node-color);
     padding: 14px;
-    background:
-        linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(19, 24, 32, 0.85));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--gradient-surface);
     box-shadow:
         0 0 20px var(--node-glow),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -187,14 +183,12 @@
     width: 140px;
     min-height: 52px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
     padding: 10px 12px;
-    background: linear-gradient(145deg, rgba(13, 17, 23, 0.9), rgba(19, 24, 32, 0.8));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: var(--gradient-surface);
     align-items: flex-start;
     text-align: left;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
 }
 
@@ -211,10 +205,29 @@
 }
 
 .sub:hover {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: var(--border-glow);
     box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.4),
+        var(--shadow-md),
         0 0 15px var(--node-glow);
+}
+
+.rankBadge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--node-color, var(--accent-cyan));
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 2;
 }
 
 .subTitle {

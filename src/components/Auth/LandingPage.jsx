@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Network, ArrowRight, Sparkles, BookOpen, Lightbulb, Link2 } from 'lucide-react';
+import { ArrowRight, Sparkles, BookOpen, Lightbulb, Link2 } from 'lucide-react';
 import AuthModal from './AuthModal';
+import NeuroAvatar from '../UI/NeuroAvatar';
 
 const FEATURES = [
     { icon: '🔬', title: 'Research Mode', desc: 'Explore topics from every angle' },
@@ -66,23 +67,13 @@ const LandingPage = ({ onAuth }) => {
                 borderBottom: '1px solid var(--glass-border)'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'var(--gradient-cyan)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'var(--shadow-glow-cyan)'
-                    }}>
-                        <Network size={18} color="#050709" strokeWidth={2.5} />
-                    </div>
+                    <NeuroAvatar state="idle" size={32} />
                     <span style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '18px',
                         fontWeight: '800',
                         background: 'linear-gradient(135deg, var(--text), var(--accent-cyan))',
+                        WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
                     }}>Neuro</span>
                 </div>
@@ -139,22 +130,7 @@ const LandingPage = ({ onAuth }) => {
 
                 {/* Neuro Avatar */}
                 <div style={{ marginBottom: '20px', animation: 'float 6s ease-in-out infinite' }}>
-                    <div style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #050709, #1a202c)',
-                        border: '2px solid var(--accent-cyan)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 30px rgba(0, 212, 255, 0.4)'
-                    }}>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <div style={{ width: '12px', height: '18px', background: 'var(--accent-cyan)', borderRadius: '50%' }} />
-                            <div style={{ width: '12px', height: '18px', background: 'var(--accent-cyan)', borderRadius: '50%' }} />
-                        </div>
-                    </div>
+                    <NeuroAvatar state="idle" size={80} />
                 </div>
 
                 {/* Main Headline */}

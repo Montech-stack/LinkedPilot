@@ -144,36 +144,111 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     }
   }, [nodes, selectedNode, flyTo]);
 
+  const handleFindNode = useCallback(async (conceptText) => {
+    // Filter out common stop words to focus on meaningful terms
+    const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'and', 'or', 'that', 'this', 'it', 'are', 'was', 'be', 'has', 'had', 'with', 'as', 'by', 'on', 'at', 'from', 'which', 'how', 'why', 'who', 'do', 'does', 'did']);
+    const searchTerms = conceptText.toLowerCase().split(/[\s?.,!]+/)
+      .filter(t => t.length > 2 && !STOP_WORDS.has(t));
+
+    if (searchTerms.length === 0) return false;
+
+    // Score a node by how many meaningful terms match its content
+    const scoreNode = (node) => {
+      const text = [
+        node.data?.title || '',
+        node.data?.detail || '',
+        node.data?.summary || '',
+        node.data?.category || ''
+      ].join(' ').toLowerCase();
+      let score = 0;
+      searchTerms.forEach(term => {
+        if (text.includes(term)) score += 1;
+        // Bonus for title match (more specific)
+        if ((node.data?.title || '').toLowerCase().includes(term)) score += 2;
+      });
+      return score;
+    };
+
+    // 1) Search ALL existing nodes (branches + subs) for best match
+    const contentNodes = nodes.filter(n => n.type === 'branch' || n.type === 'sub');
+    let bestNode = null;
+    let bestScore = 0;
+    contentNodes.forEach(n => {
+      const s = scoreNode(n);
+      if (s > bestScore) { bestScore = s; bestNode = n; }
+    });
+
+    // Strong match in existing nodes? Go directly
+    if (bestNode && bestScore >= 3) {
+      flyTo(bestNode.x, bestNode.y, 1.5, 1200);
+      setSelectedNode(bestNode);
+      return true;
+    }
+
+    // 2) No strong match — expand branches to find the concept
+    // Sort branches by relevance score (best first)
+    const branches = nodes.filter(n => n.type === 'branch');
+    const scoredBranches = branches.map(b => ({ branch: b, score: scoreNode(b) }))
+      .sort((a, b) => b.score - a.score);
+
+    // Try expanding branches (most relevant first) until we find a match
+    for (const { branch } of scoredBranches) {
+      // Skip branches that already have children expanded
+      const hasChildren = nodes.some(n => n.type === 'sub' &&
+        nodes.some(c => c.type === 'sub' &&
+          Math.hypot(c.x - branch.x, c.y - branch.y) < 400));
+
+      const result = await handleExpand(branch.id);
+
+      if (result && result.nodes && result.nodes.length > 0) {
+        // Search the newly created nodes
+        let expandBest = null;
+        let expandBestScore = 0;
+        result.nodes.filter(n => n.type === 'sub').forEach(n => {
+          const s = scoreNode(n);
+          if (s > expandBestScore) { expandBestScore = s; expandBest = n; }
+        });
+
+        if (expandBest && expandBestScore >= 2) {
+          flyTo(expandBest.x, expandBest.y, 1.5, 1200);
+          setSelectedNode(expandBest);
+          return true;
+        }
+      }
+    }
+
+    // 3) After expanding all branches, do one final search across ALL nodes
+    const allContentNodes = nodes.filter(n => n.type === 'branch' || n.type === 'sub');
+    let finalBest = null;
+    let finalBestScore = 0;
+    allContentNodes.forEach(n => {
+      const s = scoreNode(n);
+      if (s > finalBestScore) { finalBestScore = s; finalBest = n; }
+    });
+
+    if (finalBest) {
+      flyTo(finalBest.x, finalBest.y, 1.5, 1200);
+      setSelectedNode(finalBest);
+      return true;
+    }
+
+    return false;
+  }, [nodes, flyTo, handleExpand]);
+
   const handleExpandWrapper = useCallback(async (nodeId) => {
-    // Return result from handleExpand (requires modification in useMapData)
     const result = await handleExpand(nodeId);
-
     if (result && result.nodes && result.nodes.length > 0) {
-      // Calculate center of NEW nodes
-      // Filter out the "expand" node if we want to focus on content?
-      // The last node is the new expand node. The others are content.
       const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
-
       if (contentNodes.length > 0) {
         const xs = contentNodes.map(n => n.x);
         const ys = contentNodes.map(n => n.y);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-
-        // Zoom in to see them
+        const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
         flyTo(centerX, centerY, 1.2, 1500);
       } else {
-        // Fallback if no content nodes (e.g. just expand node?)
         const node = result.nodes[0];
         flyTo(node.x, node.y, 1.2, 1000);
       }
-    } else {
-      // Fallback or error
     }
   }, [handleExpand, flyTo]);
 
@@ -191,8 +266,13 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   const onZoomIn = () => setScale(s => Math.min(3.0, s * 1.2));
   const onZoomOut = () => setScale(s => Math.max(0.3, s / 1.2));
   const onReset = () => {
-    setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-    setScale(1);
+    const centralNode = nodes.find(n => n.id === 'central');
+    if (centralNode) {
+      flyTo(centralNode.x, centralNode.y, 1.0, 1200);
+    } else {
+      setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      setScale(1);
+    }
     setSelectedNode(null);
   };
 
@@ -220,16 +300,19 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         onSignOut={signOut}
       />
 
-      <DPad onNavigate={handleNavigate} onReset={onReset} />
+      {nodes.length > 0 && (
+        <DPad onNavigate={handleNavigate} onReset={onReset} selectedNode={selectedNode} />
+      )}
 
       {/* Quiz Modal */}
       {showQuiz && (
         <QuizModal
           topic={topic || "General Knowledge"}
+          user={user}
           onClose={() => setShowQuiz(false)}
-          onFindNode={(t) => {
-            if (handleFindNode(t)) setShowQuiz(false);
-            else alert("Topic not found on map!");
+          onFindNode={async (concept) => {
+            const found = await handleFindNode(concept);
+            if (found) setShowQuiz(false);
           }}
         />
       )}
@@ -266,7 +349,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
       <InfoPanel
         node={selectedNode}
         onClose={() => setSelectedNode(null)}
-        onExpand={handleExpand}
+        onExpand={handleExpandWrapper}
         loading={loading}
         topic={topic}
         mode={mode}

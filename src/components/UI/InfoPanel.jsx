@@ -94,7 +94,7 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                     <button
                         onClick={onClose}
                         style={{
-                            background: 'rgba(255, 255, 255, 0.05)',
+                            background: 'var(--surface2)',
                             border: '1px solid var(--glass-border)',
                             color: 'var(--text-secondary)',
                             cursor: 'pointer',
@@ -107,11 +107,11 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                             flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.background = 'var(--surface2)';
                             e.currentTarget.style.color = 'var(--text)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.background = 'var(--surface2)';
                             e.currentTarget.style.color = 'var(--text-secondary)';
                         }}
                     >
@@ -214,7 +214,7 @@ const InfoPanel = ({ node, onClose, onExpand, loading, topic, mode }) => {
                         <div
                             ref={answerRef}
                             style={{
-                                background: 'rgba(255, 255, 255, 0.03)',
+                                background: 'var(--surface2)',
                                 borderRadius: '10px',
                                 padding: '16px',
                                 fontSize: '13px',

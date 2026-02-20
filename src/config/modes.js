@@ -1,4 +1,4 @@
-import { Search, BookOpen, Lightbulb, ClipboardList, Link2, Scale, Rocket } from 'lucide-react';
+import { Search, BookOpen, Lightbulb, ClipboardList, Link2, RefreshCcw, Rocket } from 'lucide-react';
 
 export const MODES = {
   research: {
@@ -40,9 +40,11 @@ RULES:
 8. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are diving deeper into "${branchTitle}" within "${contextTopic}".
-Generate between 3 to 7 specific sub-concepts as JSON array:
-[{ "id": "unique-id", "title": "Concept (2-4 words)", "summary": "Hook (max 5 words)", "detail": "2-3 sentences with analogy/example. Explain WHY it matters." }]
-Be SPECIFIC. Use simple language. Return ONLY JSON.`
+Generate ALL important sub-concepts — do NOT limit yourself to a fixed number. Include every concept that matters.
+Number each item by importance (1 = most important).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Concept (2-4 words)", "summary": "Hook (max 5 words)", "detail": "2-3 sentences with analogy/example. Explain WHY it matters." }]
+Be SPECIFIC and COMPREHENSIVE. Use simple language. Return ONLY JSON.`
   },
 
   learning: {
@@ -82,8 +84,10 @@ RULES:
 6. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are a tutor expanding on "${branchTitle}" in the learning path for "${contextTopic}".
-Generate between 3 to 7 specific LESSONS or SKILLS to learn as JSON array:
-[{ "id": "unique-id", "title": "Skill/Lesson (2-4 words)", "summary": "Quick hook (max 5 words)", "detail": "2-3 sentences. What to learn, HOW to practice it, and a real-world analogy." }]
+Generate ALL important lessons and skills — include every concept that a learner needs. No fixed limit.
+Number each by learning priority (1 = learn first).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Skill/Lesson (2-4 words)", "summary": "Quick hook (max 5 words)", "detail": "2-3 sentences. What to learn, HOW to practice it, and a real-world analogy." }]
 Make it ACTIONABLE. Return ONLY JSON.`
   },
 
@@ -122,8 +126,10 @@ RULES:
 4. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are a creative consultant expanding "${branchTitle}" for brainstorming "${contextTopic}".
-Generate between 3 to 7 specific creative ideas or approaches as JSON array:
-[{ "id": "unique-id", "title": "Idea (2-4 words)", "summary": "Spark (max 5 words)", "detail": "2-3 sentences. Be CREATIVE and UNEXPECTED. Use 'What if...' framing." }]
+Generate ALL relevant creative ideas — include every approach worth considering. No fixed limit.
+Number each by impact potential (1 = highest impact).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Idea (2-4 words)", "summary": "Spark (max 5 words)", "detail": "2-3 sentences. Be CREATIVE and UNEXPECTED. Use 'What if...' framing." }]
 Think WILD. Return ONLY JSON.`
   },
 
@@ -162,8 +168,10 @@ RULES:
 4. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are expanding the study guide section "${branchTitle}" for "${contextTopic}".
-Generate between 3 to 7 specific study items as JSON array:
-[{ "id": "unique-id", "title": "Study item (2-4 words)", "summary": "Key point (max 5 words)", "detail": "2-3 sentences. Include a mnemonic, practice question, or common mistake to avoid." }]
+Generate ALL important study items — include every concept students need to know. No fixed limit.
+Number each by exam importance (1 = most likely to appear).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Study item (2-4 words)", "summary": "Key point (max 5 words)", "detail": "2-3 sentences. Include a mnemonic, practice question, or common mistake to avoid." }]
 Return ONLY JSON.`
   },
 
@@ -203,55 +211,59 @@ RULES:
 5. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are exploring connections in "${branchTitle}" between the topics in "${contextTopic}".
-Generate between 3 to 7 specific cross-connections as JSON array:
-[{ "id": "unique-id", "title": "Connection (2-4 words)", "summary": "Bridge (max 5 words)", "detail": "2-3 sentences on a surprising link. Use a concrete example." }]
+Generate ALL meaningful cross-connections — include every surprising link. No fixed limit.
+Number each by surprise factor (1 = most unexpected).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Connection (2-4 words)", "summary": "Bridge (max 5 words)", "detail": "2-3 sentences on a surprising link. Use a concrete example." }]
 Be SURPRISING. Return ONLY JSON.`
   },
 
-  debate: {
-    id: 'debate',
-    label: 'Debate',
-    icon: 'Scale',
-    emoji: '⚖️',
-    description: 'Explore all sides of controversial or complex arguments',
+  revision: {
+    id: 'revision',
+    label: 'Revision',
+    icon: 'RefreshCcw',
+    emoji: '🔄',
+    description: 'Quick-fire revision cards to test and reinforce your knowledge',
     color: 'var(--accent-yellow)',
-    categories: ['Core Thesis', 'Supporting Arguments', 'Counter Arguments', 'Evidence & Data', 'Ethical Dimensions', 'Verdict & Nuance'],
+    categories: ['Must-Know Facts', 'Key Formulas', 'Common Mistakes', 'Quick Definitions', 'Memory Aids', 'Exam Tips'],
     generatePrompt: (topic) => `
-You are a world-class debate coach analyzing ALL sides of: "${topic}".
+You are an expert tutor creating a REVISION MAP for: "${topic}".
 
-Present every perspective fairly. Show the strongest arguments for AND against. Include evidence and nuance.
+Create the ultimate last-minute revision resource — the kind of sheet students cram from before an exam. Focus on recall, patterns, and common pitfalls.
 
 Generate JSON:
 {
-  "central": { "title": "Debate: (catchy 2-3 words)", "icon": "⚖️" },
+  "central": { "title": "Revise: (catchy 2-3 words)", "icon": "🔄" },
   "branches": [
     {
-      "id": "b1", "category": "Core Thesis",
-      "title": "What's Being Argued",
-      "summary": "The central claim (max 8 words)",
-      "detail": "3-4 sentences framing the debate. What is the main claim? Why is it controversial? Who are the stakeholders?",
-      "icon": "🎯",
-      "children": [{ "id": "b1-1", "title": "Key stakeholder view", "detail": "2-3 sentences on one perspective." }]
+      "id": "b1", "category": "Must-Know Facts",
+      "title": "The Essentials",
+      "summary": "If you remember NOTHING else (max 8 words)",
+      "detail": "3-4 sentences covering the absolute must-know facts. Use bullet-style clarity.",
+      "icon": "📌",
+      "children": [{ "id": "b1-1", "title": "Critical fact", "detail": "2-3 sentences. State the fact, give context, provide a memory hook." }]
     }
   ]
 }
 
 RULES:
-1. Exactly 6 branches: Core Thesis, Supporting Arguments, Counter Arguments, Evidence & Data, Ethical Dimensions, Verdict & Nuance
+1. Exactly 6 branches: Must-Know Facts, Key Formulas, Common Mistakes, Quick Definitions, Memory Aids, Exam Tips
 2. Each branch has exactly 3 children
-3. Core Thesis: Frame the debate clearly and neutrally
-4. Supporting Arguments: The 3 strongest reasons FOR
-5. Counter Arguments: The 3 strongest reasons AGAINST
-6. Evidence & Data: Real statistics, studies, or historical examples
-7. Ethical Dimensions: Moral, social, and philosophical implications
-8. Verdict & Nuance: Balanced conclusion showing where truth likely lies
-9. Be FAIR, BALANCED, and EVIDENCE-BASED
+3. Must-Know Facts: The top facts that appear on every exam
+4. Key Formulas: Essential equations, rules, or frameworks
+5. Common Mistakes: What students always get wrong
+6. Quick Definitions: Terms you MUST know cold
+7. Memory Aids: Mnemonics, acronyms, visual tricks
+8. Exam Tips: Strategy and timing advice for this specific topic
+9. Be CONCISE, MEMORABLE, and EXAM-FOCUSED
 10. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
-You are analyzing "${branchTitle}" in the debate on "${contextTopic}".
-Generate between 3 to 7 specific arguments or evidence points as JSON array:
-[{ "id": "unique-id", "title": "Point (2-4 words)", "summary": "Key claim (max 5 words)", "detail": "2-3 sentences with specific evidence, data, or logical reasoning." }]
-Be BALANCED and EVIDENCE-BASED. Return ONLY JSON.`
+You are expanding the revision section "${branchTitle}" for "${contextTopic}".
+Generate ALL important revision items — include everything a student needs to revise. No fixed limit.
+Number each by exam frequency (1 = most commonly tested).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Item (2-4 words)", "summary": "Key point (max 5 words)", "detail": "2-3 sentences. Be CONCISE. Include a memory trick or common mistake to avoid." }]
+Return ONLY JSON.`
   },
 
   career: {
@@ -295,8 +307,10 @@ RULES:
 10. Return ONLY valid JSON.`,
     expandPrompt: (branchTitle, contextTopic) => `
 You are expanding "${branchTitle}" in the career guide for "${contextTopic}".
-Generate between 3 to 7 specific career insights as JSON array:
-[{ "id": "unique-id", "title": "Insight (2-4 words)", "summary": "Key takeaway (max 5 words)", "detail": "2-3 sentences with SPECIFIC advice — mention real tools, job titles, or salary figures when relevant." }]
+Generate ALL important career insights — include every actionable piece of advice. No fixed limit.
+Number each by career impact (1 = most impactful).
+JSON array format:
+[{ "id": "unique-id", "rank": 1, "title": "Insight (2-4 words)", "summary": "Key takeaway (max 5 words)", "detail": "2-3 sentences with SPECIFIC advice — mention real tools, job titles, or salary figures when relevant." }]
 Be ACTIONABLE and SPECIFIC. Return ONLY JSON.`
   }
 };
@@ -306,6 +320,6 @@ export const DEFAULT_MODE = 'research';
 
 // Get lucide icon component by mode id
 export const getModeIcon = (modeId) => {
-  const icons = { research: Search, learning: BookOpen, brainstorm: Lightbulb, study: ClipboardList, connect: Link2, debate: Scale, career: Rocket };
+  const icons = { research: Search, learning: BookOpen, brainstorm: Lightbulb, study: ClipboardList, connect: Link2, revision: RefreshCcw, career: Rocket };
   return icons[modeId] || Search;
 };

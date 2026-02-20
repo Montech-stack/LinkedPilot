@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trophy, Check, AlertCircle, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { generateQuiz } from '../../services/api';
+import { supabase } from '../../services/supabase';
 import NeuroAvatar from './NeuroAvatar';
+import Confetti from './Confetti';
 
 const RANKS = [
     { level: 1, title: "Neuro Novice", color: "#60A5FA" },
@@ -13,19 +15,68 @@ const RANKS = [
     { level: 7, title: "Neuro Grandmaster", color: "#FCD34D" } // Gold
 ];
 
-const QuizModal = ({ topic, onClose, onFindNode }) => {
+const STORAGE_KEY = 'neuroQuizProgress';
+
+// localStorage helpers (always available as fallback)
+const getLocalProgress = (topic) => {
+    try {
+        const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        return all[topic] || null;
+    } catch { return null; }
+};
+
+const saveLocalProgress = (topic, level, streak) => {
+    try {
+        const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        all[topic] = { level, streak, lastPlayed: Date.now() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    } catch (e) { console.warn("Quiz save error:", e); }
+};
+
+// DB helpers (Supabase when available)
+const getDbProgress = async (userId, topic) => {
+    if (!supabase || !userId) return null;
+    try {
+        const { data } = await supabase
+            .from('quiz_progress')
+            .select('level, streak')
+            .eq('user_id', userId)
+            .eq('topic', topic)
+            .single();
+        return data || null;
+    } catch { return null; }
+};
+
+const saveDbProgress = async (userId, topic, level, streak) => {
+    if (!supabase || !userId) return;
+    try {
+        await supabase.from('quiz_progress').upsert({
+            user_id: userId,
+            topic,
+            level,
+            streak,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,topic' });
+    } catch (e) { console.warn("DB quiz save error:", e); }
+};
+
+const QuizModal = ({ topic, onClose, onFindNode, user }) => {
     const [level, setLevel] = useState(1);
     const [loading, setLoading] = useState(false);
     const [questionData, setQuestionData] = useState(null);
     const [selectedOption, setSelectedOption] = useState(null);
-    const [result, setResult] = useState(null); // 'correct' | 'incorrect'
+    const [result, setResult] = useState(null);
     const [streak, setStreak] = useState(0);
+    const [locating, setLocating] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [progressLoaded, setProgressLoaded] = useState(false);
 
     const loadLevel = async (lvl) => {
         setLoading(true);
         setQuestionData(null);
         setSelectedOption(null);
         setResult(null);
+        setShowConfetti(false);
         try {
             const data = await generateQuiz(topic, RANKS[lvl - 1].title);
             setQuestionData(data);
@@ -35,9 +86,26 @@ const QuizModal = ({ topic, onClose, onFindNode }) => {
         setLoading(false);
     };
 
+    // Save to both localStorage and DB
+    const saveProgress = (newLevel, newStreak) => {
+        saveLocalProgress(topic, newLevel, newStreak);
+        saveDbProgress(user?.id, topic, newLevel, newStreak);
+    };
+
+    // Load saved progress on mount
     useEffect(() => {
-        loadLevel(1);
-    }, [topic]);
+        const loadProgress = async () => {
+            const dbProgress = await getDbProgress(user?.id, topic);
+            const localProgress = getLocalProgress(topic);
+            const saved = dbProgress || localProgress || { level: 1, streak: 0 };
+
+            setLevel(saved.level);
+            setStreak(saved.streak);
+            setProgressLoaded(true);
+            loadLevel(saved.level);
+        };
+        loadProgress();
+    }, [topic, user]);
 
     const handleOptionClick = (index) => {
         if (result) return;
@@ -45,23 +113,29 @@ const QuizModal = ({ topic, onClose, onFindNode }) => {
 
         if (index === questionData.correctIndex) {
             setResult('correct');
-            setStreak(s => s + 1);
+            const newStreak = streak + 1;
+            setStreak(newStreak);
+            // Save next level so quiz resumes there on reopen
+            saveProgress(Math.min(level + 1, 7), newStreak);
+            setShowConfetti(true);
         } else {
             setResult('incorrect');
             setStreak(0);
+            saveProgress(level, 0);
         }
     };
 
     const handleNext = () => {
         if (level < 7 && result === 'correct') {
-            setLevel(l => l + 1);
-            loadLevel(level + 1);
+            const newLevel = level + 1;
+            setLevel(newLevel);
+            saveProgress(newLevel, streak);
+            loadLevel(newLevel);
         } else {
-            // Retry same level or close if finished
             if (result === 'incorrect') {
-                loadLevel(level); // Retry
+                loadLevel(level);
             } else {
-                onClose(); // Finished
+                onClose();
             }
         }
     };
@@ -73,7 +147,7 @@ const QuizModal = ({ topic, onClose, onFindNode }) => {
             position: 'fixed',
             inset: 0,
             zIndex: 2000,
-            background: 'rgba(5, 7, 9, 0.85)',
+            background: 'var(--glass)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
@@ -88,8 +162,10 @@ const QuizModal = ({ topic, onClose, onFindNode }) => {
                 borderRadius: '20px',
                 padding: '30px',
                 position: 'relative',
+                overflow: 'visible',
                 boxShadow: `0 0 40px ${currentRank.color}20`
             }}>
+                <Confetti active={showConfetti} />
                 <button
                     onClick={onClose}
                     style={{
@@ -229,21 +305,35 @@ const QuizModal = ({ topic, onClose, onFindNode }) => {
                                     )}
 
                                     <button
-                                        onClick={() => onFindNode(topic)}
+                                        onClick={async () => {
+                                            setLocating(true);
+                                            // Build concept text from quiz question + correct answer
+                                            const correctAnswer = questionData.options[questionData.correctIndex];
+                                            const concept = `${correctAnswer} ${questionData.question}`;
+                                            await onFindNode(concept);
+                                            setLocating(false);
+                                        }}
+                                        disabled={locating}
                                         style={{
                                             background: 'var(--surface2)',
                                             border: '1px solid var(--glass-border)',
                                             color: 'var(--accent-cyan)',
                                             padding: '10px 20px',
                                             borderRadius: '10px',
-                                            cursor: 'pointer',
+                                            cursor: locating ? 'wait' : 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '6px'
+                                            gap: '6px',
+                                            opacity: locating ? 0.7 : 1,
+                                            transition: 'all 0.2s'
                                         }}
                                         title="Find related node on map"
                                     >
-                                        <MapPin size={16} /> Locate
+                                        {locating ? (
+                                            <><Loader2 size={16} className="animate-spin" /> Locating...</>
+                                        ) : (
+                                            <><MapPin size={16} /> Locate</>
+                                        )}
                                     </button>
 
                                     {result === 'correct' && (
