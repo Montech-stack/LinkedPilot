@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Loader2, Network, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import NeuroAvatar from '../UI/NeuroAvatar';
 
 const AuthModal = ({ mode = 'login', onSwitchMode, onClose, onSuccess }) => {
     const { signIn, signUp, signInWithGoogle, error, clearError, loading } = useAuth();
@@ -123,17 +124,11 @@ const AuthModal = ({ mode = 'login', onSwitchMode, onClose, onSuccess }) => {
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                     <div style={{
-                        width: '48px',
-                        height: '48px',
-                        background: 'var(--gradient-cyan)',
-                        borderRadius: '14px',
                         display: 'flex',
-                        alignItems: 'center',
                         justifyContent: 'center',
-                        margin: '0 auto 16px',
-                        boxShadow: 'var(--shadow-glow-cyan)'
+                        marginBottom: '16px'
                     }}>
-                        <Network size={24} color="#050709" strokeWidth={2.5} />
+                        <NeuroAvatar state={isLogin ? 'happy' : 'thinking'} size={64} />
                     </div>
                     <h2 style={{
                         fontFamily: 'var(--font-display)',
