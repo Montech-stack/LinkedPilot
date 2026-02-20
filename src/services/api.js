@@ -115,3 +115,25 @@ export const generateQuiz = async (topic, levelTitle) => {
     throw error;
   }
 };
+
+// Predict which branch most likely contains a concept
+export const predictBranch = async (concept, branchTitles, mapTopic) => {
+  if (useMock || !model) return branchTitles[0] || null;
+
+  const prompt = `
+    Given a mind map about "${mapTopic}" with these branches:
+    ${branchTitles.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+    Which ONE branch most likely contains or relates to this concept: "${concept}"?
+    Return ONLY the exact branch title text, nothing else. No quotes, no explanation.
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Branch prediction failed:", error);
+    return branchTitles[0] || null;
+  }
+};

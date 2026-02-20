@@ -14,6 +14,7 @@ import Sidebar from './components/UI/Sidebar';
 import DPad from './components/UI/DPad';
 import QuizModal from './components/UI/QuizModal';
 import LandingPage from './components/Auth/LandingPage';
+import { predictBranch } from './services/api';
 import styles from './App.module.css';
 
 class ErrorBoundary extends React.Component {
@@ -146,14 +147,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
   }, [nodes, selectedNode, flyTo]);
 
   const handleFindNode = useCallback(async (conceptText) => {
-    // Filter out common stop words to focus on meaningful terms
     const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'and', 'or', 'that', 'this', 'it', 'are', 'was', 'be', 'has', 'had', 'with', 'as', 'by', 'on', 'at', 'from', 'which', 'how', 'why', 'who', 'do', 'does', 'did']);
     const searchTerms = conceptText.toLowerCase().split(/[\s?.,!]+/)
       .filter(t => t.length > 2 && !STOP_WORDS.has(t));
 
     if (searchTerms.length === 0) return false;
 
-    // Score a node by how many meaningful terms match its content
     const scoreNode = (node) => {
       const text = [
         node.data?.title || '',
@@ -164,13 +163,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
       let score = 0;
       searchTerms.forEach(term => {
         if (text.includes(term)) score += 1;
-        // Bonus for title match (more specific)
         if ((node.data?.title || '').toLowerCase().includes(term)) score += 2;
       });
       return score;
     };
 
-    // 1) Search ALL existing nodes (branches + subs) for best match
+    // 1) Search existing nodes first (instant)
     const contentNodes = nodes.filter(n => n.type === 'branch' || n.type === 'sub');
     let bestNode = null;
     let bestScore = 0;
@@ -179,62 +177,58 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
       if (s > bestScore) { bestScore = s; bestNode = n; }
     });
 
-    // Strong match in existing nodes? Go directly
     if (bestNode && bestScore >= 3) {
       flyTo(bestNode.x, bestNode.y, 1.5, 1200);
       setSelectedNode(bestNode);
       return true;
     }
 
-    // 2) No strong match — expand branches to find the concept
-    // Sort branches by relevance score (best first)
+    // 2) Not found — ask AI which branch contains the concept (one fast call)
     const branches = nodes.filter(n => n.type === 'branch');
-    const scoredBranches = branches.map(b => ({ branch: b, score: scoreNode(b) }))
-      .sort((a, b) => b.score - a.score);
+    if (branches.length === 0) return false;
 
-    // Try expanding branches (most relevant first) until we find a match
-    for (const { branch } of scoredBranches) {
-      // Skip branches that already have children expanded
-      const hasChildren = nodes.some(n => n.type === 'sub' &&
-        nodes.some(c => c.type === 'sub' &&
-          Math.hypot(c.x - branch.x, c.y - branch.y) < 400));
+    const branchTitles = branches.map(b => b.data?.title || '');
+    const predicted = await predictBranch(conceptText, branchTitles, topic);
 
-      const result = await handleExpand(branch.id);
+    // Find the matching branch (fuzzy match on predicted title)
+    const targetBranch = branches.find(b =>
+      b.data?.title?.toLowerCase() === predicted?.toLowerCase()
+    ) || branches.find(b =>
+      predicted?.toLowerCase()?.includes(b.data?.title?.toLowerCase())
+    ) || branches[0];
 
-      if (result && result.nodes && result.nodes.length > 0) {
-        // Search the newly created nodes
-        let expandBest = null;
-        let expandBestScore = 0;
-        result.nodes.filter(n => n.type === 'sub').forEach(n => {
-          const s = scoreNode(n);
-          if (s > expandBestScore) { expandBestScore = s; expandBest = n; }
-        });
+    // 3) Expand only that one branch
+    const result = await handleExpand(targetBranch.id);
 
-        if (expandBest && expandBestScore >= 2) {
-          flyTo(expandBest.x, expandBest.y, 1.5, 1200);
-          setSelectedNode(expandBest);
-          return true;
-        }
+    if (result && result.nodes && result.nodes.length > 0) {
+      // Find best match in expanded nodes
+      let expandBest = null;
+      let expandBestScore = 0;
+      result.nodes.filter(n => n.type === 'sub').forEach(n => {
+        const s = scoreNode(n);
+        if (s > expandBestScore) { expandBestScore = s; expandBest = n; }
+      });
+
+      if (expandBest) {
+        flyTo(expandBest.x, expandBest.y, 1.5, 1200);
+        setSelectedNode(expandBest);
+        return true;
+      }
+
+      // If no text match, just go to the first expanded sub-node
+      const firstSub = result.nodes.find(n => n.type === 'sub');
+      if (firstSub) {
+        flyTo(firstSub.x, firstSub.y, 1.5, 1200);
+        setSelectedNode(firstSub);
+        return true;
       }
     }
 
-    // 3) After expanding all branches, do one final search across ALL nodes
-    const allContentNodes = nodes.filter(n => n.type === 'branch' || n.type === 'sub');
-    let finalBest = null;
-    let finalBestScore = 0;
-    allContentNodes.forEach(n => {
-      const s = scoreNode(n);
-      if (s > finalBestScore) { finalBestScore = s; finalBest = n; }
-    });
-
-    if (finalBest) {
-      flyTo(finalBest.x, finalBest.y, 1.5, 1200);
-      setSelectedNode(finalBest);
-      return true;
-    }
-
-    return false;
-  }, [nodes, flyTo, handleExpand]);
+    // 4) Fallback: pan to the branch itself
+    flyTo(targetBranch.x, targetBranch.y, 1.5, 1200);
+    setSelectedNode(targetBranch);
+    return true;
+  }, [nodes, flyTo, handleExpand, topic]);
 
   const handleExpandWrapper = useCallback(async (nodeId) => {
     const result = await handleExpand(nodeId);
