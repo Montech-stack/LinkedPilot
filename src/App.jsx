@@ -277,6 +277,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     if (bestNode && bestScore >= 3) {
       flyTo(bestNode.x, bestNode.y, 1.5, 1200);
       setSelectedNode(bestNode);
+      setPanelNode(bestNode);
       return true;
     }
 
@@ -309,6 +310,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
       if (expandBest) {
         flyTo(expandBest.x, expandBest.y, 1.5, 1200);
         setSelectedNode(expandBest);
+        setPanelNode(expandBest);
         return true;
       }
 
@@ -317,6 +319,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
       if (firstSub) {
         flyTo(firstSub.x, firstSub.y, 1.5, 1200);
         setSelectedNode(firstSub);
+        setPanelNode(firstSub);
         return true;
       }
     }
@@ -324,6 +327,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     // 4) Fallback: pan to the branch itself
     flyTo(targetBranch.x, targetBranch.y, 1.5, 1200);
     setSelectedNode(targetBranch);
+    setPanelNode(targetBranch);
     return true;
   }, [nodes, flyTo, handleExpand, topic]);
 
