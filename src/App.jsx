@@ -446,7 +446,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         onCollapse={handleCollapseWrapper}
         loading={loading}
         topic={topic}
-        mode={generateMode}
+        mode={mode}
       />
 
       <Canvas
