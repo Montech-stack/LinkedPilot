@@ -339,6 +339,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     }
   }, [handleExpand, flyTo]);
 
+  const handleCollapseWrapper = useCallback((nodeId) => {
+    collapseNode(nodeId);
+  }, [collapseNode]);
+
   const handleShare = async () => {
     try {
       const id = await shareMap(user);
