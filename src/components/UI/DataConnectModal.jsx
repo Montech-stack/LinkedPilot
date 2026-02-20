@@ -29,7 +29,13 @@ const DataConnectModal = ({ onClose, onConnect }) => {
                 body: JSON.stringify({ connectionString, type: dbType })
             });
 
-            const data = await res.json();
+            const textResponse = await res.text();
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 50)}... Check Vercel Function Logs.`);
+            }
 
             if (!res.ok) {
                 throw new Error(data.error || 'Failed to connect to database');
@@ -69,7 +75,13 @@ const DataConnectModal = ({ onClose, onConnect }) => {
                 body: formData
             });
 
-            const data = await res.json();
+            const textResponse = await res.text();
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 50)}... Check Vercel Function Logs.`);
+            }
 
             if (!res.ok) {
                 throw new Error(data.error || 'Failed to parse document');

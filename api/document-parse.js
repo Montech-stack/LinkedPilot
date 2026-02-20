@@ -1,5 +1,6 @@
 import multer from 'multer';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
+import pdfParsePkg from 'pdf-parse/lib/pdf-parse.js';
+const pdfParse = pdfParsePkg.default || pdfParsePkg;
 
 // Setup multer to store uploaded files in memory
 const upload = multer({ storage: multer.memoryStorage() });
