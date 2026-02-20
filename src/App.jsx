@@ -141,7 +141,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
     });
 
     if (bestNode) {
-      setSelectedNode(bestNode);
+      // setSelectedNode(bestNode); // Don't select, just move camera (keeps InfoPanel stable)
       flyTo(bestNode.x, bestNode.y, 1.5, 800);
     }
   }, [nodes, selectedNode, flyTo]);
