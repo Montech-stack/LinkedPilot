@@ -43,6 +43,20 @@ const InputOverlay = ({ onSubmit, loading }) => {
 
     const activeMode = MODE_LIST.find(m => m.id === selectedMode);
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit(e);
+        }
+    };
+
+    const handleTextareaChange = (e) => {
+        setValue(e.target.value);
+        // Auto-resize logic
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+    };
+
     return (
         <div style={{
             position: 'absolute',
@@ -184,10 +198,10 @@ const InputOverlay = ({ onSubmit, loading }) => {
                     : <Search size={18} color="var(--muted)" />
                 }
 
-                <input
-                    type="text"
+                <textarea
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
+                    onChange={handleTextareaChange}
+                    onKeyDown={handleKeyDown}
                     placeholder={
                         isDataMode ? 'Click Explore to upload your Document/Database...' :
                             selectedMode === 'connect' ? 'Enter two or more topics to connect (e.g. AI + Biology)...' :
@@ -195,6 +209,7 @@ const InputOverlay = ({ onSubmit, loading }) => {
                     }
                     disabled={loading || isDataMode}
                     autoFocus
+                    rows={1}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -205,8 +220,12 @@ const InputOverlay = ({ onSubmit, loading }) => {
                         fontWeight: '400',
                         width: '100%',
                         padding: '12px 0',
+                        resize: 'none',
+                        maxHeight: '35vh',
+                        overflowY: 'auto',
                         transition: 'opacity 0.3s',
-                        opacity: showPlaceholder || value || isDataMode ? 1 : 0.7
+                        opacity: showPlaceholder || value || isDataMode ? 1 : 0.7,
+                        lineHeight: '1.5'
                     }}
                 />
 

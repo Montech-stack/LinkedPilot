@@ -367,12 +367,12 @@ Return ONLY JSON.`
 export const MODE_LIST = [
   MODES.research,
   MODES.dataIntegration,
+  MODES.brainstorm,
   MODES.connect,
   MODES.learning,
   MODES.revision,
   MODES.study,
-  MODES.career,
-  MODES.brainstorm
+  MODES.career
 ];
 export const DEFAULT_MODE = 'research';
 
