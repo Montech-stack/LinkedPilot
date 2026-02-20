@@ -31,10 +31,13 @@ const InputOverlay = ({ onSubmit, loading }) => {
         return () => clearInterval(interval);
     }, []);
 
+    const isDataMode = selectedMode === 'data-integration';
+    const canSubmit = !loading && (isDataMode || value.trim());
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (value.trim()) {
-            onSubmit(value, selectedMode);
+        if (canSubmit) {
+            onSubmit(value.trim() || 'My Data', selectedMode);
         }
     };
 
@@ -185,8 +188,8 @@ const InputOverlay = ({ onSubmit, loading }) => {
                     type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    placeholder={`Explore "${SUGGESTIONS[placeholderIdx]}"...`}
-                    disabled={loading}
+                    placeholder={isDataMode ? 'Click Explore to upload your Document/Database...' : `Explore "${SUGGESTIONS[placeholderIdx]}"...`}
+                    disabled={loading || isDataMode}
                     autoFocus
                     style={{
                         background: 'transparent',
@@ -199,31 +202,31 @@ const InputOverlay = ({ onSubmit, loading }) => {
                         width: '100%',
                         padding: '12px 0',
                         transition: 'opacity 0.3s',
-                        opacity: showPlaceholder || value ? 1 : 0.7
+                        opacity: showPlaceholder || value || isDataMode ? 1 : 0.7
                     }}
                 />
 
                 <button
                     type="submit"
-                    disabled={!value.trim() || loading}
+                    disabled={!canSubmit}
                     style={{
-                        background: value.trim()
+                        background: canSubmit
                             ? `linear-gradient(135deg, ${activeMode?.color || 'var(--accent-cyan)'}, #0EA5E9)`
                             : 'rgba(255, 255, 255, 0.06)',
-                        color: value.trim() ? '#050709' : 'var(--muted)',
+                        color: canSubmit ? '#050709' : 'var(--muted)',
                         border: 'none',
                         borderRadius: '10px',
                         padding: '10px 18px',
                         fontSize: '13px',
                         fontWeight: '600',
-                        cursor: value.trim() ? 'pointer' : 'not-allowed',
+                        cursor: canSubmit ? 'pointer' : 'not-allowed',
                         transition: 'all 0.25s var(--ease-smooth)',
                         fontFamily: 'var(--font-display)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         whiteSpace: 'nowrap',
-                        boxShadow: value.trim() ? `0 0 20px ${activeMode?.color || 'var(--accent-cyan)'}33` : 'none'
+                        boxShadow: canSubmit ? `0 0 20px ${activeMode?.color || 'var(--accent-cyan)'}33` : 'none'
                     }}
                 >
                     {loading ? (

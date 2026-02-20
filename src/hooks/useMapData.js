@@ -266,29 +266,7 @@ export const useMapData = () => {
                 */
             });
 
-            // 4. Expand Node
-            // "placed at radius 540px from centre, positioned at 135° angle from centre"
-            const expandPos = polarToCartesian(LAYOUT.EXPAND_RADIUS_FROM_CENTER, LAYOUT.EXPAND_ANGLE);
-
-            // We need to know who it connects to?
-            // PRD says "positioned at outer edge of the last branch cluster".
-            // 135 degrees is between branch 2 (120) and branch 3 (180).
-            // Let's connect it to the nearest branch for visual consistency, or just the central node?
-            // PRD: "Connections... Branch -> Expand node: Cyan dashed line".
-            // So it connects to a branch. At 135 deg, nearest branch is at 120 (Branch 2).
-            // Let's find branch at index 2.
-            const parentBranch = nodes.find(n => n.type === 'branch' && n.id === data.branches[2]?.id) || nodes[0];
-
-            const expandNode = {
-                id: 'expand-1',
-                type: 'expand',
-                x: expandPos.x,
-                y: expandPos.y,
-                data: { parentId: parentBranch.id } // Keep track of context
-            };
-
-            nodes.push(expandNode);
-            connections.push({ from: parentBranch.id, to: expandNode.id, type: 'expand', id: `c-exp-1` });
+            // 4. Expand Node completely removed per user request.
 
             dispatch({
                 type: ACTIONS.SET_MAP,
@@ -380,28 +358,7 @@ export const useMapData = () => {
                 });
             });
 
-            // Spawn new expand node further out
-            const centerX = targetNode.type === 'expand' ? targetNode.x : baseX;
-            const centerY = targetNode.type === 'expand' ? targetNode.y : baseY;
-            const newExpandDist = radius + 120;
-            const newExpandX = centerX + newExpandDist * Math.cos(baseAngle);
-            const newExpandY = centerY + newExpandDist * Math.sin(baseAngle);
-
-            const newExpandNode = {
-                id: `expand-${Date.now()}`,
-                type: 'expand',
-                x: newExpandX,
-                y: newExpandY,
-                data: { parentId: targetNode.id }
-            };
-
-            newNodes.push(newExpandNode);
-            newConnections.push({
-                from: targetNode.id,
-                to: newExpandNode.id,
-                type: 'expand',
-                id: `c-${targetNode.id}-${newExpandNode.id}`
-            });
+            // Spawn new expand node further out logic removed completely.
 
             dispatch({
                 type: ACTIONS.APPEND_CLUSTER,
