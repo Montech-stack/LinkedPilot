@@ -21,12 +21,7 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connection
         }
     }, [node]);
 
-    // Auto-scroll to bottom of chat
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages, asking]);
+    // Removed auto-scroll to bottom of chat to prevent jumping (per user request)
 
     const handleAsk = async (e) => {
         e && e.preventDefault();
