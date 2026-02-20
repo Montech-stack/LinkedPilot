@@ -149,7 +149,11 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
           return nodes.find(n => n.id === toId);
         })
         .filter(Boolean)
-        .sort((a, b) => a.y - b.y); // Sort by vertical check
+        .sort((a, b) => {
+          const angleA = Math.atan2(a.y - current.y, a.x - current.x);
+          const angleB = Math.atan2(b.y - current.y, b.x - current.x);
+          return angleA - angleB;
+        });
 
       if (potentialChildren.length > 0) {
         // Pick middle child for intuitive navigation
@@ -168,10 +172,9 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
       if (parentConn) {
         const parentId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
+        const parentNode = nodes.find(n => n.id === parentId) || { x: 0, y: 0 };
 
-        // Get all siblings (children of same parent), sorted by Y or relevant order
-        // For branches, they are often circular, but let's try sorting by angle or just ID order
-        // A simple effective strategy for radial maps: Sort by angle relative to parent
+        // Get all siblings, sorted by angle relative to parent
         const siblings = connections
           .filter(c => {
             const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
@@ -182,15 +185,17 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
             return nodes.find(n => n.id === toId);
           })
           .filter(Boolean)
-          // Sort siblings by Y for list-like, or angle for radial. 
-          // Let's rely on array order which often matches creation/layout order
-          .sort((a, b) => a.y - b.y);
+          .sort((a, b) => {
+            const angleA = Math.atan2(a.y - parentNode.y, a.x - parentNode.x);
+            const angleB = Math.atan2(b.y - parentNode.y, b.x - parentNode.x);
+            return angleA - angleB;
+          });
 
         const currentIndex = siblings.findIndex(n => n.id === current.id);
 
         if (currentIndex !== -1) {
           if (dx > 0.5) { // Right -> Next
-            nextNode = siblings[currentIndex + 1] || siblings[0]; // Cycle? or stop? Let's cycle or stop.
+            nextNode = siblings[currentIndex + 1] || siblings[0];
           } else { // Left -> Prev
             nextNode = siblings[currentIndex - 1] || siblings[siblings.length - 1];
           }
