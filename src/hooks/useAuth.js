@@ -6,6 +6,8 @@ export const useAuth = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const [providerToken, setProviderToken] = useState(null);
+
     // Check initial session
     useEffect(() => {
         if (!supabase) {
@@ -16,6 +18,7 @@ export const useAuth = () => {
         // Get current session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
+            setProviderToken(session?.provider_token ?? null);
             setLoading(false);
         });
 
@@ -23,6 +26,7 @@ export const useAuth = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, session) => {
                 setUser(session?.user ?? null);
+                setProviderToken(session?.provider_token ?? null);
             }
         );
 
@@ -79,6 +83,7 @@ export const useAuth = () => {
         setLoading(true);
         await supabase.auth.signOut();
         setUser(null);
+        setProviderToken(null);
         setLoading(false);
     }, []);
 
@@ -94,14 +99,32 @@ export const useAuth = () => {
         if (authError) setError(authError.message);
     }, []);
 
+    const connectGoogleDrive = useCallback(async () => {
+        if (!supabase) {
+            setError('Auth service unavailable');
+            return;
+        }
+        // Force a re-authentication with Google to explicitly request the Drive scope.
+        const { error: authError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin,
+                scopes: 'https://www.googleapis.com/auth/drive.readonly'
+            }
+        });
+        if (authError) setError(authError.message);
+    }, []);
+
     return {
         user,
+        providerToken,
         loading,
         error,
         signUp,
         signIn,
         signOut,
         signInWithGoogle,
+        connectGoogleDrive,
         isAuthenticated: !!user,
         clearError: () => setError(null)
     };

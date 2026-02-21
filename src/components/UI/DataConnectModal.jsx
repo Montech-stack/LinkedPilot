@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { X, Database, FileText, Upload, Link, Loader2, Cloud } from 'lucide-react';
 import styles from './DataConnectModal.module.css';
 
-const DataConnectModal = ({ onClose, onConnect }) => {
+const DataConnectModal = ({ onClose, onConnect, auth }) => {
+    const { providerToken, connectGoogleDrive } = auth;
     const [tab, setTab] = useState('database'); // 'database' or 'document'
     const [dbType, setDbType] = useState('postgres');
     const [connectionString, setConnectionString] = useState('');
@@ -101,20 +102,71 @@ const DataConnectModal = ({ onClose, onConnect }) => {
         }
     };
 
-    const handleDriveConnect = (e) => {
+    const handleDriveConnect = async (e) => {
         e.preventDefault();
+        setError(null);
+
         if (!driveLink.trim()) {
             setError('Please enter a valid Google Drive link.');
             return;
         }
 
-        // Pass the explicit link as context content so the RAG knows where to go
-        onConnect({
-            type: 'drive',
-            topic: `Google Drive Source`,
-            content: `Connected Google Drive Document URL: ${driveLink}\n\n[Instruction for AI: Structure the mind map based on the implied content of this external source if direct retrieval wasn't possible.]`
-        });
-        onClose();
+        // 1. If we don't have a provider token, the user must authorize Drive access first.
+        if (!providerToken) {
+            try {
+                // This triggers the Google Pop-up window for OAuth Consent
+                await connectGoogleDrive();
+                // The connect window redirects the app entirely if on the same page in Supabase, 
+                // but if they are already authed, they might just get a silent token refresh.
+                // Assuming silent update works, we'll tell them to try clicking again if it didn't immediately loop.
+                setError('Google Drive access requested. If a popup appeared, please authorize and try clicking Connect again.');
+                return;
+            } catch (err) {
+                setError('Failed to request Google Drive authorization.');
+                return;
+            }
+        }
+
+        setLoading(true);
+
+        // 2. We have the token, let's fetch the file from our secure serverless endpoint
+        try {
+            const res = await fetch('/api/drive-fetch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ driveLink, providerToken })
+            });
+
+            const textResponse = await res.text();
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch (err) {
+                throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 50)}...`);
+            }
+
+            if (!res.ok) {
+                // Determine if it's an auth issue so we can prompt re-auth
+                if (res.status === 401 || res.status === 403) {
+                    setError('Google Drive access denied. Your session may have expired, or you may not have granted the necessary read permissions during sign-in.');
+                    return;
+                }
+                throw new Error(data.error || 'Failed to fetch Google Drive document.');
+            }
+
+            // 3. Success! Pass the raw text back to the Map Generator
+            onConnect({
+                type: 'drive',
+                topic: `Drive Doc: ${data.name || 'External'}`,
+                content: data.text
+            });
+            onClose();
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

@@ -52,7 +52,7 @@ class ErrorBoundary extends React.Component {
 }
 
 
-const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
+const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const {
     scale,
     offset,
@@ -443,6 +443,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
         <DataConnectModal
           onClose={() => setShowDataConnect(false)}
           onConnect={handleDataConnect}
+          auth={auth}
         />
       )}
 
@@ -548,7 +549,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut }) => {
 
 const AppContent = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user, loading, signOut, isAuthenticated } = useAuth();
+  const auth = useAuth();
+  const { user, loading, signOut, isAuthenticated } = auth;
 
   // Handle body overflow for landing page
   useEffect(() => {
@@ -597,6 +599,7 @@ const AppContent = () => {
       theme={theme}
       toggleTheme={toggleTheme}
       signOut={signOut}
+      auth={auth}
     />
   );
 };
