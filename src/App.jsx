@@ -383,8 +383,18 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     }
   };
 
-  const onZoomIn = () => setScale(s => Math.min(3.0, s * 1.2));
-  const onZoomOut = () => setScale(s => Math.max(0.3, s / 1.2));
+  const onZoomIn = () => {
+    const newScale = Math.min(3.0, scale * 1.2);
+    const worldCX = (window.innerWidth / 2 - offset.x) / scale;
+    const worldCY = (window.innerHeight / 2 - offset.y) / scale;
+    flyTo(worldCX, worldCY, newScale, 350);
+  };
+  const onZoomOut = () => {
+    const newScale = Math.max(0.3, scale / 1.2);
+    const worldCX = (window.innerWidth / 2 - offset.x) / scale;
+    const worldCY = (window.innerHeight / 2 - offset.y) / scale;
+    flyTo(worldCX, worldCY, newScale, 350);
+  };
   const onReset = () => {
     const centralNode = nodes.find(n => n.id === 'central');
     if (centralNode) {

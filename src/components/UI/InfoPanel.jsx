@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Sparkles, Loader2, Send, MessageSquare, Bot, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Sparkles, Loader2, Send, MessageSquare, Bot, Minimize2, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 import { askNodeQuestion } from '../../services/api';
 import styles from './InfoPanel.module.css';
 
 const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connections, loading, topic, mode }) => {
     const [visible, setVisible] = useState(false);
+    const [expanded, setExpanded] = useState(false);
     const [question, setQuestion] = useState('');
     const [messages, setMessages] = useState([]); // Array of { type: 'user' | 'ai', content: string }
     const [asking, setAsking] = useState(false);
@@ -16,6 +17,7 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connection
             setVisible(true);
             setQuestion('');
             setMessages([]); // Reset chat on new node
+            setExpanded(false); // Reset expanded on new node
         } else {
             setVisible(false);
         }
@@ -68,39 +70,48 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connection
     const { title, category, detail, type, icon, color } = node?.data || {};
     const accentColor = color || 'var(--accent-cyan)';
 
-    // Helper to format AI markdown-like text
+    // Parse inline markdown: ***bold italic***, **bold**, *italic*, _italic_
+    const parseInline = (text) => {
+        const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*\n]+\*|_[^_\n]+_)/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+            const raw = match[0];
+            if (raw.startsWith('***')) {
+                parts.push(<strong key={match.index}><em>{raw.slice(3, -3)}</em></strong>);
+            } else if (raw.startsWith('**')) {
+                parts.push(<strong key={match.index} style={{ color: 'var(--text)', fontWeight: 600 }}>{raw.slice(2, -2)}</strong>);
+            } else {
+                parts.push(<em key={match.index}>{raw.slice(1, -1)}</em>);
+            }
+            lastIndex = match.index + raw.length;
+        }
+        if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+        return parts;
+    };
+
+    // Render block markdown (headings, lists, paragraphs)
     const formatMessage = (text) => {
         return text.split('\n').map((line, i) => {
-            if (line.startsWith('### ')) return <h4 key={i} style={{ margin: '8px 0 4px', fontSize: '14px', color: 'var(--text)' }}>{line.replace('### ', '')}</h4>;
+            if (line.startsWith('### ')) return <h4 key={i} style={{ margin: '8px 0 4px', fontSize: '14px', color: 'var(--text)' }}>{parseInline(line.slice(4))}</h4>;
+            if (line.startsWith('## ')) return <h3 key={i} style={{ margin: '8px 0 4px', fontSize: '15px', color: 'var(--text)' }}>{parseInline(line.slice(3))}</h3>;
             if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
                 return (
                     <div key={i} style={{ display: 'flex', gap: '8px', marginLeft: '4px', marginBottom: '4px' }}>
-                        <span style={{ color: accentColor }}>•</span>
-                        <span>
-                            {line.replace(/^[\-\*]\s+/, '').split(/(\*\*.*?\*\*)/).map((part, j) =>
-                                part.startsWith('**') && part.endsWith('**')
-                                    ? <strong key={j} style={{ color: 'var(--text)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
-                                    : part
-                            )}
-                        </span>
+                        <span style={{ color: accentColor, flexShrink: 0 }}>•</span>
+                        <span>{parseInline(line.replace(/^[\s]*[-*]\s+/, ''))}</span>
                     </div>
                 );
             }
             if (line.trim() === '') return <div key={i} style={{ height: '6px' }} />;
-            return (
-                <p key={i} style={{ margin: '0 0 6px' }}>
-                    {line.split(/(\*\*.*?\*\*)/).map((part, j) =>
-                        part.startsWith('**') && part.endsWith('**')
-                            ? <strong key={j} style={{ color: 'var(--text)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
-                            : part
-                    )}
-                </p>
-            );
+            return <p key={i} style={{ margin: '0 0 6px' }}>{parseInline(line)}</p>;
         });
     };
 
     return (
-        <div className={`${styles.panel} ${visible && node ? styles.visible : ''}`}>
+        <div className={`${styles.panel} ${visible && node ? styles.visible : ''} ${expanded ? styles.expanded : ''}`}>
             {/* Gradient Top Accent */}
             <div style={{
                 height: '3px',
@@ -163,6 +174,20 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connection
                                 <ChevronDown size={14} />
                             </button>
                             <button
+                                onClick={() => setExpanded(e => !e)}
+                                style={{
+                                    background: 'var(--surface2)', border: '1px solid var(--glass-border)',
+                                    color: 'var(--text-secondary)', cursor: 'pointer', padding: '6px',
+                                    borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s', marginLeft: '4px'
+                                }}
+                                title={expanded ? "Collapse panel" : "Expand panel"}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-cyan)'; e.currentTarget.style.borderColor = 'var(--accent-cyan)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
+                            >
+                                {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                            </button>
+                            <button
                                 onClick={onClose}
                                 style={{
                                     background: 'var(--surface2)', border: '1px solid var(--glass-border)',
@@ -185,7 +210,7 @@ const InfoPanel = ({ node, onClose, onExpand, onCollapse, onNavigate, connection
                         fontFamily: 'var(--font-body)', fontSize: '13px', lineHeight: 1.6,
                         color: 'var(--text-secondary)', margin: '0 0 12px 0'
                     }}>
-                        {detail}
+                        {detail ? parseInline(detail) : null}
                     </p>
 
                     {/* "Tell Me More" Button */}

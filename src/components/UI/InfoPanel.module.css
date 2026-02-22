@@ -16,7 +16,7 @@
     transform: translateY(16px) scale(0.97);
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.3s var(--ease-spring), opacity 0.25s var(--ease-smooth);
+    transition: transform 0.3s var(--ease-spring), opacity 0.25s var(--ease-smooth), width 0.3s var(--ease-smooth);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -26,6 +26,10 @@
     transform: translateY(0) scale(1);
     opacity: 1;
     pointer-events: auto;
+}
+
+.expanded {
+    width: min(780px, calc(100vw - 40px));
 }
 
 .scrollArea {
