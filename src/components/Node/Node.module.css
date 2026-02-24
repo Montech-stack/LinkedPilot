@@ -362,6 +362,6 @@
 
 @keyframes flowPulse {
     0%, 80%, 100% { box-shadow: 0 0 20px var(--node-glow); border-color: var(--node-color); }
-    5%            { box-shadow: 0 0 50px var(--node-glow), 0 0 0 2px var(--node-color); border-color: #fff; z-index: 20; }
+    5%            { box-shadow: 0 0 50px var(--node-glow), 0 0 0 2px var(--node-color); border-color: var(--text); z-index: 20; }
     15%           { box-shadow: 0 0 20px var(--node-glow); z-index: auto; }
 }
