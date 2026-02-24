@@ -1,26 +1,20 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const Connection = ({ from, to, type = 'default', color = '#00D4FF' }) => {
-    if (!from || !to) return null;
+const Connection = memo(({ fromX, fromY, toX, toY, type = 'default', color = '#00D4FF' }) => {
+    if (fromX == null || toX == null) return null;
 
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const cp1 = { x: fromX + dx * 0.4, y: fromY + dy * 0.1 };
+    const cp2 = { x: toX - dx * 0.4, y: toY - dy * 0.1 };
+    const pathData = `M ${fromX} ${fromY} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${toX} ${toY}`;
 
-    // Smooth bezier control points
-    const cp1 = { x: from.x + dx * 0.4, y: from.y + dy * 0.1 };
-    const cp2 = { x: to.x - dx * 0.4, y: to.y - dy * 0.1 };
-
-    const pathData = `M ${from.x} ${from.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${to.x} ${to.y}`;
-
-    // Unique ID for gradients
-    const gradientId = `grad-${from.x.toFixed(0)}-${to.x.toFixed(0)}-${type}`;
+    const gradientId = `grad-${Math.round(fromX)}-${Math.round(toX)}-${type}`;
     const glowId = `glow-${gradientId}`;
 
-    // Style config per type
     let strokeDasharray = 'none';
     let opacity = 0.5;
     let strokeWidth = 1.5;
-    let stroke = color;
     let fromColor = color;
     let toColor = color;
     let useGlow = false;
@@ -48,10 +42,8 @@ const Connection = ({ from, to, type = 'default', color = '#00D4FF' }) => {
         <svg
             style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '1px',
-                height: '1px',
+                top: 0, left: 0,
+                width: '1px', height: '1px',
                 pointerEvents: 'none',
                 overflow: 'visible',
                 zIndex: -1
@@ -73,7 +65,6 @@ const Connection = ({ from, to, type = 'default', color = '#00D4FF' }) => {
                 )}
             </defs>
 
-            {/* Glow underlayer */}
             {useGlow && (
                 <path
                     d={pathData}
@@ -85,7 +76,6 @@ const Connection = ({ from, to, type = 'default', color = '#00D4FF' }) => {
                 />
             )}
 
-            {/* Main path */}
             <path
                 d={pathData}
                 stroke={`url(#${gradientId})`}
@@ -93,19 +83,10 @@ const Connection = ({ from, to, type = 'default', color = '#00D4FF' }) => {
                 strokeDasharray={strokeDasharray}
                 fill="none"
                 className={type === 'expand' ? 'connection-flow' : ''}
-            >
-                {type === 'expand' && (
-                    <animate
-                        attributeName="stroke-dashoffset"
-                        from="100"
-                        to="0"
-                        dur="2s"
-                        repeatCount="indefinite"
-                    />
-                )}
-            </path>
+            />
         </svg>
     );
-};
+});
 
+Connection.displayName = 'Connection';
 export default Connection;

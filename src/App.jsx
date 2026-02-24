@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useMapData } from './hooks/useMapData';
 import { useCanvas } from './hooks/useCanvas';
 import { useTheme } from './hooks/useTheme';
@@ -23,16 +23,11 @@ class ErrorBoundary extends React.Component {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true };
-  }
-
+  static getDerivedStateFromError(error) { return { hasError: true }; }
   componentDidCatch(error, errorInfo) {
     this.setState({ error, errorInfo });
     console.error("Uncaught error:", error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return (
@@ -43,10 +38,12 @@ class ErrorBoundary extends React.Component {
             <br />
             {this.state.errorInfo && this.state.errorInfo.componentStack}
           </details>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: '8px 16px' }}>
+            Reload
+          </button>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
@@ -54,37 +51,45 @@ class ErrorBoundary extends React.Component {
 
 const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const {
-    scale,
-    offset,
-    handleWheel,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    setScale,
-    setOffset,
-    flyTo
+    scale, offset, handleWheel, handleMouseDown, handleMouseMove, handleMouseUp,
+    setScale, setOffset, flyTo, isDragging
   } = useCanvas();
 
   const {
-    nodes,
-    connections,
-    loading,
-    error,
-    generateNewMap,
-    handleExpand,
-    savedMaps,
-    currentMapId,
-    createNewMap,
-    deleteMap,
-    loadMap,
-    topic,
-    mode,
-    shareMap,
-    loadSharedMap,
-    collapseNode
+    nodes, connections, loading, error,
+    generateNewMap, handleExpand, savedMaps, currentMapId,
+    createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode
   } = useMapData();
 
+  // ── Panel & selection state ───────────────────────────────────────────
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelNode, setPanelNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+
+  // ── Per-node chat persistence (keyed by `${mapId}:${nodeId}`) ─────────
+  const [nodeChatStore, setNodeChatStore] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('neuronNodeChats') || '{}'); } catch { return {}; }
+  });
+  // Persist chat store to localStorage whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem('neuronNodeChats', JSON.stringify(nodeChatStore)); } catch {}
+  }, [nodeChatStore]);
+
+  // Get messages for currently displayed node
+  const chatKey = panelNode && currentMapId ? `${currentMapId}:${panelNode.id}` : null;
+  const currentMessages = chatKey ? (nodeChatStore[chatKey] || []) : [];
+
+  const handleMessagesChange = useCallback((newMessages) => {
+    if (!chatKey) return;
+    setNodeChatStore(prev => ({ ...prev, [chatKey]: newMessages }));
+  }, [chatKey]);
+
+  const handleClearChat = useCallback(() => {
+    if (!chatKey) return;
+    setNodeChatStore(prev => ({ ...prev, [chatKey]: [] }));
+  }, [chatKey]);
+
+  // ── Other modals ──────────────────────────────────────────────────────
   const [showQuiz, setShowQuiz] = useState(false);
   const [showDataConnect, setShowDataConnect] = useState(false);
 
@@ -92,29 +97,49 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mapId = params.get('mapId');
-    if (mapId) {
-      loadSharedMap(mapId);
-    }
+    if (mapId) loadSharedMap(mapId);
   }, [loadSharedMap]);
 
+  // Remove body scroll
+  useEffect(() => { document.body.classList.remove('landing-page'); }, []);
 
+  // ── Build parent chain for a node (from central root → immediate parent) ──
+  const getParentChain = useCallback((nodeId) => {
+    const chain = [];
+    let currentId = nodeId;
+    const visited = new Set();
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const parentConn = connections.find(c => {
+        const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+        return toId === currentId;
+      });
+      if (!parentConn) break;
+      const parentId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (!parentNode) break;
+      chain.unshift(parentNode.data); // prepend so order is root→parent
+      currentId = parentId;
+    }
+    return chain;
+  }, [nodes, connections]);
 
-  const [panelNode, setPanelNode] = useState(null);
+  const parentChain = panelNode ? getParentChain(panelNode.id) : [];
 
-  // Ensure body doesn't scroll in workspace
-  useEffect(() => {
-    document.body.classList.remove('landing-page');
-  }, []);
-
+  // ── Node click handler — opens/updates panel WITHOUT closing it ────────
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
-    setPanelNode(node); // Update panel content only on direct click
+    setPanelNode(node);
+    setPanelOpen(true);
+    flyTo(node.x, node.y, Math.max(scale, 1.2), 600);
+  }, [flyTo, scale]);
+
+  // ── Close panel (only via X button) ───────────────────────────────────
+  const handlePanelClose = useCallback(() => {
+    setPanelOpen(false);
   }, []);
 
-  const handleCanvasClick = useCallback(() => {
-    setPanelNode(null);
-  }, []);
-
+  // ── Input/data submit ─────────────────────────────────────────────────
   const handleInputSubmit = (submittedTopic, selectedMode) => {
     if (selectedMode === 'data-integration') {
       setShowDataConnect(true);
@@ -127,21 +152,16 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     generateNewMap(dataPayload.topic, 'data-integration', dataPayload.content);
   };
 
+  // ── D-pad / keyboard navigation (moves focus, doesn't touch panel) ────
   const handleNavigate = useCallback((dx, dy) => {
-    // Determine current node (or mock central if none)
     let current = selectedNode;
-    // If no node selected, try to find the one closest to screen center
-    if (!current) {
-      // Simple fallback: just use central node
-      current = nodes.find(n => n.id === 'central') || nodes[0];
-    }
+    if (!current) current = nodes.find(n => n.id === 'central') || nodes[0];
     if (!current) return;
-
     let nextNode = null;
 
-    // UP: Go to Parent
     if (dy < -0.5) {
-      if (current.id === 'central') return; // Central has no parent
+      // UP: parent
+      if (current.id === 'central') return;
       const parentConn = connections.find(c => {
         const toId = typeof c.to === 'string' ? c.to : c.to?.id;
         return toId === current.id;
@@ -150,127 +170,121 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         const fromId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
         nextNode = nodes.find(n => n.id === fromId);
       }
-    }
-    // DOWN: Go to Child (Middle or First)
-    else if (dy > 0.5) {
-      const potentialChildren = connections
+    } else if (dy > 0.5) {
+      // DOWN: middle child
+      const children = connections
         .filter(c => {
           const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
           return fromId === current.id;
         })
-        .map(c => {
-          const toId = typeof c.to === 'string' ? c.to : c.to?.id;
-          return nodes.find(n => n.id === toId);
-        })
+        .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
         .filter(Boolean)
-        .sort((a, b) => {
-          const angleA = Math.atan2(a.y - current.y, a.x - current.x);
-          const angleB = Math.atan2(b.y - current.y, b.x - current.x);
-          return angleA - angleB;
-        });
-
-      if (potentialChildren.length > 0) {
-        // Pick middle child for intuitive navigation
-        nextNode = potentialChildren[Math.floor(potentialChildren.length / 2)];
-      }
-    }
-    // LEFT/RIGHT: Go to Sibling
-    else if (Math.abs(dx) > 0.5) {
-      if (current.id === 'central') return; // Central has no siblings
-
-      // Find parent to get sibling list
+        .sort((a, b) => Math.atan2(a.y - current.y, a.x - current.x) - Math.atan2(b.y - current.y, b.x - current.x));
+      if (children.length > 0) nextNode = children[Math.floor(children.length / 2)];
+    } else if (Math.abs(dx) > 0.5) {
+      // LEFT/RIGHT: siblings
+      if (current.id === 'central') return;
       const parentConn = connections.find(c => {
         const toId = typeof c.to === 'string' ? c.to : c.to?.id;
         return toId === current.id;
       });
-
       if (parentConn) {
         const parentId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
         const parentNode = nodes.find(n => n.id === parentId) || { x: 0, y: 0 };
-
-        // Get all siblings, sorted by angle relative to parent
         const siblings = connections
-          .filter(c => {
-            const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
-            return fromId === parentId;
-          })
-          .map(c => {
-            const toId = typeof c.to === 'string' ? c.to : c.to?.id;
-            return nodes.find(n => n.id === toId);
-          })
+          .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === parentId)
+          .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
           .filter(Boolean)
-          .sort((a, b) => {
-            const angleA = Math.atan2(a.y - parentNode.y, a.x - parentNode.x);
-            const angleB = Math.atan2(b.y - parentNode.y, b.x - parentNode.x);
-            return angleA - angleB;
-          });
-
-        const currentIndex = siblings.findIndex(n => n.id === current.id);
-
-        if (currentIndex !== -1) {
-          if (dx > 0.5) { // Right -> Prev (swap left and right based on user request)
-            nextNode = siblings[currentIndex - 1] || siblings[siblings.length - 1];
-          } else { // Left -> Next
-            nextNode = siblings[currentIndex + 1] || siblings[0];
-          }
+          .sort((a, b) => Math.atan2(a.y - parentNode.y, a.x - parentNode.x) - Math.atan2(b.y - parentNode.y, b.x - parentNode.x));
+        const idx = siblings.findIndex(n => n.id === current.id);
+        if (idx !== -1) {
+          nextNode = dx > 0 ? (siblings[idx - 1] || siblings[siblings.length - 1]) : (siblings[idx + 1] || siblings[0]);
         }
       }
     }
 
     if (nextNode) {
-      // Don't select, just fly to it (keeps InfoPanel stable)
-      flyTo(nextNode.x, nextNode.y, 1.5, 600);
-      // NOTE: We might want to implicitly track "focused" node without selecting, 
-      // but 'selectedNode' is our state. If we don't update selectedNode, 
-      // subsequent navigations will define "current" as the OLD selectedNode.
-      // FIX: We MUST update selectedNode for navigation continuity, OR use a separate 'focusedNode' state.
-      // Since user said "don't open panel", but we need to track where we are...
-      // Paradox: User wants to navigate. If I don't update selectedNode, pressing DOWN twice 
-      // will just go Parent -> Child, then Parent -> Child again (stuck).
-
-      // OPTION: We update selectedNode, but modify InfoPanel to NOT open automatically?
-      // User said: "Info panel should not automatically open... ONLY open when new node is SELECTED"
-      // Implication: Navigation selects "focus" but not "selection".
-
-      // Hack for now: Updating selectedNode IS how we know where we are.
-      // If we don't update it, navigation allows 1 step then stuck.
-      // I will update selectedNode, BUT I will check if InfoPanel has a prop to stay closed?
-      // Actually, user said: "instead it should only open up or change when a new node is selected"
-      // This implies Navigation != Selection.
-
-      // Use a separate state ref or just force selection?
-      // Wait, if I don't select, I can't navigate further. 
-      // I will update selectedNode for now to fix the navigation logic.
-      // To satisfy "don't open panel", I would need a "source=navigation" flag.
-
-      // Let's look at the previous step. 
-      // I removed setSelectedNode. That broke multi-step navigation.
-
-      // FIX: setSelectedNode(nextNode) IS REQUIRED for navigation to continue from new spot.
-      // I will restore it, because without it, you can't navigate >1 step.
-      // To fix the "InfoPanel opens" issue, I should probably pass a flag or handle it in InfoPanel side.
-      // Or... simply realize that "Selected" means "Info Panel Open".
-      // Maybe I need a `focusedNode` state? That's too big a refactor.
-
-      // Compromise: I will set selectedNode, because otherwise navigation is broken.
       setSelectedNode(nextNode);
+      flyTo(nextNode.x, nextNode.y, 1.4, 500);
     }
   }, [nodes, connections, selectedNode, flyTo]);
 
+  // ── Panel sibling navigation (updates panel content) ──────────────────
+  const handlePanelNavigateSibling = useCallback((dir) => {
+    const current = panelNode;
+    if (!current) return;
+    if (current.id === 'central') return;
+
+    const parentConn = connections.find(c => {
+      const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+      return toId === current.id;
+    });
+    if (!parentConn) return;
+
+    const parentId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
+    const parentNode = nodes.find(n => n.id === parentId) || { x: 0, y: 0 };
+    const siblings = connections
+      .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === parentId)
+      .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
+      .filter(Boolean)
+      .sort((a, b) => Math.atan2(a.y - parentNode.y, a.x - parentNode.x) - Math.atan2(b.y - parentNode.y, b.x - parentNode.x));
+
+    const idx = siblings.findIndex(n => n.id === current.id);
+    if (idx === -1) return;
+
+    const nextNode = dir > 0
+      ? (siblings[idx + 1] || siblings[0])
+      : (siblings[idx - 1] || siblings[siblings.length - 1]);
+
+    if (nextNode && nextNode.id !== current.id) {
+      setPanelNode(nextNode);
+      setSelectedNode(nextNode);
+      flyTo(nextNode.x, nextNode.y, Math.max(scale, 1.2), 500);
+    }
+  }, [panelNode, nodes, connections, flyTo, scale]);
+
+  // ── Panel parent/child nav (from arrow buttons in panel) ─────────────
+  const handlePanelNavigate = useCallback((dx, dy) => {
+    const current = panelNode;
+    if (!current) return;
+    let nextNode = null;
+
+    if (dy < -0.5) {
+      // Go to parent
+      if (current.id === 'central') return;
+      const parentConn = connections.find(c => {
+        const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+        return toId === current.id;
+      });
+      if (parentConn) {
+        const fromId = typeof parentConn.from === 'string' ? parentConn.from : parentConn.from?.id;
+        nextNode = nodes.find(n => n.id === fromId);
+      }
+    } else if (dy > 0.5) {
+      // Go to middle child
+      const children = connections
+        .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === current.id)
+        .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
+        .filter(Boolean)
+        .sort((a, b) => Math.atan2(a.y - current.y, a.x - current.x) - Math.atan2(b.y - current.y, b.x - current.x));
+      if (children.length > 0) nextNode = children[Math.floor(children.length / 2)];
+    }
+
+    if (nextNode) {
+      setPanelNode(nextNode);
+      setSelectedNode(nextNode);
+      flyTo(nextNode.x, nextNode.y, Math.max(scale, 1.2), 500);
+    }
+  }, [panelNode, nodes, connections, flyTo, scale]);
+
+  // ── Find node ──────────────────────────────────────────────────────────
   const handleFindNode = useCallback(async (conceptText) => {
     const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'and', 'or', 'that', 'this', 'it', 'are', 'was', 'be', 'has', 'had', 'with', 'as', 'by', 'on', 'at', 'from', 'which', 'how', 'why', 'who', 'do', 'does', 'did']);
-    const searchTerms = conceptText.toLowerCase().split(/[\s?.,!]+/)
-      .filter(t => t.length > 2 && !STOP_WORDS.has(t));
-
+    const searchTerms = conceptText.toLowerCase().split(/[\s?.,!]+/).filter(t => t.length > 2 && !STOP_WORDS.has(t));
     if (searchTerms.length === 0) return false;
 
     const scoreNode = (node) => {
-      const text = [
-        node.data?.title || '',
-        node.data?.detail || '',
-        node.data?.summary || '',
-        node.data?.category || ''
-      ].join(' ').toLowerCase();
+      const text = [node.data?.title || '', node.data?.detail || '', node.data?.summary || '', node.data?.category || ''].join(' ').toLowerCase();
       let score = 0;
       searchTerms.forEach(term => {
         if (text.includes(term)) score += 1;
@@ -279,130 +293,134 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
       return score;
     };
 
-    // 1) Search existing nodes first (instant)
     const contentNodes = nodes.filter(n => n.type === 'branch' || n.type === 'sub');
-    let bestNode = null;
-    let bestScore = 0;
-    contentNodes.forEach(n => {
-      const s = scoreNode(n);
-      if (s > bestScore) { bestScore = s; bestNode = n; }
-    });
+    let bestNode = null, bestScore = 0;
+    contentNodes.forEach(n => { const s = scoreNode(n); if (s > bestScore) { bestScore = s; bestNode = n; } });
 
     if (bestNode && bestScore >= 3) {
-      flyTo(bestNode.x, bestNode.y, 1.5, 1200);
-      setSelectedNode(bestNode);
-      setPanelNode(bestNode);
+      flyTo(bestNode.x, bestNode.y, 1.5, 1000);
+      setSelectedNode(bestNode); setPanelNode(bestNode); setPanelOpen(true);
       return true;
     }
 
-    // 2) Not found — ask AI which branch contains the concept (one fast call)
     const branches = nodes.filter(n => n.type === 'branch');
     if (branches.length === 0) return false;
+    const predicted = await predictBranch(conceptText, branches.map(b => b.data?.title || ''), topic);
+    const targetBranch = branches.find(b => b.data?.title?.toLowerCase() === predicted?.toLowerCase())
+      || branches.find(b => predicted?.toLowerCase()?.includes(b.data?.title?.toLowerCase()))
+      || branches[0];
 
-    const branchTitles = branches.map(b => b.data?.title || '');
-    const predicted = await predictBranch(conceptText, branchTitles, topic);
-
-    // Find the matching branch (fuzzy match on predicted title)
-    const targetBranch = branches.find(b =>
-      b.data?.title?.toLowerCase() === predicted?.toLowerCase()
-    ) || branches.find(b =>
-      predicted?.toLowerCase()?.includes(b.data?.title?.toLowerCase())
-    ) || branches[0];
-
-    // 3) Expand only that one branch
     const result = await handleExpand(targetBranch.id);
-
-    if (result && result.nodes && result.nodes.length > 0) {
-      // Find best match in newly expanded sub-nodes
-      let expandBest = null;
-      let expandBestScore = -1;
-
+    if (result?.nodes?.length > 0) {
       const subNodes = result.nodes.filter(n => n.type === 'sub');
+      let expandBest = null, expandBestScore = -1;
+      subNodes.forEach(n => { const s = scoreNode(n); if (s > expandBestScore) { expandBestScore = s; expandBest = n; } });
 
-      subNodes.forEach(n => {
-        const s = scoreNode(n);
-        if (s > expandBestScore) {
-          expandBestScore = s;
-          expandBest = n;
-        }
-      });
-
-      // If we found a reasonable text match in the newly expanded nodes
-      if (expandBest && expandBestScore > 0) {
-        flyTo(expandBest.x, expandBest.y, 1.5, 1200);
-        setSelectedNode(expandBest);
-        setPanelNode(expandBest);
-        return true;
-      }
-
-      // If no text match at all, just go to the first expanded sub-node
-      if (subNodes.length > 0) {
-        flyTo(subNodes[0].x, subNodes[0].y, 1.5, 1200);
-        setSelectedNode(subNodes[0]);
-        setPanelNode(subNodes[0]);
-        return true;
-      }
+      const target = (expandBest && expandBestScore > 0) ? expandBest : (subNodes[0] || targetBranch);
+      flyTo(target.x, target.y, 1.5, 1000);
+      setSelectedNode(target); setPanelNode(target); setPanelOpen(true);
+      return true;
     }
 
-    // 4) Fallback: pan to the branch itself
-    flyTo(targetBranch.x, targetBranch.y, 1.5, 1200);
-    setSelectedNode(targetBranch);
-    setPanelNode(targetBranch);
+    flyTo(targetBranch.x, targetBranch.y, 1.5, 1000);
+    setSelectedNode(targetBranch); setPanelNode(targetBranch); setPanelOpen(true);
     return true;
   }, [nodes, flyTo, handleExpand, topic]);
 
+  // ── Expand with auto-collapse of overlapping expansions ───────────────
   const handleExpandWrapper = useCallback(async (nodeId) => {
+    const targetNode = nodes.find(n => n.id === nodeId);
+    if (!targetNode) return;
+
+    // Calculate approximate center of the new expansion
+    const baseAngle = Math.atan2(targetNode.y, targetNode.x);
+    const expansionCenterX = targetNode.x + 200 * Math.cos(baseAngle);
+    const expansionCenterY = targetNode.y + 200 * Math.sin(baseAngle);
+    const OVERLAP_DIST = 260; // px threshold
+
+    // Find existing expanded parents (have outgoing connections, not central, not the target itself)
+    const expandedParentIds = new Set();
+    connections.forEach(c => {
+      const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+      if (fromId && fromId !== nodeId && fromId !== 'central') {
+        const fromNode = nodes.find(n => n.id === fromId);
+        if (fromNode && (fromNode.type === 'branch' || fromNode.type === 'sub')) {
+          expandedParentIds.add(fromId);
+        }
+      }
+    });
+
+    // Collapse any expansion whose children overlap with our new expansion center
+    expandedParentIds.forEach(parentId => {
+      const childNodes = connections
+        .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === parentId)
+        .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
+        .filter(Boolean);
+
+      const hasOverlap = childNodes.some(child => {
+        const dist = Math.sqrt(
+          Math.pow(child.x - expansionCenterX, 2) + Math.pow(child.y - expansionCenterY, 2)
+        );
+        return dist < OVERLAP_DIST;
+      });
+
+      if (hasOverlap) {
+        collapseNode(parentId);
+        // If panel was showing a child of the collapsed node, update panel
+        if (panelNode && childNodes.some(c => c.id === panelNode.id)) {
+          const parentNodeData = nodes.find(n => n.id === parentId);
+          if (parentNodeData) { setPanelNode(parentNodeData); setSelectedNode(parentNodeData); }
+        }
+      }
+    });
+
+    // Now expand
     const result = await handleExpand(nodeId);
-    if (result && result.nodes && result.nodes.length > 0) {
+    if (result?.nodes?.length > 0) {
       const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
       if (contentNodes.length > 0) {
         const xs = contentNodes.map(n => n.x);
         const ys = contentNodes.map(n => n.y);
         const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
         const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
-        flyTo(centerX, centerY, 1.2, 1500);
-      } else {
-        const node = result.nodes[0];
-        flyTo(node.x, node.y, 1.2, 1000);
+        flyTo(centerX, centerY, 1.15, 1200);
       }
     }
-  }, [handleExpand, flyTo]);
+  }, [nodes, connections, handleExpand, flyTo, collapseNode, panelNode]);
 
   const handleCollapseWrapper = useCallback((nodeId) => {
     collapseNode(nodeId);
   }, [collapseNode]);
 
+  // ── Share ──────────────────────────────────────────────────────────────
   const handleShare = async () => {
     try {
       const id = await shareMap(user);
       const link = `${window.location.origin}?mapId=${id}`;
       await navigator.clipboard.writeText(link);
-      alert("Link copied to clipboard! Share it with the world.");
+      alert("Link copied to clipboard!");
     } catch (err) {
       alert(err.message);
     }
   };
 
+  // ── Zoom buttons ───────────────────────────────────────────────────────
   const onZoomIn = () => {
-    const newScale = Math.min(3.0, scale * 1.2);
+    const newScale = Math.min(4.0, scale * 1.2);
     const worldCX = (window.innerWidth / 2 - offset.x) / scale;
     const worldCY = (window.innerHeight / 2 - offset.y) / scale;
-    flyTo(worldCX, worldCY, newScale, 350);
+    flyTo(worldCX, worldCY, newScale, 300);
   };
   const onZoomOut = () => {
-    const newScale = Math.max(0.3, scale / 1.2);
+    const newScale = Math.max(0.2, scale / 1.2);
     const worldCX = (window.innerWidth / 2 - offset.x) / scale;
     const worldCY = (window.innerHeight / 2 - offset.y) / scale;
-    flyTo(worldCX, worldCY, newScale, 350);
+    flyTo(worldCX, worldCY, newScale, 300);
   };
   const onReset = () => {
     const centralNode = nodes.find(n => n.id === 'central');
-    if (centralNode) {
-      flyTo(centralNode.x, centralNode.y, 1.0, 1200);
-    } else {
-      setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-      setScale(1);
-    }
+    if (centralNode) flyTo(centralNode.x, centralNode.y, 1.0, 900);
+    else { setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setScale(1); }
     setSelectedNode(null);
   };
 
@@ -410,14 +428,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
   };
 
-
-
   return (
     <div
       className={styles.app}
       onMouseUp={handleMouseUp}
+      style={{ cursor: 'default' }}
     >
-      {/* Sidebar */}
       <Sidebar
         savedMaps={savedMaps}
         currentMapId={currentMapId}
@@ -434,7 +450,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         <DPad onNavigate={handleNavigate} onReset={onReset} selectedNode={selectedNode} />
       )}
 
-      {/* Quiz Modal */}
       {showQuiz && (
         <QuizModal
           topic={topic || "General Knowledge"}
@@ -448,7 +463,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         />
       )}
 
-      {/* Data Integration Modal */}
       {showDataConnect && (
         <DataConnectModal
           onClose={() => setShowDataConnect(false)}
@@ -457,7 +471,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         />
       )}
 
-      {/* Input Overlay */}
       {!nodes.length && !loading && !showDataConnect && (
         <InputOverlay onSubmit={handleInputSubmit} loading={loading} />
       )}
@@ -466,7 +479,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         <InputOverlay onSubmit={() => { }} loading={true} />
       )}
 
-      {/* Error Toast */}
       {error && (
         <div className={styles.errorToast}>
           {error}
@@ -474,7 +486,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         </div>
       )}
 
-      {/* Toolbar */}
       {nodes.length > 0 && (
         <Toolbar
           onZoomIn={onZoomIn}
@@ -485,17 +496,23 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         />
       )}
 
-      {/* Info Panel */}
+      {/* Info Panel — never closes on canvas click, only on X */}
       <InfoPanel
         node={panelNode}
-        onClose={() => setPanelNode(null)}
+        isOpen={panelOpen}
+        onClose={handlePanelClose}
         connections={connections}
         onExpand={handleExpandWrapper}
         onCollapse={handleCollapseWrapper}
-        onNavigate={handleNavigate}
+        onNavigate={handlePanelNavigate}
+        onNavigateSibling={handlePanelNavigateSibling}
         loading={loading}
         topic={topic}
         mode={mode}
+        messages={currentMessages}
+        onMessagesChange={handleMessagesChange}
+        onClearChat={handleClearChat}
+        parentChain={parentChain}
       />
 
       <Canvas
@@ -504,9 +521,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        onClick={handleCanvasClick}
+        onClick={() => { /* Canvas click no longer closes panel */ }}
       >
-        {/* Connections */}
         {connections.map(conn => {
           const fromId = typeof conn.from === 'string' ? conn.from : conn.from?.id;
           const toId = typeof conn.to === 'string' ? conn.to : conn.to?.id;
@@ -516,25 +532,22 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
           return (
             <Connection
               key={conn.id}
-              from={{ x: fromNode.x, y: fromNode.y }}
-              to={{ x: toNode.x, y: toNode.y }}
+              fromX={fromNode.x}
+              fromY={fromNode.y}
+              toX={toNode.x}
+              toY={toNode.y}
               type={conn.type}
               color={conn.color}
             />
           );
         })}
 
-        {/* Nodes */}
         {nodes.map(node => {
           if (node.type === 'expand') {
             return (
               <ExpandNode
                 key={node.id}
-                style={{
-                  left: node.x,
-                  top: node.y,
-                  position: 'absolute'
-                }}
+                style={{ left: node.x, top: node.y, position: 'absolute' }}
                 onClick={() => handleExpandWrapper(node.id)}
               />
             );
@@ -542,12 +555,9 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
           return (
             <Node
               key={node.id}
-              data={node.data}
-              style={{
-                left: node.x,
-                top: node.y
-              }}
-              onClick={() => handleNodeClick(node)}
+              nodeData={node}
+              isSelected={selectedNode?.id === node.id}
+              onClick={handleNodeClick}
             />
           );
         })}
@@ -562,33 +572,20 @@ const AppContent = () => {
   const auth = useAuth();
   const { user, loading, signOut, isAuthenticated } = auth;
 
-  // Handle body overflow for landing page
   useEffect(() => {
-    if (!isAuthenticated) {
-      document.body.classList.add('landing-page');
-    } else {
-      document.body.classList.remove('landing-page');
-    }
+    if (!isAuthenticated) document.body.classList.add('landing-page');
+    else document.body.classList.remove('landing-page');
   }, [isAuthenticated]);
 
-  // Show loading spinner while checking auth
   if (loading) {
     return (
       <div style={{
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        color: 'var(--accent-cyan)',
-        fontFamily: 'var(--font-display)',
-        fontSize: '18px',
-        gap: '12px'
+        width: '100vw', height: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: 'var(--bg)', color: 'var(--accent-cyan)',
+        fontFamily: 'var(--font-display)', fontSize: '18px', gap: '12px'
       }}>
         <div className="animate-spin" style={{
-          width: '24px',
-          height: '24px',
+          width: '24px', height: '24px',
           border: '2px solid var(--glass-border)',
           borderTop: '2px solid var(--accent-cyan)',
           borderRadius: '50%'
@@ -597,12 +594,10 @@ const AppContent = () => {
     );
   }
 
-  // Not authenticated → show landing page
   if (!isAuthenticated) {
-    return <LandingPage onAuth={() => { /* Session listener handles this */ }} />;
+    return <LandingPage onAuth={() => { }} />;
   }
 
-  // Authenticated → show workspace
   return (
     <MapWorkspace
       user={user}

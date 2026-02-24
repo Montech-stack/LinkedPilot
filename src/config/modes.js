@@ -318,6 +318,7 @@ Be ACTIONABLE and SPECIFIC. Return ONLY JSON.`
     label: 'Data Explorer',
     icon: 'Database',
     emoji: '🗄️',
+    beta: true,
     description: 'Map out personal documents, Drive folders, or Database schemas',
     color: 'var(--accent-cyan)',
     categories: ['Core Structure', 'Key Entities', 'Relationships', 'Main Concepts', 'Attributes', 'Summary Insights'],

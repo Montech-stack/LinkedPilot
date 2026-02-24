@@ -152,6 +152,19 @@ const InputOverlay = ({ onSubmit, loading }) => {
                         >
                             <span style={{ fontSize: '14px' }}>{mode.emoji}</span>
                             {mode.label}
+                            {mode.beta && (
+                                <span style={{
+                                    fontSize: '7px',
+                                    fontWeight: '800',
+                                    background: 'linear-gradient(135deg, #F97316, #EC4899)',
+                                    color: '#fff',
+                                    padding: '2px 5px',
+                                    borderRadius: '4px',
+                                    letterSpacing: '0.8px',
+                                    textTransform: 'uppercase',
+                                    lineHeight: 1,
+                                }}>BETA</span>
+                            )}
                         </button>
                     );
                 })}

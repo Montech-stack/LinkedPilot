@@ -13,73 +13,154 @@
     padding: 0;
     box-shadow: var(--shadow-lg);
     z-index: 200;
-    transform: translateY(16px) scale(0.97);
+    transform: translateX(calc(100% + 30px));
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.3s var(--ease-spring), opacity 0.25s var(--ease-smooth), width 0.3s var(--ease-smooth);
+    transition: transform 0.35s var(--ease-spring), opacity 0.25s var(--ease-smooth), width 0.3s var(--ease-smooth);
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
 .visible {
-    transform: translateY(0) scale(1);
+    transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
 }
 
 .expanded {
-    width: min(780px, calc(100vw - 40px));
+    width: min(72vw, calc(100vw - 40px));
+}
+
+/* External close button — floats to left of panel */
+.externalClose {
+    position: fixed;
+    z-index: 201;
+    top: 36px;
+    width: 32px;
+    height: 32px;
+    background: var(--glass);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s var(--ease-smooth);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85) translateX(8px);
+}
+
+.externalCloseVisible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1) translateX(0);
+    transition: all 0.3s var(--ease-spring);
+}
+
+.externalClose:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    transform: scale(1.1);
 }
 
 .scrollArea {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px 20px 10px 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     scroll-behavior: smooth;
 }
 
 .inputArea {
-    padding: 16px;
+    padding: 14px 16px;
     border-top: 1px solid var(--glass-border);
     background: rgba(10, 10, 20, 0.4);
     flex-shrink: 0;
 }
 
-/* Chat Message Styles */
+/* Chat message styles */
 .message {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
+    gap: 4px;
     font-size: 13px;
-    line-height: 1.5;
-    animation: fadeInUp 0.3s ease-out;
+    line-height: 1.55;
+    animation: fadeInUp 0.25s ease-out;
+    position: relative;
 }
 
 .messageContent {
     background: var(--surface2);
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-radius: 12px;
     color: var(--text);
     position: relative;
-    max-width: 85%;
+    word-break: break-word;
+}
+
+.messageActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    padding: 2px 4px 0;
+}
+
+.message:hover .messageActions {
+    opacity: 1;
+}
+
+.copyBtn {
+    background: var(--surface2);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+}
+
+.copyBtn:hover {
+    background: var(--accent-cyan-dim, rgba(0, 212, 255, 0.1));
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
 }
 
 .userMessage {
-    flex-direction: row-reverse;
+    align-items: flex-end;
 }
 
 .userMessage .messageContent {
     background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.1));
     border: 1px solid rgba(0, 212, 255, 0.2);
     border-top-right-radius: 4px;
+    max-width: 88%;
+}
+
+.aiMessage {
+    align-items: flex-start;
 }
 
 .aiMessage .messageContent {
     border-top-left-radius: 4px;
     border: 1px solid var(--glass-border);
+    max-width: 100%;
 }
 
 .moreButton {
@@ -96,14 +177,79 @@
     align-items: center;
     gap: 6px;
     transition: all 0.2s;
-    margin-top: -8px;
-    margin-bottom: 8px;
+    margin-top: -4px;
+    margin-bottom: 4px;
 }
 
 .moreButton:hover {
-    background: var(--accent-cyan-dim);
+    background: rgba(0, 212, 255, 0.08);
     color: var(--accent-cyan);
     border-color: var(--accent-cyan);
+}
+
+.navBtnGroup {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.navBtn {
+    background: var(--surface2);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+    flex-shrink: 0;
+}
+
+.navBtn:hover {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+    background: rgba(0, 212, 255, 0.08);
+}
+
+.navBtn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.clearBtn {
+    background: var(--surface2);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.18s;
+    letter-spacing: 0.3px;
+}
+
+.clearBtn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 768px) {
@@ -112,15 +258,18 @@
         bottom: 0;
         left: 0;
         right: 0;
-        width: 100%;
+        width: 100% !important;
         max-width: 100%;
         border-radius: 20px 20px 0 0;
         max-height: 85vh;
         transform: translateY(100%);
-        /* Slide up from bottom */
     }
 
     .visible {
         transform: translateY(0);
+    }
+
+    .externalClose {
+        display: none;
     }
 }

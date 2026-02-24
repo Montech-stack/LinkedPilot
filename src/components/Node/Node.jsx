@@ -1,25 +1,26 @@
-import React from 'react';
+import React, { memo } from 'react';
 import styles from './Node.module.css';
 
-const Node = ({ data, onClick, style }) => {
-    const { type, title, category, summary, icon, color, rank } = data;
+const Node = memo(({ nodeData, isSelected, onClick }) => {
+    const { id, type, x, y, data } = nodeData;
+    const { title, category, summary, icon, color, rank } = data;
 
-    // Dynamic style for color variations
     const dynamicStyle = {
-        ...style,
+        left: x,
+        top: y,
         '--node-color': color,
         '--node-glow': `${color}30`,
     };
 
     const handleClick = (e) => {
         e.stopPropagation();
-        onClick && onClick(data);
+        onClick && onClick(nodeData);
     };
 
     if (type === 'central') {
         return (
             <div
-                className={`${styles.node} ${styles.central}`}
+                className={`${styles.node} ${styles.central} ${isSelected ? styles.selected : ''}`}
                 style={dynamicStyle}
                 onClick={handleClick}
             >
@@ -32,7 +33,7 @@ const Node = ({ data, onClick, style }) => {
     if (type === 'branch') {
         return (
             <div
-                className={`${styles.node} ${styles.branch}`}
+                className={`${styles.node} ${styles.branch} ${isSelected ? styles.selected : ''}`}
                 style={dynamicStyle}
                 onClick={handleClick}
             >
@@ -49,7 +50,7 @@ const Node = ({ data, onClick, style }) => {
     if (type === 'sub') {
         return (
             <div
-                className={`${styles.node} ${styles.sub}`}
+                className={`${styles.node} ${styles.sub} ${isSelected ? styles.selected : ''}`}
                 style={dynamicStyle}
                 onClick={handleClick}
             >
@@ -64,6 +65,7 @@ const Node = ({ data, onClick, style }) => {
     }
 
     return null;
-};
+});
 
+Node.displayName = 'Node';
 export default Node;

@@ -1,80 +1,123 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
-const MIN_SCALE = 0.3;
-const MAX_SCALE = 3.0;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 4.0;
 
 export const useCanvas = () => {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-  // Center the canvas initially
-  useEffect(() => {
-    setOffset({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2
-    });
+  // Refs for zero-stale-closure animations and drag tracking
+  const scaleRef = useRef(1);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const animFrameRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const hasDraggedRef = useRef(false);
+  const dragStartRef = useRef({ clientX: 0, clientY: 0, offsetX: 0, offsetY: 0 });
+
+  // Setters that keep refs in sync
+  const applyScale = useCallback((s) => {
+    scaleRef.current = s;
+    setScale(s);
   }, []);
 
-  // Wheel zoom disabled — use the zoom buttons in the toolbar instead
+  const applyOffset = useCallback((o) => {
+    offsetRef.current = o;
+    setOffset(o);
+  }, []);
+
+  // Center canvas on mount
+  useEffect(() => {
+    const initial = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    applyOffset(initial);
+  }, []);
+
+  // Wheel zoom: zoom toward cursor
   const handleWheel = useCallback((e) => {
     e.preventDefault();
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scaleRef.current * factor));
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    const worldX = (mouseX - offsetRef.current.x) / scaleRef.current;
+    const worldY = (mouseY - offsetRef.current.y) / scaleRef.current;
+    const newOffset = {
+      x: mouseX - worldX * newScale,
+      y: mouseY - worldY * newScale,
+    };
+    applyScale(newScale);
+    applyOffset(newOffset);
+  }, [applyScale, applyOffset]);
+
+  // Drag pan
+  const handleMouseDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      offsetX: offsetRef.current.x,
+      offsetY: offsetRef.current.y,
+    };
   }, []);
 
-  // Canvas drag disabled — use the D-pad for navigation
-  const handleMouseDown = useCallback(() => {}, []);
-  const handleMouseMove = useCallback(() => {}, []);
-  const handleMouseUp = useCallback(() => {}, []);
+  const handleMouseMove = useCallback((e) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.clientX;
+    const dy = e.clientY - dragStartRef.current.clientY;
+    if (!hasDraggedRef.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    hasDraggedRef.current = true;
+    applyOffset({
+      x: dragStartRef.current.offsetX + dx,
+      y: dragStartRef.current.offsetY + dy,
+    });
+  }, [applyOffset]);
 
-  // Smoothly animate to a target position and scale
-  const flyTo = useCallback((targetX, targetY, targetScale = 1.0, duration = 1000) => {
-    const startX = offset.x;
-    const startY = offset.y;
-    const startScale = scale;
+  const handleMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
+  }, []);
+
+  // Fly-to animation — uses refs, no stale closures, zero dependencies
+  const flyTo = useCallback((targetX, targetY, targetScale = 1.0, duration = 900) => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    const startX = offsetRef.current.x;
+    const startY = offsetRef.current.y;
+    const startScale = scaleRef.current;
     const startTime = performance.now();
-
-    // We want to center the targetX, targetY on the screen.
-    // The offset in our canvas usually represents the translation.
-    // If we render nodes at (x, y) with transform(offset + x*scale).
-    // To center (targetX, targetY):
-    // CenterScreen = Offset + Target * Scale
-    // Offset = CenterScreen - Target * Scale
-
-    // Wait, let's verify how Canvas renders.
-    // Canvas.jsx: transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
-    // Node at node.x, node.y. 
-    // ScreenPos = offset + node * scale.
-    // We want ScreenPos = ScreenCenter.
-    // offset = ScreenCenter - node * scale.
-
     const screenCX = window.innerWidth / 2;
     const screenCY = window.innerHeight / 2;
-
     const finalOffsetX = screenCX - targetX * targetScale;
     const finalOffsetY = screenCY - targetY * targetScale;
 
-    const animate = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Easing: easeInOutCubic
-      const ease = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-      const currentScale = startScale + (targetScale - startScale) * ease;
-      const currentOffsetX = startX + (finalOffsetX - startX) * ease;
-      const currentOffsetY = startY + (finalOffsetY - startY) * ease;
-
-      setScale(currentScale);
-      setOffset({ x: currentOffsetX, y: currentOffsetY });
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+    const animate = (now) => {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const s = startScale + (targetScale - startScale) * ease;
+      const ox = startX + (finalOffsetX - startX) * ease;
+      const oy = startY + (finalOffsetY - startY) * ease;
+      scaleRef.current = s;
+      offsetRef.current = { x: ox, y: oy };
+      setScale(s);
+      setOffset({ x: ox, y: oy });
+      if (t < 1) {
+        animFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        animFrameRef.current = null;
       }
     };
-
-    requestAnimationFrame(animate);
-  }, [offset, scale]);
+    animFrameRef.current = requestAnimationFrame(animate);
+  }, []); // No deps — reads from refs
 
   return {
     scale,
@@ -83,8 +126,9 @@ export const useCanvas = () => {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    setScale, // exported for zoom buttons
-    setOffset, // exported for reset
-    flyTo // exported for animations
+    setScale: applyScale,
+    setOffset: applyOffset,
+    flyTo,
+    isDragging: () => hasDraggedRef.current,
   };
 };

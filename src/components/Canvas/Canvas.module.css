@@ -20,9 +20,11 @@
     height: 0;
     will-change: transform;
     transform-origin: 0 0;
-    /* Prevent blurry text when scaling */
+    /* Sharp rendering at all zoom levels — no blur ever */
     backface-visibility: hidden;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transform-style: flat;
 }
 
 .background {

@@ -8,27 +8,30 @@
     align-items: center;
     text-align: center;
     transform: translate(-50%, -50%);
-    animation: appear 0.5s var(--ease-spring) forwards;
+    animation: appear 0.45s var(--ease-spring) forwards;
     user-select: none;
     cursor: pointer;
-    transition: transform 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth), border-color 0.25s;
-    /* Prevent pixelation on scale */
-    will-change: transform;
+    transition: transform 0.22s var(--ease-smooth), box-shadow 0.22s var(--ease-smooth), border-color 0.22s;
+    /* Always sharp — never blur */
+    will-change: auto;
     backface-visibility: hidden;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Force crisp pixel rendering at all zoom levels */
+    transform-style: flat;
+    isolation: isolate;
 }
 
 .node:hover {
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: translate(-50%, -50%) scale(1.07);
     z-index: 10;
 }
 
 @keyframes appear {
     from {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.3);
+        transform: translate(-50%, -50%) scale(0.4);
     }
-
     to {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
@@ -60,60 +63,52 @@
         inset 0 0 40px rgba(0, 212, 255, 0.08);
 }
 
-@keyframes centralGradient {
-    0% {
-        background-position: 100% 100%, 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 100%, 100% 50%;
-    }
-
-    100% {
-        background-position: 100% 100%, 0% 50%;
-    }
+.central.selected {
+    box-shadow:
+        0 0 50px rgba(0, 212, 255, 0.4),
+        0 0 90px rgba(124, 58, 237, 0.2),
+        inset 0 0 50px rgba(0, 212, 255, 0.1);
 }
 
-/* Orbital ring */
+@keyframes centralGradient {
+    0%   { background-position: 100% 100%, 0% 50%; }
+    50%  { background-position: 100% 100%, 100% 50%; }
+    100% { background-position: 100% 100%, 0% 50%; }
+}
+
+/* Orbital rings */
 .central::after {
     content: '';
     position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
+    top: -8px; left: -8px; right: -8px; bottom: -8px;
     border-radius: 50%;
     border: 1.5px solid transparent;
     border-top-color: var(--accent-cyan);
     border-right-color: rgba(124, 58, 237, 0.4);
     animation: spin 10s linear infinite;
     opacity: 0.6;
+    /* Prevent this ring from causing blur on nearby nodes */
+    will-change: transform;
+    contain: layout style;
 }
 
-/* Second orbital ring (reversed) */
 .central::before {
     content: '';
     position: absolute;
-    top: -14px;
-    left: -14px;
-    right: -14px;
-    bottom: -14px;
+    top: -14px; left: -14px; right: -14px; bottom: -14px;
     border-radius: 50%;
     border: 1px solid transparent;
     border-bottom-color: rgba(124, 58, 237, 0.3);
     border-left-color: rgba(0, 212, 255, 0.15);
     animation: spin 15s linear infinite reverse;
     opacity: 0.4;
+    will-change: transform;
+    contain: layout style;
 }
 
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 .centralIcon {
@@ -155,6 +150,14 @@
     border-color: var(--node-color);
 }
 
+.branch.selected {
+    box-shadow:
+        0 0 0 2px var(--node-color),
+        0 0 35px var(--node-glow),
+        0 0 70px var(--node-glow);
+    transform: translate(-50%, -50%) scale(1.04);
+}
+
 .branchCategory {
     font-family: var(--font-mono);
     font-size: 9px;
@@ -194,12 +197,10 @@
     box-shadow: var(--shadow-sm);
 }
 
-/* Color accent strip */
 .sub::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     width: 3px;
     height: 100%;
     background: var(--node-color);
@@ -208,9 +209,16 @@
 
 .sub:hover {
     border-color: var(--border-glow);
+    box-shadow: var(--shadow-md), 0 0 15px var(--node-glow);
+}
+
+.sub.selected {
+    border-color: var(--node-color);
     box-shadow:
+        0 0 0 1.5px var(--node-color),
         var(--shadow-md),
-        0 0 15px var(--node-glow);
+        0 0 20px var(--node-glow);
+    transform: translate(-50%, -50%) scale(1.05);
 }
 
 .rankBadge {
@@ -261,6 +269,7 @@
     border-radius: 50%;
     border: 1px solid rgba(0, 212, 255, 0.1);
     animation: expandRing 3s ease-in-out infinite;
+    will-change: transform;
 }
 
 .expand:hover {
@@ -270,29 +279,12 @@
 }
 
 @keyframes breathe {
-    0% {
-        box-shadow: 0 0 0 rgba(0, 212, 255, 0);
-    }
-
-    50% {
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.25);
-    }
-
-    100% {
-        box-shadow: 0 0 0 rgba(0, 212, 255, 0);
-    }
+    0%   { box-shadow: 0 0 0 rgba(0, 212, 255, 0); }
+    50%  { box-shadow: 0 0 20px rgba(0, 212, 255, 0.25); }
+    100% { box-shadow: 0 0 0 rgba(0, 212, 255, 0); }
 }
 
 @keyframes expandRing {
-
-    0%,
-    100% {
-        transform: scale(1);
-        opacity: 0.3;
-    }
-
-    50% {
-        transform: scale(1.15);
-        opacity: 0.6;
-    }
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50%       { transform: scale(1.15); opacity: 0.6; }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from './Canvas.module.css';
 
 const Canvas = ({
@@ -10,14 +10,25 @@ const Canvas = ({
     onMouseMove,
     onClick
 }) => {
+    const containerRef = useRef(null);
+
+    // Attach wheel with passive:false so preventDefault works
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || !onWheel) return;
+        const handler = (e) => { e.preventDefault(); onWheel(e); };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
+    }, [onWheel]);
+
     return (
         <div
+            ref={containerRef}
             className={styles.canvasContainer}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
-            onWheel={onWheel}
             onClick={onClick}
-            onDoubleClick={(e) => e.preventDefault()} // Prevent browser default zoom/select
+            onDoubleClick={(e) => e.preventDefault()}
         >
             <div
                 className={styles.world}
