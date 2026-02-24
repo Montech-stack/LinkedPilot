@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useMapData } from './hooks/useMapData';
 import { useCanvas } from './hooks/useCanvas';
 import { useTheme } from './hooks/useTheme';
@@ -69,6 +69,19 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelNode, setPanelNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+
+  // ── Per-node expand tracking ──────────────────────────────────────────
+  const [expandingNodeId, setExpandingNodeId] = useState(null);
+
+  // Set of node IDs that currently have children (are expanded)
+  const expandedNodeIds = useMemo(() => {
+    const ids = new Set();
+    connections.forEach(c => {
+      const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
+      if (fromId && fromId !== 'central') ids.add(fromId);
+    });
+    return ids;
+  }, [connections]);
 
   // ── Per-node chat persistence (keyed by `${mapId}:${nodeId}`) ─────────
   const [nodeChatStore, setNodeChatStore] = useState(() => {
@@ -246,6 +259,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     if (nextNode && nextNode.id !== current.id) {
       setPanelNode(nextNode);
       setSelectedNode(nextNode);
+      setPanelOpen(true);
       flyTo(nextNode.x, nextNode.y, Math.max(scale, 1.2), 500);
     }
   }, [panelNode, nodes, connections, flyTo, scale]);
@@ -280,6 +294,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     if (nextNode) {
       setPanelNode(nextNode);
       setSelectedNode(nextNode);
+      setPanelOpen(true);
       flyTo(nextNode.x, nextNode.y, Math.max(scale, 1.2), 500);
     }
   }, [panelNode, nodes, connections, flyTo, scale]);
@@ -336,19 +351,23 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
 
   // ── Expand node and center view ───────────────────────────────────────
   const handleExpandWrapper = useCallback(async (nodeId) => {
-    // Just expand directly without auto-collapsing siblings
-    const result = await handleExpand(nodeId);
-    if (result?.nodes?.length > 0) {
-      const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
-      if (contentNodes.length > 0) {
-        const xs = contentNodes.map(n => n.x);
-        const ys = contentNodes.map(n => n.y);
-        const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
-        const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
-        flyTo(centerX, centerY, 1.15, 1200);
+    setExpandingNodeId(nodeId);
+    try {
+      const result = await handleExpand(nodeId);
+      if (result?.nodes?.length > 0) {
+        const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
+        if (contentNodes.length > 0) {
+          const xs = contentNodes.map(n => n.x);
+          const ys = contentNodes.map(n => n.y);
+          const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+          const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
+          flyTo(centerX, centerY, 1.15, 1200);
+        }
       }
+    } finally {
+      setExpandingNodeId(null);
     }
-  }, [nodes, connections, handleExpand, flyTo, collapseNode, panelNode]);
+  }, [handleExpand, flyTo]);
 
   const handleCollapseWrapper = useCallback((nodeId) => {
     collapseNode(nodeId);
@@ -536,6 +555,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
               key={node.id}
               nodeData={node}
               isSelected={selectedNode?.id === node.id}
+              isExpanded={expandedNodeIds.has(node.id)}
+              isLoading={expandingNodeId === node.id}
+              onExpand={handleExpandWrapper}
+              onCollapse={handleCollapseWrapper}
               onClick={handleNodeClick}
             />
           );

@@ -393,7 +393,7 @@ export const useMapData = () => {
                     type: 'branch',
                     x: pos.x,
                     y: pos.y,
-                    data: { ...branch, color, type: 'branch' }
+                    data: { ...branch, color, type: 'branch', branchIndex: i + 1 }
                 };
                 nodes.push(branchNode);
                 connections.push({ from: centralNode.id, to: branchNode.id, type: 'central', id: `c-${centralNode.id}-${branchNode.id}` });

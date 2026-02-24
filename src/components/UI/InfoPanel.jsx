@@ -160,13 +160,15 @@ const InfoPanel = ({
     const scrollRef = useRef(null);
     const prevNodeIdRef = useRef(null);
 
-    // Clear input when switching nodes (keep panel open, keep messages, just clear input)
+    // When node changes: reset input, scroll to top so the new node's info is visible
     const nodeId = node?.id;
     React.useEffect(() => {
         if (nodeId && nodeId !== prevNodeIdRef.current) {
             setQuestion('');
             setAsking(false);
             prevNodeIdRef.current = nodeId;
+            // Instant scroll to top — show new node's title/detail, not leftover chat scroll
+            if (scrollRef.current) scrollRef.current.scrollTop = 0;
         }
     }, [nodeId]);
 
