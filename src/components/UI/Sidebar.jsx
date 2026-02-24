@@ -505,3 +505,11 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
                             }}
                         />
                     </div>
+
+                </div>
+            </div>
+        </>
+    );
+};
+
+export default Sidebar;
