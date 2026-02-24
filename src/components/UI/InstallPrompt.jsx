@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 
-// Device-specific detection for iOS
+// Device-specific detection for iOS (including iPadOS)
 const isIOS = () => {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    return (
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
 };
 
 // Generate device ID (tied to device, not account)
@@ -20,9 +23,7 @@ const getDeviceId = () => {
 const DISMISSED_KEY = (deviceId) => `neuro_pwa_dismissed_${deviceId}`;
 
 const InstallPrompt = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [visible, setVisible] = useState(false);
-    const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+    const [showIOSHint, setShowIOSHint] = useState(false);
     const deviceId = getDeviceId();
 
     useEffect(() => {
@@ -52,6 +53,14 @@ const InstallPrompt = () => {
     }, [deviceId]);
 
     const handleInstall = async () => {
+        if (showIOSPrompt) {
+            // iOS doesn't support programmatic install
+            // Flash the instructions to help the user
+            setShowIOSHint(true);
+            setTimeout(() => setShowIOSHint(false), 3000);
+            return;
+        }
+
         if (!deferredPrompt) return;
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
@@ -73,7 +82,9 @@ const InstallPrompt = () => {
 
     const content = showIOSPrompt ? {
         title: 'Install Neuro',
-        description: 'Tap the Share icon and select "Add to Home Screen"'
+        description: showIOSHint 
+            ? '⬇️ Tap the Share icon below, then "Add to Home Screen"'
+            : 'Tap the Share icon and select "Add to Home Screen"'
     } : {
         title: 'Install Neuro',
         description: 'Add to your home screen for a native app experience'
@@ -89,16 +100,19 @@ const InstallPrompt = () => {
             background: 'var(--glass)',
             backdropFilter: 'blur(var(--glass-blur))',
             WebkitBackdropFilter: 'blur(var(--glass-blur))',
-            border: '1px solid var(--glass-border)',
+            border: showIOSHint ? '1px solid var(--accent-cyan)' : '1px solid var(--glass-border)',
             borderRadius: '18px',
             padding: '14px 16px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,212,255,0.08)',
+            boxShadow: showIOSHint 
+                ? '0 8px 40px rgba(0,212,255,0.25), 0 0 0 1px rgba(0,212,255,0.4)'
+                : '0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,212,255,0.08)',
             maxWidth: '360px',
             width: 'calc(100vw - 32px)',
             animation: 'fadeInUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transition: 'all 0.3s ease'
         }}>
             <NeuroAvatar state="idle" size={38} />
 
@@ -114,38 +128,39 @@ const InstallPrompt = () => {
                 </div>
                 <div style={{
                     fontSize: '11px',
-                    color: 'var(--text-secondary)',
+                    color: showIOSHint ? 'var(--accent-cyan)' : 'var(--text-secondary)',
                     lineHeight: 1.45,
+                    transition: 'color 0.3s ease',
+                    fontWeight: showIOSHint ? '600' : '400'
                 }}>
                     {content.description}
                 </div>
             </div>
 
-            {!showIOSPrompt && (
-                <button
-                    onClick={handleInstall}
-                    style={{
-                        background: 'linear-gradient(135deg, #00D4FF, #7C3AED)',
-                        border: 'none',
-                        borderRadius: '10px',
-                        color: '#fff',
-                        padding: '9px 14px',
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.2px',
-                    }}
-                >
-                    <Download size={12} />
-                    Install
-                </button>
-            )}
+            <button
+                onClick={handleInstall}
+                style={{
+                    background: 'linear-gradient(135deg, #00D4FF, #7C3AED)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    padding: '9px 14px',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.2px',
+                    opacity: showIOSPrompt ? 0.9 : 1
+                }}
+            >
+                <Download size={12} />
+                Install
+            </button>
 
             <button
                 onClick={handleDismiss}
