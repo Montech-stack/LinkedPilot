@@ -70,9 +70,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const [panelNode, setPanelNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
 
-  // ── Per-node expand tracking ──────────────────────────────────────────
-  const [expandingNodeId, setExpandingNodeId] = useState(null);
-
   // Set of node IDs that currently have children (are expanded)
   const expandedNodeIds = useMemo(() => {
     const ids = new Set();
@@ -351,21 +348,16 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
 
   // ── Expand node and center view ───────────────────────────────────────
   const handleExpandWrapper = useCallback(async (nodeId) => {
-    setExpandingNodeId(nodeId);
-    try {
-      const result = await handleExpand(nodeId);
-      if (result?.nodes?.length > 0) {
-        const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
-        if (contentNodes.length > 0) {
-          const xs = contentNodes.map(n => n.x);
-          const ys = contentNodes.map(n => n.y);
-          const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
-          const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
-          flyTo(centerX, centerY, 1.15, 1200);
-        }
+    const result = await handleExpand(nodeId);
+    if (result?.nodes?.length > 0) {
+      const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
+      if (contentNodes.length > 0) {
+        const xs = contentNodes.map(n => n.x);
+        const ys = contentNodes.map(n => n.y);
+        const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
+        flyTo(centerX, centerY, 1.15, 1200);
       }
-    } finally {
-      setExpandingNodeId(null);
     }
   }, [handleExpand, flyTo]);
 
