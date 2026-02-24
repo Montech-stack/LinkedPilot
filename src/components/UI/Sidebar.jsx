@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, ChevronLeft, ChevronRight, Network, Sparkles, Sun, Moon, LogOut } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, Network, Sparkles, Sun, Moon, LogOut, Download, Upload } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 
 const MODE_META = {
@@ -12,8 +12,59 @@ const MODE_META = {
     career: { emoji: '🚀', label: 'Career', color: 'var(--accent-orange)' }
 };
 
-const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, theme, onToggleTheme, user, onSignOut }) => {
+// Export all maps as JSON file
+const exportMaps = (savedMaps) => {
+    const data = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        maps: savedMaps && typeof savedMaps === 'object' ? Object.values(savedMaps) : []
+    };
+    
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `neuro-maps-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+// Import maps from JSON file
+const importMaps = (file, savedMaps, onUpdate) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const content = JSON.parse(e.target.result);
+            if (!content.maps || !Array.isArray(content.maps)) {
+                alert('Invalid file format. Please export from Neuro app.');
+                return;
+            }
+            
+            const currentMaps = savedMaps && typeof savedMaps === 'object' ? Object.assign({}, savedMaps) : {};
+            let importedCount = 0;
+            
+            content.maps.forEach(map => {
+                if (map.id) {
+                    currentMaps[map.id] = map;
+                    importedCount++;
+                }
+            });
+            
+            onUpdate(currentMaps);
+            alert(`Successfully imported ${importedCount} map${importedCount !== 1 ? 's' : ''}!`);
+        } catch (err) {
+            alert('Error importing file. Make sure it\'s a valid Neuro export.');
+        }
+    };
+    reader.readAsText(file);
+};
+
+const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, theme, onToggleTheme, user, onSignOut, onUpdateMaps, syncEnabled }) => {
     const [collapsed, setCollapsed] = useState(false);
+    const fileInputRef = useRef(null);
 
     const mapEntries = savedMaps && typeof savedMaps === 'object' ? Object.values(savedMaps) : [];
     const sortedMaps = mapEntries.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
@@ -323,31 +374,134 @@ const Sidebar = ({ savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, 
                             }}>
                                 {user.user_metadata?.full_name || user.email}
                             </span>
-                            <button
-                                onClick={onSignOut}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--muted)',
-                                    cursor: 'pointer',
-                                    padding: '4px',
-                                    display: 'flex',
-                                    transition: 'color 0.2s'
-                                }}
-                                title="Sign Out"
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--muted)'}
-                            >
-                                <LogOut size={14} />
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {syncEnabled && (
+                                    <span style={{
+                                        fontSize: '10px',
+                                        color: 'var(--accent-cyan)',
+                                        fontFamily: 'var(--font-mono)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        <span style={{
+                                            width: '6px',
+                                            height: '6px',
+                                            borderRadius: '50%',
+                                            background: 'var(--accent-cyan)',
+                                            boxShadow: '0 0 6px var(--accent-cyan)',
+                                            display: 'inline-block'
+                                        }} />
+                                        synced
+                                    </span>
+                                )}
+                                <button
+                                    onClick={onSignOut}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--muted)',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        display: 'flex',
+                                        transition: 'color 0.2s'
+                                    }}
+                                    title="Sign Out"
+                                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--muted)'}
+                                >
+                                    <LogOut size={14} />
+                                </button>
+                            </div>
                         </div>
                     )}
 
+                    {/* Export/Import (Backup for offline or manual transfer) */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid var(--glass-border)',
+                        justifyContent: 'space-between'
+                    }}>
+                        <button
+                            onClick={() => exportMaps(savedMaps)}
+                            title="Export all maps to JSON file (backup)"
+                            style={{
+                                flex: 1,
+                                background: 'rgba(0, 212, 255, 0.08)',
+                                border: '1px solid rgba(0, 212, 255, 0.25)',
+                                borderRadius: '8px',
+                                color: 'var(--accent-cyan)',
+                                cursor: 'pointer',
+                                padding: '8px 12px',
+                                fontSize: '11px',
+                                fontFamily: 'var(--font-display)',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(0, 212, 255, 0.15)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 212, 255, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(0, 212, 255, 0.08)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            <Download size={12} />
+                            Export
+                        </button>
 
-                </div>
-            </div>
-        </>
-    );
-};
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            title="Import maps from JSON file (backup)"
+                            style={{
+                                flex: 1,
+                                background: 'rgba(124, 58, 237, 0.08)',
+                                border: '1px solid rgba(124, 58, 237, 0.25)',
+                                borderRadius: '8px',
+                                color: 'var(--accent-purple)',
+                                cursor: 'pointer',
+                                padding: '8px 12px',
+                                fontSize: '11px',
+                                fontFamily: 'var(--font-display)',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(124, 58, 237, 0.15)';
+                                e.currentTarget.style.boxShadow = '0 0 12px rgba(124, 58, 237, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(124, 58, 237, 0.08)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            <Upload size={12} />
+                            Import
+                        </button>
 
-export default Sidebar;
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                    importMaps(e.target.files[0], savedMaps, onUpdateMaps);
+                                    e.target.value = '';
+                                }
+                            }}
+                        />
+                    </div>

@@ -61,7 +61,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const {
     nodes, connections, loading, error,
     generateNewMap, handleExpand, savedMaps, currentMapId,
-    createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode
+    createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode,
+    syncEnabled
   } = useMapData();
 
   // ── Panel & selection state ───────────────────────────────────────────
@@ -431,6 +432,18 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
   };
 
+  // Handle import: update savedMaps in localStorage
+  const handleUpdateMaps = useCallback((updatedMaps) => {
+    try {
+      window.localStorage.setItem('neuronMaps', JSON.stringify(updatedMaps));
+      // Reload the page to pick up the new maps
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to import maps:", err);
+      alert("Failed to import maps. Please try again.");
+    }
+  }, []);
+
   return (
     <div
       className={styles.app}
@@ -447,6 +460,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         onToggleTheme={toggleTheme}
         user={user}
         onSignOut={signOut}
+        onUpdateMaps={handleUpdateMaps}
+        syncEnabled={syncEnabled}
       />
 
       {nodes.length > 0 && (

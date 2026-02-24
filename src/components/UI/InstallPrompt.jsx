@@ -2,19 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 
-const DISMISSED_KEY = 'neuro_pwa_dismissed';
+// Device-specific detection for iOS
+const isIOS = () => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+};
+
+// Generate device ID (tied to device, not account)
+const getDeviceId = () => {
+    let deviceId = localStorage.getItem('neuro_device_id');
+    if (!deviceId) {
+        deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('neuro_device_id', deviceId);
+    }
+    return deviceId;
+};
+
+const DISMISSED_KEY = (deviceId) => `neuro_pwa_dismissed_${deviceId}`;
 
 const InstallPrompt = () => {
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [visible, setVisible] = useState(false);
+    const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+    const deviceId = getDeviceId();
 
     useEffect(() => {
-        // Don't show if user already dismissed
-        if (localStorage.getItem(DISMISSED_KEY)) return;
+        const dismissedKey = DISMISSED_KEY(deviceId);
+        
+        // Don't show if user already dismissed on THIS device
+        if (localStorage.getItem(dismissedKey)) return;
 
         // Don't show if already installed (running in standalone mode)
         if (window.matchMedia('(display-mode: standalone)').matches) return;
 
+        // iOS Safari detection
+        if (isIOS()) {
+            setShowIOSPrompt(true);
+            return;
+        }
+
+        // Android/Desktop: use beforeinstallprompt
         const handler = (e) => {
             e.preventDefault();
             setDeferredPrompt(e);
@@ -23,7 +49,7 @@ const InstallPrompt = () => {
 
         window.addEventListener('beforeinstallprompt', handler);
         return () => window.removeEventListener('beforeinstallprompt', handler);
-    }, []);
+    }, [deviceId]);
 
     const handleInstall = async () => {
         if (!deferredPrompt) return;
@@ -33,16 +59,25 @@ const InstallPrompt = () => {
         setVisible(false);
         // Only permanently dismiss if user rejected — accepted means it's installed
         if (outcome === 'dismissed') {
-            localStorage.setItem(DISMISSED_KEY, '1');
+            localStorage.setItem(DISMISSED_KEY(deviceId), '1');
         }
     };
 
     const handleDismiss = () => {
-        setVisible(false);
-        localStorage.setItem(DISMISSED_KEY, '1');
+        if (showIOSPrompt) setShowIOSPrompt(false);
+        else setVisible(false);
+        localStorage.setItem(DISMISSED_KEY(deviceId), '1');
     };
 
-    if (!visible) return null;
+    if (!visible && !showIOSPrompt) return null;
+
+    const content = showIOSPrompt ? {
+        title: 'Install Neuro',
+        description: 'Tap the Share icon and select "Add to Home Screen"'
+    } : {
+        title: 'Install Neuro',
+        description: 'Add to your home screen for a native app experience'
+    };
 
     return (
         <div style={{
@@ -75,40 +110,42 @@ const InstallPrompt = () => {
                     color: 'var(--text)',
                     marginBottom: '3px',
                 }}>
-                    Install Neuro
+                    {content.title}
                 </div>
                 <div style={{
                     fontSize: '11px',
                     color: 'var(--text-secondary)',
                     lineHeight: 1.45,
                 }}>
-                    Add to your home screen for a native app experience
+                    {content.description}
                 </div>
             </div>
 
-            <button
-                onClick={handleInstall}
-                style={{
-                    background: 'linear-gradient(135deg, #00D4FF, #7C3AED)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    padding: '9px 14px',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    letterSpacing: '0.2px',
-                }}
-            >
-                <Download size={12} />
-                Install
-            </button>
+            {!showIOSPrompt && (
+                <button
+                    onClick={handleInstall}
+                    style={{
+                        background: 'linear-gradient(135deg, #00D4FF, #7C3AED)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: '#fff',
+                        padding: '9px 14px',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.2px',
+                    }}
+                >
+                    <Download size={12} />
+                    Install
+                </button>
+            )}
 
             <button
                 onClick={handleDismiss}

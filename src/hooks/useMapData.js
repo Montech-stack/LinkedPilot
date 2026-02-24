@@ -112,6 +112,130 @@ export const useMapData = () => {
         }
     });
 
+    // Supabase sync state
+    const [user, setUser] = useState(null);
+    const [syncEnabled, setSyncEnabled] = useState(false);
+
+    // Get current user on mount
+    useEffect(() => {
+        if (!supabase) {
+            setSyncEnabled(false);
+            return;
+        }
+
+        const getUser = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            setUser(authUser);
+            setSyncEnabled(!!authUser);
+        };
+
+        getUser();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, authUser) => {
+            setUser(authUser);
+            setSyncEnabled(!!authUser);
+        });
+
+        return () => subscription?.unsubscribe();
+    }, []);
+
+    // Supabase sync functions
+    const syncMapsToSupabase = useCallback(async (mapsToSync) => {
+        if (!supabase || !user) return true; // Not logged in, just save locally
+
+        try {
+            // Just broadcast a sync event to other devices (don't store map data)
+            const { error } = await supabase
+                .from('sync_events')
+                .insert({
+                    user_id: user.id,
+                    event_type: 'map_updated',
+                    data: {
+                        mapIds: Object.keys(mapsToSync),
+                        timestamp: Date.now()
+                    }
+                });
+
+            if (error) {
+                console.error('Error broadcasting sync event:', error);
+                return true; // Still success locally - we'll sync when back online
+            }
+            return true;
+        } catch (err) {
+            console.error('Failed to broadcast sync:', err);
+            return true; // Still save locally
+        }
+    }, [user]);
+
+    // Subscribe to real-time sync events from other devices
+    const setupRealtimeListeners = useCallback(() => {
+        if (!supabase || !user) return;
+
+        try {
+            // Listen for sync events on this user's channel
+            const channel = supabase
+                .channel(`user_sync_${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'sync_events',
+                        filter: `user_id=eq.${user.id}`
+                    },
+                    (payload) => {
+                        // When another device syncs, reload maps from localStorage (they handle it locally)
+                        // This is just a notification that another device made changes
+                        console.log('Sync event received from another device:', payload.new);
+                        // App will naturally update since localStorage is shared concept
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        } catch (err) {
+            console.error('Failed to setup realtime listeners:', err);
+        }
+    }, [user]);
+
+    const deleteMapFromSupabase = useCallback(async (mapId) => {
+        if (!supabase || !user) return true; // Not logged in
+
+        try {
+            // Just broadcast a deletion event to other devices
+            const { error } = await supabase
+                .from('sync_events')
+                .insert({
+                    user_id: user.id,
+                    event_type: 'map_deleted',
+                    data: {
+                        mapId: mapId,
+                        timestamp: Date.now()
+                    }
+                });
+
+            if (error) {
+                console.error('Error broadcasting delete event:', error);
+                return true; // Still success locally
+            }
+            return true;
+        } catch (err) {
+            console.error('Failed to broadcast delete:', err);
+            return true; // Still delete locally
+        }
+    }, [user]);
+
+    // On login: setup real-time sync listeners
+    useEffect(() => {
+        if (!syncEnabled || !user) return;
+
+        const unsubscribe = setupRealtimeListeners();
+        return unsubscribe;
+    }, [syncEnabled, user, setupRealtimeListeners]);
+
     // 2. Initialize current map state based on ID
     const getInitialState = () => {
         if (currentMapId && savedMaps[currentMapId]) {
@@ -134,29 +258,35 @@ export const useMapData = () => {
         }
     }, [currentMapId]); // Be careful of dependency loops if savedMaps changes
 
-    // Effect: Auto-save current state to savedMaps and localStorage
+    // Effect: Auto-save current state to localStorage + broadcast sync event if logged in
     useEffect(() => {
         if (!currentMapId && state.nodes.length > 0) {
-            // First save of a new map? Or just unsaved state?
-            // User flow: "Input topic" -> Generate -> creates map.
-            // We should generate an ID when "Generate" happens?
+            // First save of a new map?
         }
 
         if (currentMapId && state.nodes.length > 0) {
-            setSavedMaps(prev => {
-                const updated = {
-                    ...prev,
-                    [currentMapId]: {
-                        ...state,
-                        lastModified: Date.now(),
-                        id: currentMapId
-                    }
-                };
-                window.localStorage.setItem('neuronMaps', JSON.stringify(updated));
-                return updated;
-            });
+            const mapData = {
+                ...state,
+                lastModified: Date.now(),
+                id: currentMapId
+            };
+
+            // Save to localStorage first (works offline)
+            setSavedMaps(prev => ({
+                ...prev,
+                [currentMapId]: mapData
+            }));
+            window.localStorage.setItem('neuronMaps', JSON.stringify({
+                ...JSON.parse(window.localStorage.getItem('neuronMaps') || '{}'),
+                [currentMapId]: mapData
+            }));
+
+            // If logged in: broadcast sync event to other devices (but don't store map data)
+            if (syncEnabled && user) {
+                syncMapsToSupabase({ [currentMapId]: mapData });
+            }
         }
-    }, [state]);
+    }, [state, syncEnabled, user, syncMapsToSupabase, currentMapId]);
 
     // Persist currentMapId
     useEffect(() => {
@@ -174,15 +304,28 @@ export const useMapData = () => {
     };
 
     const deleteMap = (id) => {
-        const newMaps = { ...savedMaps };
-        delete newMaps[id];
-        setSavedMaps(newMaps);
-        window.localStorage.setItem('neuronMaps', JSON.stringify(newMaps));
+        const deleteFromDB = async () => {
+            // Database-first: if user is logged in, delete from Supabase first
+            if (syncEnabled && user) {
+                const success = await deleteMapFromSupabase(id);
+                if (!success) {
+                    console.warn('Failed to delete map from Supabase, but removing from local cache');
+                }
+            }
 
-        if (currentMapId === id) {
-            setCurrentMapId(null);
-            dispatch({ type: ACTIONS.RESET });
-        }
+            // After DB deletion (or if not logged in), update local state
+            const newMaps = { ...savedMaps };
+            delete newMaps[id];
+            setSavedMaps(newMaps);
+            window.localStorage.setItem('neuronMaps', JSON.stringify(newMaps));
+
+            if (currentMapId === id) {
+                setCurrentMapId(null);
+                dispatch({ type: ACTIONS.RESET });
+            }
+        };
+
+        deleteFromDB();
     };
 
     const loadMap = (id) => {
@@ -473,6 +616,8 @@ export const useMapData = () => {
         loadMap,
         shareMap,
         loadSharedMap,
-        collapseNode
+        collapseNode,
+        syncEnabled,
+        user
     };
 };

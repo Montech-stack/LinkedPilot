@@ -227,6 +227,10 @@
     cursor: not-allowed;
 }
 
+.mobileClose {
+    display: none;
+}
+
 .clearBtn {
     background: var(--surface2);
     border: 1px solid var(--glass-border);
@@ -280,5 +284,9 @@
 
     .externalClose {
         display: none;
+    }
+
+    .mobileClose {
+        display: flex !important;
     }
 }

@@ -344,6 +344,15 @@ const InfoPanel = ({
                             >
                                 {panelExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                             </button>
+                            {/* Mobile-only close (external X is hidden on mobile) */}
+                            <button
+                                className={`${styles.navBtn} ${styles.mobileClose}`}
+                                onClick={onClose}
+                                title="Close panel"
+                                style={{ marginLeft: '2px' }}
+                            >
+                                <X size={13} />
+                            </button>
                         </div>
                     </div>
                 </div>
