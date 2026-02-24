@@ -202,7 +202,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
           .sort((a, b) => Math.atan2(a.y - parentNode.y, a.x - parentNode.x) - Math.atan2(b.y - parentNode.y, b.x - parentNode.x));
         const idx = siblings.findIndex(n => n.id === current.id);
         if (idx !== -1) {
-          nextNode = dx > 0 ? (siblings[idx - 1] || siblings[siblings.length - 1]) : (siblings[idx + 1] || siblings[0]);
+          // Right (dx > 0) -> Next (idx + 1), Left (dx < 0) -> Prev (idx - 1)
+          nextNode = dx > 0 
+            ? (siblings[idx + 1] || siblings[0])
+            : (siblings[idx - 1] || siblings[siblings.length - 1]);
         }
       }
     }

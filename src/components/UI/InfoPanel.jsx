@@ -217,7 +217,7 @@ const InfoPanel = ({
             ]);
         } finally {
             setAsking(false);
-            scrollToBottom();
+            // Don't auto-scroll at end, let user read/scroll manually
         }
     };
 
@@ -241,7 +241,7 @@ const InfoPanel = ({
             onMessagesChange([...newMessages, { type: 'ai', content: "Sorry, couldn't get an answer right now.", streaming: false }]);
         } finally {
             setAsking(false);
-            scrollToBottom();
+            // Don't auto-scroll at end
         }
     };
 
