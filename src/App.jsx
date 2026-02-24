@@ -331,54 +331,9 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     return true;
   }, [nodes, flyTo, handleExpand, topic]);
 
-  // ── Expand with auto-collapse of overlapping expansions ───────────────
+  // ── Expand node and center view ───────────────────────────────────────
   const handleExpandWrapper = useCallback(async (nodeId) => {
-    const targetNode = nodes.find(n => n.id === nodeId);
-    if (!targetNode) return;
-
-    // Calculate approximate center of the new expansion
-    const baseAngle = Math.atan2(targetNode.y, targetNode.x);
-    const expansionCenterX = targetNode.x + 200 * Math.cos(baseAngle);
-    const expansionCenterY = targetNode.y + 200 * Math.sin(baseAngle);
-    const OVERLAP_DIST = 260; // px threshold
-
-    // Find existing expanded parents (have outgoing connections, not central, not the target itself)
-    const expandedParentIds = new Set();
-    connections.forEach(c => {
-      const fromId = typeof c.from === 'string' ? c.from : c.from?.id;
-      if (fromId && fromId !== nodeId && fromId !== 'central') {
-        const fromNode = nodes.find(n => n.id === fromId);
-        if (fromNode && (fromNode.type === 'branch' || fromNode.type === 'sub')) {
-          expandedParentIds.add(fromId);
-        }
-      }
-    });
-
-    // Collapse any expansion whose children overlap with our new expansion center
-    expandedParentIds.forEach(parentId => {
-      const childNodes = connections
-        .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === parentId)
-        .map(c => nodes.find(n => n.id === (typeof c.to === 'string' ? c.to : c.to?.id)))
-        .filter(Boolean);
-
-      const hasOverlap = childNodes.some(child => {
-        const dist = Math.sqrt(
-          Math.pow(child.x - expansionCenterX, 2) + Math.pow(child.y - expansionCenterY, 2)
-        );
-        return dist < OVERLAP_DIST;
-      });
-
-      if (hasOverlap) {
-        collapseNode(parentId);
-        // If panel was showing a child of the collapsed node, update panel
-        if (panelNode && childNodes.some(c => c.id === panelNode.id)) {
-          const parentNodeData = nodes.find(n => n.id === parentId);
-          if (parentNodeData) { setPanelNode(parentNodeData); setSelectedNode(parentNodeData); }
-        }
-      }
-    });
-
-    // Now expand
+    // Just expand directly without auto-collapsing siblings
     const result = await handleExpand(nodeId);
     if (result?.nodes?.length > 0) {
       const contentNodes = result.nodes.filter(n => n.type === 'sub' || n.type === 'branch');
