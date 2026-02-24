@@ -23,6 +23,9 @@ const getDeviceId = () => {
 const DISMISSED_KEY = (deviceId) => `neuro_pwa_dismissed_${deviceId}`;
 
 const InstallPrompt = () => {
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [visible, setVisible] = useState(false);
+    const [showIOSPrompt, setShowIOSPrompt] = useState(false);
     const [showIOSHint, setShowIOSHint] = useState(false);
     const deviceId = getDeviceId();
 
