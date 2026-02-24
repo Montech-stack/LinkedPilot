@@ -66,17 +66,15 @@ const Node = memo(({ nodeData, isSelected, onClick, isExpanded, isLoading, onExp
     // ── Branch ───────────────────────────────────────────────────────
     if (type === 'branch') {
         const unexpanded = !isExpanded && !isLoading;
+        // Circular flow animation: sequence 1->6 repeating
+        const animationDelay = (branchIndex && unexpanded) ? `${(branchIndex - 1) * 0.7}s` : '0s';
+
         return (
             <div
-                className={`${styles.node} ${styles.branch} ${isSelected ? styles.selected : ''} ${unexpanded ? styles.unexpanded : ''}`}
-                style={dynamicStyle}
+                className={`${styles.node} ${styles.branch} ${isSelected ? styles.selected : ''} ${unexpanded ? styles.flowPulse : ''}`}
+                style={{ ...dynamicStyle, animationDelay }}
                 onClick={handleClick}
             >
-                {/* Exploration number badge */}
-                {branchIndex != null && (
-                    <span className={styles.branchNum}>{branchIndex}</span>
-                )}
-
                 <div className={styles.branchCategory}>
                     {icon && <span style={{ marginRight: '4px', fontSize: '11px' }}>{icon}</span>}
                     {category}
