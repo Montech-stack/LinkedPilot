@@ -66,13 +66,13 @@ const Node = memo(({ nodeData, isSelected, onClick, isExpanded, isLoading, onExp
     // ── Branch ───────────────────────────────────────────────────────
     if (type === 'branch') {
         const unexpanded = !isExpanded && !isLoading;
-        // Circular flow animation: sequence 1->6 repeating
-        const animationDelay = (branchIndex && unexpanded) ? `${(branchIndex - 1) * 0.7}s` : '0s';
+        // Highlight Node 1 as the starting point
+        const isStartNode = branchIndex === 1 && unexpanded;
 
         return (
             <div
-                className={`${styles.node} ${styles.branch} ${isSelected ? styles.selected : ''} ${unexpanded ? styles.flowPulse : ''}`}
-                style={{ ...dynamicStyle, animationDelay }}
+                className={`${styles.node} ${styles.branch} ${isSelected ? styles.selected : ''} ${isStartNode ? styles.startNode : ''}`}
+                style={dynamicStyle}
                 onClick={handleClick}
             >
                 <div className={styles.branchCategory}>
