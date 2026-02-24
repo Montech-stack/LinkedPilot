@@ -59,7 +59,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   } = useCanvas();
 
   const {
-    nodes, connections, loading, error,
+    nodes, connections, loading, error, expandingNodeId,
     generateNewMap, handleExpand, savedMaps, currentMapId,
     createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode,
     syncEnabled

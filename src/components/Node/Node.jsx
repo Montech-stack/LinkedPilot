@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Loader2, Plus, Minus } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import styles from './Node.module.css';
 
 // ─── Expand / Retract button ──────────────────────────────────────────
@@ -23,10 +23,10 @@ const ExpandButton = ({ nodeId, isExpanded, isLoading, onExpand, onCollapse, col
             style={{ '--node-color': color }}
         >
             {isLoading
-                ? <Loader2 size={11} className="animate-spin" />
+                ? <Loader2 size={13} className="animate-spin" />
                 : isExpanded
-                    ? <Minus size={11} />
-                    : <Plus size={11} />
+                    ? <ChevronUp size={15} />
+                    : <ChevronDown size={15} />
             }
         </button>
     );

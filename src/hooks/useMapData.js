@@ -6,6 +6,7 @@ const INITIAL_STATE = {
     nodes: [],
     connections: [],
     loading: false,
+    expandingNodeId: null,
     error: null,
     depth: 1,
     topic: '',
@@ -25,14 +26,15 @@ const ACTIONS = {
 const mapReducer = (state, action) => {
     switch (action.type) {
         case ACTIONS.START_LOADING:
-            return { ...state, loading: true, error: null };
+            return { ...state, loading: true, error: null, expandingNodeId: action.payload };
         case ACTIONS.SET_ERROR:
-            return { ...state, loading: false, error: action.payload };
+            return { ...state, loading: false, expandingNodeId: null, error: action.payload };
         case ACTIONS.SET_MAP:
             console.log("Setting Map Data:", action.payload); // DEBUG
             return {
                 ...state,
                 loading: false,
+                expandingNodeId: null,
                 nodes: action.payload.nodes,
                 connections: action.payload.connections,
                 topic: action.payload.topic,
@@ -43,6 +45,7 @@ const mapReducer = (state, action) => {
             return {
                 ...state,
                 loading: false,
+                expandingNodeId: null,
                 nodes: [...state.nodes, ...action.payload.nodes],
                 connections: [...state.connections, ...action.payload.connections],
                 depth: state.depth + 1
@@ -446,7 +449,7 @@ export const useMapData = () => {
             baseY = targetNode.y + projectionDist * Math.sin(baseAngle);
         }
 
-        dispatch({ type: ACTIONS.START_LOADING });
+        dispatch({ type: ACTIONS.START_LOADING, payload: targetNodeId });
 
         try {
             const newSubTopics = await expandBranch(parentTopic, state.topic, state.mode);
