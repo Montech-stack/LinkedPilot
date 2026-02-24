@@ -12,14 +12,8 @@
     user-select: none;
     cursor: pointer;
     transition: transform 0.22s var(--ease-smooth), box-shadow 0.22s var(--ease-smooth), border-color 0.22s;
-    /* Always sharp — never blur */
-    will-change: auto;
-    backface-visibility: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Force crisp pixel rendering at all zoom levels */
-    transform-style: flat;
-    isolation: isolate;
 }
 
 .node:hover {
