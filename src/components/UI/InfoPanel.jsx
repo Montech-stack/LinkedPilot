@@ -283,125 +283,118 @@ const InfoPanel = ({
                     flexShrink: 0
                 }} />
 
+                {/* ── Sticky Header (title + nav controls — never scrolls) ── */}
+                <div className={styles.stickyHeader}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        {/* Title block */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            {category && (
+                                <div style={{
+                                    fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase',
+                                    color: accentColor, marginBottom: '5px', letterSpacing: '1.5px', opacity: 0.8
+                                }}>
+                                    {category}
+                                </div>
+                            )}
+                            <h2 style={{
+                                fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: '800',
+                                margin: 0, lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '7px',
+                                wordBreak: 'break-word'
+                            }}>
+                                {icon && <span style={{ fontSize: '19px', flexShrink: 0 }}>{icon}</span>}
+                                {title}
+                            </h2>
+                        </div>
+
+                        {/* Nav controls */}
+                        <div className={styles.navBtnGroup}>
+                            <button
+                                className={styles.navBtn}
+                                onClick={() => onNavigateSibling && onNavigateSibling(-1)}
+                                title="Previous sibling"
+                            >
+                                <ChevronLeft size={13} />
+                            </button>
+                            <button
+                                className={styles.navBtn}
+                                onClick={() => onNavigateSibling && onNavigateSibling(1)}
+                                title="Next sibling"
+                            >
+                                <ChevronRight size={13} />
+                            </button>
+                            <button
+                                className={styles.navBtn}
+                                onClick={() => onNavigate && onNavigate(0, -1)}
+                                title="Go to parent"
+                            >
+                                <ChevronUp size={13} />
+                            </button>
+                            <button
+                                className={styles.navBtn}
+                                onClick={() => onNavigate && onNavigate(0, 1)}
+                                title="Go to child"
+                            >
+                                <ChevronDown size={13} />
+                            </button>
+                            <button
+                                className={styles.navBtn}
+                                onClick={() => setPanelExpanded(e => !e)}
+                                title={panelExpanded ? 'Shrink panel' : 'Expand panel'}
+                                style={{ marginLeft: '2px' }}
+                            >
+                                {panelExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Scrollable Content */}
                 <div className={styles.scrollArea} ref={scrollRef}>
 
-                    {/* ── Header ── */}
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '8px' }}>
-                            {/* Title block */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                {category && (
-                                    <div style={{
-                                        fontFamily: 'var(--font-mono)', fontSize: '9px', textTransform: 'uppercase',
-                                        color: accentColor, marginBottom: '5px', letterSpacing: '1.5px', opacity: 0.8
-                                    }}>
-                                        {category}
-                                    </div>
-                                )}
-                                <h2 style={{
-                                    fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: '800',
-                                    margin: 0, lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '7px',
-                                    wordBreak: 'break-word'
-                                }}>
-                                    {icon && <span style={{ fontSize: '19px', flexShrink: 0 }}>{icon}</span>}
-                                    {title}
-                                </h2>
-                            </div>
-
-                            {/* Controls */}
-                            <div className={styles.navBtnGroup}>
-                                {/* Sibling navigation: Left */}
-                                <button
-                                    className={styles.navBtn}
-                                    onClick={() => onNavigateSibling && onNavigateSibling(-1)}
-                                    title="Previous sibling"
-                                >
-                                    <ChevronLeft size={13} />
-                                </button>
-                                {/* Sibling navigation: Right */}
-                                <button
-                                    className={styles.navBtn}
-                                    onClick={() => onNavigateSibling && onNavigateSibling(1)}
-                                    title="Next sibling"
-                                >
-                                    <ChevronRight size={13} />
-                                </button>
-                                {/* Parent nav */}
-                                <button
-                                    className={styles.navBtn}
-                                    onClick={() => onNavigate && onNavigate(0, -1)}
-                                    title="Go to parent"
-                                >
-                                    <ChevronUp size={13} />
-                                </button>
-                                {/* Child nav */}
-                                <button
-                                    className={styles.navBtn}
-                                    onClick={() => onNavigate && onNavigate(0, 1)}
-                                    title="Go to child"
-                                >
-                                    <ChevronDown size={13} />
-                                </button>
-                                {/* Expand/shrink panel */}
-                                <button
-                                    className={styles.navBtn}
-                                    onClick={() => setPanelExpanded(e => !e)}
-                                    title={panelExpanded ? 'Shrink panel' : 'Expand panel'}
-                                    style={{ marginLeft: '2px' }}
-                                >
-                                    {panelExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-                                </button>
-                            </div>
+                    {/* Detail text */}
+                    {detail && (
+                        <div style={{
+                            fontFamily: 'var(--font-body)', fontSize: '13px', lineHeight: 1.65,
+                            color: 'var(--text-secondary)', margin: '0 0 12px 0'
+                        }}>
+                            {formatMessage(detail, accentColor)}
                         </div>
+                    )}
 
-                        <div style={{ height: '1px', background: 'var(--glass-border)', marginBottom: '12px' }} />
+                    {/* Tell me more */}
+                    <button className={styles.moreButton} onClick={handleTellMeMore} disabled={asking}>
+                        <MessageSquare size={11} />
+                        Tell me more
+                    </button>
 
-                        {/* Detail text */}
-                        {detail && (
-                            <div style={{
-                                fontFamily: 'var(--font-body)', fontSize: '13px', lineHeight: 1.65,
-                                color: 'var(--text-secondary)', margin: '0 0 12px 0'
-                            }}>
-                                {formatMessage(detail, accentColor)}
-                            </div>
-                        )}
-
-                        {/* Tell me more */}
-                        <button className={styles.moreButton} onClick={handleTellMeMore} disabled={asking}>
-                            <MessageSquare size={11} />
-                            Tell me more
+                    {/* Expand / Collapse button */}
+                    {(type === 'branch' || type === 'sub') && (
+                        <button
+                            onClick={() => isNodeExpanded ? onCollapse(node.id) : onExpand(node.id)}
+                            disabled={loading}
+                            style={{
+                                width: '100%', padding: '10px 16px',
+                                background: isNodeExpanded
+                                    ? 'linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05))'
+                                    : 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(124,58,237,0.06))',
+                                border: `1px solid ${isNodeExpanded ? 'rgba(239,68,68,0.25)' : 'rgba(0,212,255,0.25)'}`,
+                                borderRadius: '10px',
+                                color: isNodeExpanded ? '#ef4444' : 'var(--accent-cyan)',
+                                cursor: loading ? 'wait' : 'pointer',
+                                fontFamily: 'var(--font-display)', fontSize: '12px', fontWeight: '700',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                transition: 'all 0.2s var(--ease-smooth)', margin: '6px 0 4px 0'
+                            }}
+                        >
+                            {loading ? (
+                                <><Loader2 size={13} className="animate-spin" /> Expanding...</>
+                            ) : isNodeExpanded ? (
+                                <><Minimize2 size={13} /> Retract</>
+                            ) : (
+                                <><Sparkles size={13} /> Expand with Neuro</>
+                            )}
                         </button>
-
-                        {/* Expand / Collapse button */}
-                        {(type === 'branch' || type === 'sub') && (
-                            <button
-                                onClick={() => isNodeExpanded ? onCollapse(node.id) : onExpand(node.id)}
-                                disabled={loading}
-                                style={{
-                                    width: '100%', padding: '10px 16px',
-                                    background: isNodeExpanded
-                                        ? 'linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05))'
-                                        : 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(124,58,237,0.06))',
-                                    border: `1px solid ${isNodeExpanded ? 'rgba(239,68,68,0.25)' : 'rgba(0,212,255,0.25)'}`,
-                                    borderRadius: '10px',
-                                    color: isNodeExpanded ? '#ef4444' : 'var(--accent-cyan)',
-                                    cursor: loading ? 'wait' : 'pointer',
-                                    fontFamily: 'var(--font-display)', fontSize: '12px', fontWeight: '700',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                    transition: 'all 0.2s var(--ease-smooth)', margin: '6px 0 4px 0'
-                                }}
-                            >
-                                {loading ? (
-                                    <><Loader2 size={13} className="animate-spin" /> Expanding...</>
-                                ) : isNodeExpanded ? (
-                                    <><Minimize2 size={13} /> Retract</>
-                                ) : (
-                                    <><Sparkles size={13} /> Expand with Neuro</>
-                                )}
-                            </button>
-                        )}
-                    </div>
+                    )}
 
                     {/* ── Chat History ── */}
                     {msgs.length > 0 && (

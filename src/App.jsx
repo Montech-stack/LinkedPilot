@@ -15,6 +15,7 @@ import DPad from './components/UI/DPad';
 import QuizModal from './components/UI/QuizModal';
 import LandingPage from './components/Auth/LandingPage';
 import DataConnectModal from './components/UI/DataConnectModal';
+import InstallPrompt from './components/UI/InstallPrompt';
 import { predictBranch } from './services/api';
 import styles from './App.module.css';
 
@@ -51,7 +52,9 @@ class ErrorBoundary extends React.Component {
 
 const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const {
-    scale, offset, handleWheel, handleMouseDown, handleMouseMove, handleMouseUp,
+    scale, offset, handleWheel,
+    handleMouseDown, handleMouseMove, handleMouseUp,
+    handleTouchStart, handleTouchMove, handleTouchEnd,
     setScale, setOffset, flyTo, isDragging
   } = useCanvas();
 
@@ -522,6 +525,9 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onClick={() => { /* Canvas click no longer closes panel */ }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {connections.map(conn => {
           const fromId = typeof conn.from === 'string' ? conn.from : conn.from?.id;
@@ -595,7 +601,7 @@ const AppContent = () => {
   }
 
   if (!isAuthenticated) {
-    return <LandingPage onAuth={() => { }} />;
+    return <LandingPage onAuth={() => { }} theme={theme} toggleTheme={toggleTheme} />;
   }
 
   return (
@@ -612,6 +618,7 @@ const AppContent = () => {
 const App = () => (
   <ErrorBoundary>
     <AppContent />
+    <InstallPrompt />
   </ErrorBoundary>
 );
 

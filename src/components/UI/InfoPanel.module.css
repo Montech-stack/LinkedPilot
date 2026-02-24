@@ -70,11 +70,20 @@
     transform: scale(1.1);
 }
 
+.stickyHeader {
+    flex-shrink: 0;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--glass-border);
+    background: var(--glass);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
 .scrollArea {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 20px 20px 10px 20px;
+    padding: 16px 20px 10px 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;

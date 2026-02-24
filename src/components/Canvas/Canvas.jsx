@@ -8,18 +8,29 @@ const Canvas = ({
     onWheel,
     onMouseDown,
     onMouseMove,
-    onClick
+    onClick,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
 }) => {
     const containerRef = useRef(null);
 
-    // Attach wheel with passive:false so preventDefault works
+    // Must use non-passive listeners so we can call preventDefault
     useEffect(() => {
         const el = containerRef.current;
-        if (!el || !onWheel) return;
-        const handler = (e) => { e.preventDefault(); onWheel(e); };
-        el.addEventListener('wheel', handler, { passive: false });
-        return () => el.removeEventListener('wheel', handler);
-    }, [onWheel]);
+        if (!el) return;
+
+        const wheelHandler = (e) => { e.preventDefault(); onWheel?.(e); };
+        const touchMoveHandler = (e) => { e.preventDefault(); onTouchMove?.(e); };
+
+        el.addEventListener('wheel', wheelHandler, { passive: false });
+        el.addEventListener('touchmove', touchMoveHandler, { passive: false });
+
+        return () => {
+            el.removeEventListener('wheel', wheelHandler);
+            el.removeEventListener('touchmove', touchMoveHandler);
+        };
+    }, [onWheel, onTouchMove]);
 
     return (
         <div
@@ -29,6 +40,8 @@ const Canvas = ({
             onMouseMove={onMouseMove}
             onClick={onClick}
             onDoubleClick={(e) => e.preventDefault()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
         >
             <div
                 className={styles.world}
@@ -39,7 +52,6 @@ const Canvas = ({
                 {children}
             </div>
 
-            {/* Background layer: Star field texture */}
             <div className={styles.background} />
         </div>
     );

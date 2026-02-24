@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 export const useTheme = () => {
     const [theme, setTheme] = useState(() => {
         try {
-            return localStorage.getItem('neuromap-theme') || 'dark';
+            return localStorage.getItem('neuromap-theme') || 'light';
         } catch {
-            return 'dark';
+            return 'light';
         }
     });
 

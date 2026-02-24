@@ -7,22 +7,60 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const useMock = !API_KEY;
 
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
-const model = genAI ? genAI.getGenerativeModel({
+
+// JSON-mode model for map/expansion — forces valid JSON output (faster + no parsing needed)
+const jsonModel = genAI ? genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+  generationConfig: {
+    responseMimeType: 'application/json',
+    temperature: 0.8,
+    topP: 0.92,
+    maxOutputTokens: 4096,
+  }
+}) : null;
+
+// Chat model for Q&A (streaming, plain text)
+const chatModel = genAI ? genAI.getGenerativeModel({
   model: "gemini-2.0-flash",
   generationConfig: {
     temperature: 0.85,
     topP: 0.95,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 2048,
   }
 }) : null;
 
-// Helper to parse JSON from AI response
+// Back-compat alias
+const model = chatModel;
+
+// ── Map generation cache (24h TTL, max 30 entries) ──────────────────────
+const CACHE_KEY = 'neuroMapCache';
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const cacheGet = (key) => {
+  try {
+    const store = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    const entry = store[key];
+    if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  } catch {}
+  return null;
+};
+
+const cacheSet = (key, data) => {
+  try {
+    const store = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    store[key] = { data, ts: Date.now() };
+    const keys = Object.keys(store);
+    if (keys.length > 30) delete store[keys[0]];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(store));
+  } catch {}
+};
+
+// Helper to parse JSON from AI response (fallback for non-JSON-mode calls)
 const parseResponse = (text) => {
   try {
     const jsonString = text.replace(/```json\n?|\n?```/g, '').trim();
     return JSON.parse(jsonString);
   } catch (error) {
-    // Try to extract JSON from text with extra content
     const jsonMatch = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
     if (jsonMatch) {
       try { return JSON.parse(jsonMatch[0]); } catch {}
@@ -34,40 +72,57 @@ const parseResponse = (text) => {
 
 export const generateMap = async (topic, modeId = 'research', rawDataContent = null) => {
   if (useMock) {
-    console.log("Using Mock API for Map Generation");
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_INITIAL_MAP), 800));
+    return new Promise(resolve => setTimeout(() => resolve(MOCK_INITIAL_MAP), 500));
+  }
+
+  // Cache lookup (skip for data-integration since rawDataContent is unique)
+  const cacheKey = rawDataContent ? null : `map:${modeId}:${topic.toLowerCase().trim()}`;
+  if (cacheKey) {
+    const cached = cacheGet(cacheKey);
+    if (cached) { console.log('Map cache hit:', cacheKey); return cached; }
   }
 
   const mode = MODES[modeId] || MODES.research;
   const prompt = mode.generatePrompt(topic, rawDataContent);
 
   try {
-    const result = await model.generateContent(prompt);
+    // JSON mode: faster + guaranteed-valid JSON, no markdown wrapping
+    const result = await (jsonModel || model).generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    return parseResponse(text);
+    const data = parseResponse(text);
+    if (cacheKey) cacheSet(cacheKey, data);
+    return data;
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("generateMap error:", error);
     throw error;
   }
 };
 
 export const expandBranch = async (branchTitle, contextTopic, modeId = 'research', rawDataContent = null) => {
   if (useMock) {
-    console.log("Using Mock API for Expansion");
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_EXPANSION), 600));
+    return new Promise(resolve => setTimeout(() => resolve(MOCK_EXPANSION), 400));
+  }
+
+  // Cache expansions too
+  const cacheKey = rawDataContent ? null : `expand:${modeId}:${contextTopic.toLowerCase()}:${branchTitle.toLowerCase()}`;
+  if (cacheKey) {
+    const cached = cacheGet(cacheKey);
+    if (cached) { console.log('Expand cache hit:', cacheKey); return cached; }
   }
 
   const mode = MODES[modeId] || MODES.research;
   const prompt = mode.expandPrompt(branchTitle, contextTopic, rawDataContent);
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await (jsonModel || model).generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    return parseResponse(text);
+    const data = parseResponse(text);
+    if (cacheKey) cacheSet(cacheKey, data);
+    return data;
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("expandBranch error:", error);
     throw error;
   }
 };
@@ -135,23 +190,23 @@ RESPONSE GUIDELINES:
 - Use plain text only — no markdown, no HTML`;
 
   try {
+    const activeModel = chatModel || model;
     if (onChunk) {
-      // Streaming mode for instant feedback
-      const result = await model.generateContentStream(prompt);
+      // Streaming for instant feel
+      const result = await activeModel.generateContentStream(prompt);
       let fullText = '';
       for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        fullText += chunkText;
+        fullText += chunk.text();
         onChunk(fullText);
       }
       return fullText;
     } else {
-      const result = await model.generateContent(prompt);
+      const result = await activeModel.generateContent(prompt);
       const response = await result.response;
       return response.text();
     }
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("askNodeQuestion error:", error);
     if (onChunk) onChunk("Sorry, I couldn't generate an answer at this moment.");
     return "Sorry, I couldn't generate an answer at this moment.";
   }
