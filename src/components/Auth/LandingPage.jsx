@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowRight, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Sun, Moon, Download } from 'lucide-react';
 import AuthModal from './AuthModal';
 import NeuroAvatar from '../UI/NeuroAvatar';
 
@@ -11,9 +11,51 @@ const FEATURES = [
     { icon: '🔗', title: 'Connect', desc: 'Discover hidden connections' },
 ];
 
+const isIOS = () => {
+    return (
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+};
+
 const LandingPage = ({ onAuth, theme, toggleTheme }) => {
     const [authMode, setAuthMode] = useState(null);
+    const [installPrompt, setInstallPrompt] = useState(null);
+    const [showInstall, setShowInstall] = useState(false);
     const isDark = theme === 'dark';
+
+    useEffect(() => {
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            return;
+        }
+
+        if (isIOS()) {
+            setShowInstall(true);
+            return;
+        }
+
+        const handler = (e) => {
+            e.preventDefault();
+            setInstallPrompt(e);
+            setShowInstall(true);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleInstall = () => {
+        if (isIOS()) {
+            alert("To install, tap the Share icon, then 'Add to Home Screen'.");
+            return;
+        }
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        installPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                setShowInstall(false);
+            }
+        });
+    };
 
     return (
         <div style={{
@@ -110,6 +152,35 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                         }}
                     >Get Started</button>
                 </div>
+
+                {showInstall && (
+                    <div style={{ marginTop: '24px', animation: 'fadeInUp 0.8s ease-out 0.45s backwards' }}>
+                        <button
+                            onClick={handleInstall}
+                            style={{
+                                background: 'var(--glass)',
+                                backdropFilter: 'blur(var(--glass-blur))',
+                                border: '1px solid var(--accent-purple)',
+                                color: 'var(--accent-purple)',
+                                padding: '12px 28px',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                fontFamily: 'var(--font-display)',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124, 58, 237, 0.1)'; e.currentTarget.style.boxShadow = 'var(--shadow-glow-purple)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        >
+                            <Download size={15} />
+                            Install Neuro
+                        </button>
+                    </div>
+                )}
             </nav>
 
             {/* HERO SECTION */}
