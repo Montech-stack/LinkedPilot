@@ -300,7 +300,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   const handleFindNode = useCallback(async (conceptText) => {
     const STOP_WORDS = new Set(['what', 'is', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'and', 'or', 'that', 'this', 'it', 'are', 'was', 'be', 'has', 'had', 'with', 'as', 'by', 'on', 'at', 'from', 'which', 'how', 'why', 'who', 'do', 'does', 'did']);
     const searchTerms = conceptText.toLowerCase().split(/[\s?.,!]+/).filter(t => t.length > 2 && !STOP_WORDS.has(t));
-    if (searchTerms.length === 0) return false;
+    if (searchTerms.length === 0) return null;
 
     const scoreNode = (node) => {
       const text = [node.data?.title || '', node.data?.detail || '', node.data?.summary || '', node.data?.category || ''].join(' ').toLowerCase();
@@ -319,11 +319,11 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     if (bestNode && bestScore >= 3) {
       flyTo(bestNode.x, bestNode.y, 1.5, 1000);
       setSelectedNode(bestNode); setPanelNode(bestNode); setPanelOpen(true);
-      return true;
+      return bestNode;
     }
 
     const branches = nodes.filter(n => n.type === 'branch');
-    if (branches.length === 0) return false;
+    if (branches.length === 0) return null;
     const predicted = await predictBranch(conceptText, branches.map(b => b.data?.title || ''), topic);
     const targetBranch = branches.find(b => b.data?.title?.toLowerCase() === predicted?.toLowerCase())
       || branches.find(b => predicted?.toLowerCase()?.includes(b.data?.title?.toLowerCase()))
@@ -338,12 +338,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
       const target = (expandBest && expandBestScore > 0) ? expandBest : (subNodes[0] || targetBranch);
       flyTo(target.x, target.y, 1.5, 1000);
       setSelectedNode(target); setPanelNode(target); setPanelOpen(true);
-      return true;
+      return target;
     }
 
     flyTo(targetBranch.x, targetBranch.y, 1.5, 1000);
     setSelectedNode(targetBranch); setPanelNode(targetBranch); setPanelOpen(true);
-    return true;
+    return targetBranch;
   }, [nodes, flyTo, handleExpand, topic]);
 
   // ── Expand node and center view ───────────────────────────────────────
@@ -443,9 +443,19 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
           user={user}
           mode={mode}
           onClose={() => setShowQuiz(false)}
-          onFindNode={async (concept) => {
-            const found = await handleFindNode(concept);
-            if (found) setShowQuiz(false);
+          onFindNode={async (concept, questionData) => {
+            const foundNode = await handleFindNode(concept);
+            if (foundNode) {
+              const chatKey = `${currentMapId}:${foundNode.id}`;
+              const existingMessages = nodeChatStore[chatKey] || [];
+              const newMessage = {
+                type: 'ai',
+                content: `**Quiz Question:**\n${questionData.question}\n\n**Explanation:**\n${questionData.explanation}`
+              };
+              const newMessages = [...existingMessages, newMessage];
+              setNodeChatStore(prev => ({ ...prev, [chatKey]: newMessages }));
+              setShowQuiz(false);
+            }
           }}
         />
       )}

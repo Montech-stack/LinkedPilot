@@ -316,7 +316,7 @@ const QuizModal = ({ topic, onClose, onFindNode, user, mode }) => {
                                             // Build concept text from quiz question + correct answer
                                             const correctAnswer = questionData.options[questionData.correctIndex];
                                             const concept = `${correctAnswer} ${questionData.question}`;
-                                            await onFindNode(concept);
+                                            await onFindNode(concept, questionData);
                                             setLocating(false);
                                         }}
                                         disabled={locating}
