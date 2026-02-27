@@ -373,7 +373,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
       await navigator.clipboard.writeText(link);
       alert("Link copied to clipboard!");
     } catch (err) {
-      alert(err.message);
+      alert("Error, please try again.");
     }
   };
 
@@ -409,7 +409,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
       window.location.reload();
     } catch (err) {
       console.error("Failed to import maps:", err);
-      alert("Failed to import maps. Please try again.");
+      alert("Error, please try again.");
     }
   }, []);
 

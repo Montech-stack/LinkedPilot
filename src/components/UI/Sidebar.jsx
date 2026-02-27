@@ -39,7 +39,7 @@ const importMaps = (file, savedMaps, onUpdate) => {
         try {
             const content = JSON.parse(e.target.result);
             if (!content.maps || !Array.isArray(content.maps)) {
-                alert('Invalid file format. Please export from Neuro app.');
+                alert('Error, please try again.');
                 return;
             }
             
@@ -56,7 +56,7 @@ const importMaps = (file, savedMaps, onUpdate) => {
             onUpdate(currentMaps);
             alert(`Successfully imported ${importedCount} map${importedCount !== 1 ? 's' : ''}!`);
         } catch (err) {
-            alert('Error importing file. Make sure it\'s a valid Neuro export.');
+            alert('Error, please try again.');
         }
     };
     reader.readAsText(file);

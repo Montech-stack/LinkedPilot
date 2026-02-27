@@ -45,7 +45,7 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
 
     const handleInstall = () => {
         if (isIOS()) {
-            alert("To install, tap the Share icon, then 'Add to Home Screen'.");
+            alert("Error, please try again.");
             return;
         }
         if (!installPrompt) return;
