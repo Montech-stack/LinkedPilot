@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Minus, RotateCcw, Trophy, Share2 } from 'lucide-react';
 
-const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare }) => {
+const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare, shareLoading }) => {
     const btnStyle = {
         background: 'var(--glass)',
         backdropFilter: 'blur(var(--glass-blur))',
@@ -49,13 +49,24 @@ const Toolbar = ({ onZoomIn, onZoomOut, onReset, onQuiz, onShare }) => {
             boxShadow: 'var(--shadow-md)'
         }}>
             <button
-                style={btnStyle}
+                style={{ ...btnStyle, opacity: shareLoading ? 0.6 : 1, pointerEvents: shareLoading ? 'none' : 'auto' }}
                 onClick={onShare}
                 title="Share Map"
-                onMouseEnter={(e) => handleHover(e, true)}
-                onMouseLeave={(e) => handleHover(e, false)}
+                onMouseEnter={(e) => !shareLoading && handleHover(e, true)}
+                onMouseLeave={(e) => !shareLoading && handleHover(e, false)}
             >
-                <Share2 size={16} color="var(--accent-purple)" />
+                {shareLoading ? (
+                    <svg
+                        width="16" height="16" viewBox="0 0 24 24"
+                        fill="none" stroke="var(--accent-purple)" strokeWidth="2.5"
+                        strokeLinecap="round"
+                        style={{ animation: 'spin 0.8s linear infinite' }}
+                    >
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                ) : (
+                    <Share2 size={16} color="var(--accent-purple)" />
+                )}
             </button>
             <div style={{ width: '1px', background: 'var(--glass-border)', margin: '4px 2px' }} />
             <button

@@ -61,12 +61,15 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     clearError, syncEnabled
   } = useMapData();
 
-  // Auto-dismiss error after 8 seconds
+  // Auto-dismiss errors after 8 seconds
   useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(clearError, 8000);
+    if (!error && !shareState.error) return;
+    const t = setTimeout(() => {
+      clearError();
+      setShareState(s => ({ ...s, error: false }));
+    }, 8000);
     return () => clearTimeout(t);
-  }, [error, clearError]);
+  }, [error, shareState.error, clearError]);
 
   // ── Panel & selection state ───────────────────────────────────────────
   const [panelOpen, setPanelOpen] = useState(false);
@@ -105,6 +108,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     if (!chatKey) return;
     setNodeChatStore(prev => ({ ...prev, [chatKey]: [] }));
   }, [chatKey]);
+
+  // ── Share modal state ─────────────────────────────────────────────────
+  const [shareState, setShareState] = useState({ loading: false, link: null, copied: false });
+  const shareLinkRef = useRef(null);
 
   // ── Other modals ──────────────────────────────────────────────────────
   const [showQuiz, setShowQuiz] = useState(false);
@@ -371,15 +378,33 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
 
   // ── Share ──────────────────────────────────────────────────────────────
   const handleShare = async () => {
+    if (shareState.loading) return;
+    setShareState({ loading: true, link: null, copied: false });
     try {
       const id = await shareMap(user);
       const link = `${window.location.origin}?mapId=${id}`;
-      await navigator.clipboard.writeText(link);
-      alert("Link copied to clipboard!");
-    } catch (err) {
-      alert("Error, please try again.");
+      setShareState({ loading: false, link, copied: false });
+      // Focus the link input so users can copy manually on mobile if needed
+      setTimeout(() => shareLinkRef.current?.select(), 50);
+    } catch {
+      setShareState({ loading: false, link: null, copied: false, error: true });
     }
   };
+
+  const handleCopyLink = async () => {
+    if (!shareState.link) return;
+    try {
+      await navigator.clipboard.writeText(shareState.link);
+    } catch {
+      // Fallback for mobile / insecure contexts: select the input text
+      shareLinkRef.current?.select();
+      document.execCommand('copy');
+    }
+    setShareState(s => ({ ...s, copied: true }));
+    setTimeout(() => setShareState(s => ({ ...s, copied: false })), 2500);
+  };
+
+  const closeShareModal = () => setShareState({ loading: false, link: null, copied: false });
 
   // ── Zoom buttons ───────────────────────────────────────────────────────
   const onZoomIn = () => {
@@ -480,10 +505,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         <InputOverlay onSubmit={() => { }} loading={true} />
       )}
 
-      {error && (
+      {(error || shareState.error) && (
         <div className={styles.errorToast}>
           <span>Something went wrong. Please try again.</span>
-          <button onClick={clearError} aria-label="Dismiss">✕</button>
+          <button onClick={() => { clearError(); setShareState(s => ({ ...s, error: false })); }} aria-label="Dismiss">✕</button>
         </div>
       )}
 
@@ -494,7 +519,54 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
           onReset={onReset}
           onQuiz={() => setShowQuiz(true)}
           onShare={handleShare}
+          shareLoading={shareState.loading}
         />
+      )}
+
+      {shareState.link && (
+        <div className={styles.shareOverlay} onClick={closeShareModal}>
+          <div className={styles.shareCard} onClick={e => e.stopPropagation()}>
+            <div className={styles.shareCardHeader}>
+              <div className={styles.shareCardTitle}>
+                <div className={styles.shareCardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                </div>
+                <span>Share this map</span>
+              </div>
+              <button className={styles.shareCloseBtn} onClick={closeShareModal} aria-label="Close">✕</button>
+            </div>
+            <p className={styles.shareCardDesc}>Anyone with this link can view your map.</p>
+            <div className={styles.shareLinkRow}>
+              <input
+                ref={shareLinkRef}
+                className={styles.shareLinkInput}
+                value={shareState.link}
+                readOnly
+                onClick={e => e.target.select()}
+              />
+              <button
+                className={`${styles.shareCopyBtn} ${shareState.copied ? styles.shareCopyBtnCopied : ''}`}
+                onClick={handleCopyLink}
+              >
+                {shareState.copied ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy Link
+                  </>
+                )}
+              </button>
+            </div>
+            <button className={styles.shareDoneBtn} onClick={closeShareModal}>Done</button>
+          </div>
+        </div>
       )}
 
       {/* Info Panel — never closes on canvas click, only on X */}
