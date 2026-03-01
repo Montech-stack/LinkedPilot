@@ -61,6 +61,10 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     clearError, syncEnabled
   } = useMapData();
 
+  // ── Share modal state — must be declared before the auto-dismiss effect ──
+  const [shareState, setShareState] = useState({ loading: false, link: null, copied: false });
+  const shareLinkRef = useRef(null);
+
   // Auto-dismiss errors after 8 seconds
   useEffect(() => {
     if (!error && !shareState.error) return;
@@ -108,10 +112,6 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     if (!chatKey) return;
     setNodeChatStore(prev => ({ ...prev, [chatKey]: [] }));
   }, [chatKey]);
-
-  // ── Share modal state ─────────────────────────────────────────────────
-  const [shareState, setShareState] = useState({ loading: false, link: null, copied: false });
-  const shareLinkRef = useRef(null);
 
   // ── Other modals ──────────────────────────────────────────────────────
   const [showQuiz, setShowQuiz] = useState(false);
