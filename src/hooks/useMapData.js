@@ -33,7 +33,6 @@ const mapReducer = (state, action) => {
         case ACTIONS.CLEAR_ERROR:
             return { ...state, error: null };
         case ACTIONS.SET_MAP:
-            console.log("Setting Map Data:", action.payload); // DEBUG
             return {
                 ...state,
                 loading: false,
