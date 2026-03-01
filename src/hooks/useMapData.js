@@ -17,6 +17,7 @@ const INITIAL_STATE = {
 const ACTIONS = {
     START_LOADING: 'START_LOADING',
     SET_ERROR: 'SET_ERROR',
+    CLEAR_ERROR: 'CLEAR_ERROR',
     SET_MAP: 'SET_MAP',
     APPEND_CLUSTER: 'APPEND_CLUSTER',
     REMOVE_CHILDREN: 'REMOVE_CHILDREN',
@@ -29,6 +30,8 @@ const mapReducer = (state, action) => {
             return { ...state, loading: true, error: null, expandingNodeId: action.payload };
         case ACTIONS.SET_ERROR:
             return { ...state, loading: false, expandingNodeId: null, error: action.payload };
+        case ACTIONS.CLEAR_ERROR:
+            return { ...state, error: null };
         case ACTIONS.SET_MAP:
             console.log("Setting Map Data:", action.payload); // DEBUG
             return {
@@ -96,11 +99,27 @@ const LAYOUT = {
 export const useMapData = () => {
     // Hook to manage map state and persistence
     // 1. Manage the list of saved maps
+    // One-time migration: strip transient fields (error, loading, expandingNodeId) from all stored maps.
+    // Existing users may have raw API error text persisted in localStorage — this cleans it up on load.
     const [savedMaps, setSavedMaps] = useState(() => {
         try {
             const item = window.localStorage.getItem('neuronMaps');
             const parsed = item ? JSON.parse(item) : {};
-            return parsed && typeof parsed === 'object' ? parsed : {};
+            if (!parsed || typeof parsed !== 'object') return {};
+            let dirty = false;
+            const cleaned = {};
+            for (const [id, entry] of Object.entries(parsed)) {
+                if (entry && typeof entry === 'object') {
+                    // eslint-disable-next-line no-unused-vars
+                    const { error, loading, expandingNodeId, ...clean } = entry;
+                    cleaned[id] = clean;
+                    if (entry.error !== undefined) dirty = true;
+                }
+            }
+            if (dirty) {
+                try { window.localStorage.setItem('neuronMaps', JSON.stringify(cleaned)); } catch {}
+            }
+            return dirty ? cleaned : parsed;
         } catch (error) {
             console.warn("Error reading neuronMaps:", error);
             return {};
@@ -240,9 +259,12 @@ export const useMapData = () => {
     }, [syncEnabled, user, setupRealtimeListeners]);
 
     // 2. Initialize current map state based on ID
+    // Strip transient fields (error, loading, expandingNodeId) — they should never be restored
     const getInitialState = () => {
         if (currentMapId && savedMaps[currentMapId]) {
-            return savedMaps[currentMapId];
+            // eslint-disable-next-line no-unused-vars
+            const { error, loading, expandingNodeId, ...clean } = savedMaps[currentMapId];
+            return { ...INITIAL_STATE, ...clean };
         }
         return INITIAL_STATE;
     };
@@ -268,8 +290,11 @@ export const useMapData = () => {
         }
 
         if (currentMapId && state.nodes.length > 0) {
+            // Never persist transient UI state — strip error, loading, expandingNodeId
+            // eslint-disable-next-line no-unused-vars
+            const { error: _e, loading: _l, expandingNodeId: _en, ...savable } = state;
             const mapData = {
-                ...state,
+                ...savable,
                 lastModified: Date.now(),
                 id: currentMapId
             };
@@ -613,6 +638,10 @@ export const useMapData = () => {
         dispatch({ type: ACTIONS.REMOVE_CHILDREN, payload: nodeId });
     }, []);
 
+    const clearError = useCallback(() => {
+        dispatch({ type: ACTIONS.CLEAR_ERROR });
+    }, []);
+
     return {
         ...state,
         generateNewMap,
@@ -625,6 +654,7 @@ export const useMapData = () => {
         shareMap,
         loadSharedMap,
         collapseNode,
+        clearError,
         syncEnabled,
         user
     };

@@ -58,8 +58,15 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
     nodes, connections, loading, error, expandingNodeId,
     generateNewMap, handleExpand, savedMaps, currentMapId,
     createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode,
-    syncEnabled
+    clearError, syncEnabled
   } = useMapData();
+
+  // Auto-dismiss error after 8 seconds
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(clearError, 8000);
+    return () => clearTimeout(t);
+  }, [error, clearError]);
 
   // ── Panel & selection state ───────────────────────────────────────────
   const [panelOpen, setPanelOpen] = useState(false);
@@ -475,8 +482,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
 
       {error && (
         <div className={styles.errorToast}>
-          {error}
-          <button onClick={() => window.location.reload()}>Reload</button>
+          <span>Something went wrong. Please try again.</span>
+          <button onClick={clearError} aria-label="Dismiss">✕</button>
         </div>
       )}
 
