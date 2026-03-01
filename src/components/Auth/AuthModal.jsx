@@ -226,7 +226,7 @@ const AuthModal = ({ mode = 'login', onSwitchMode, onClose, onSuccess }) => {
                             onChange={(e) => setPassword(e.target.value)}
                             style={inputStyle}
                             required
-                            minLength={6}
+                            minLength={12}
                         />
                         <button
                             type="button"
@@ -251,7 +251,7 @@ const AuthModal = ({ mode = 'login', onSwitchMode, onClose, onSuccess }) => {
                                     borderColor: passwordMismatch ? 'rgba(239, 68, 68, 0.5)' : undefined
                                 }}
                                 required
-                                minLength={6}
+                                minLength={12}
                             />
                             <button
                                 type="button"

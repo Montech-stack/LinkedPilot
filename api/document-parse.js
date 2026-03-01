@@ -69,8 +69,7 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('File parsing error:', error);
         return res.status(500).json({
-            error: 'Failed to parse the uploaded document.',
-            details: error.message
+            error: 'Failed to parse the uploaded document.'
         });
     }
 }

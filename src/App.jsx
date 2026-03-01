@@ -34,11 +34,7 @@ class ErrorBoundary extends React.Component {
       return (
         <div style={{ padding: 20, color: 'white', background: '#333' }}>
           <h1>Something went wrong.</h1>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
-            {this.state.error && this.state.error.toString()}
-            <br />
-            {this.state.errorInfo && this.state.errorInfo.componentStack}
-          </details>
+          <p>Please try again later.</p>
           <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: '8px 16px' }}>
             Reload
           </button>
@@ -111,7 +107,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mapId = params.get('mapId');
-    if (mapId) loadSharedMap(mapId);
+    // Allowlist: UUID or alphanumeric slug, max 64 chars — reject anything else
+    if (mapId && /^[a-zA-Z0-9_-]{1,64}$/.test(mapId)) loadSharedMap(mapId);
   }, [loadSharedMap]);
 
   // Remove body scroll

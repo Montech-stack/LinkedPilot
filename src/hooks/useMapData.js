@@ -332,7 +332,10 @@ export const useMapData = () => {
     };
 
     const loadMap = (id) => {
-        setCurrentMapId(id);
+        // Allowlist map IDs to prevent prototype pollution (__proto__, constructor, etc.)
+        if (typeof id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(id)) {
+            setCurrentMapId(id);
+        }
     };
 
     // Helper to convert polar to cartesian
@@ -420,7 +423,8 @@ export const useMapData = () => {
             });
 
         } catch (err) {
-            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+            console.error('generateNewMap error:', err);
+            dispatch({ type: ACTIONS.SET_ERROR, payload: 'Error. Please try again later.' });
         }
     }, []);
 
@@ -514,7 +518,8 @@ export const useMapData = () => {
             return { nodes: newNodes, connections: newConnections };
 
         } catch (err) {
-            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+            console.error('handleExpand error:', err);
+            dispatch({ type: ACTIONS.SET_ERROR, payload: 'Error. Please try again later.' });
             return null;
         }
 
@@ -600,7 +605,7 @@ export const useMapData = () => {
             // The auto-save effect will persist this fork to localStorage
         } catch (err) {
             console.error("Load shared error:", err);
-            dispatch({ type: ACTIONS.SET_ERROR, payload: err.message || "Failed to load shared map." });
+            dispatch({ type: ACTIONS.SET_ERROR, payload: "Error. Please try again later." });
         }
     }, []);
 

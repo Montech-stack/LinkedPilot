@@ -81,7 +81,8 @@ const DataConnectModal = ({ onClose, onConnect, auth }) => {
             try {
                 data = JSON.parse(textResponse);
             } catch (e) {
-                throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 50)}... Check Vercel Function Logs.`);
+                console.error('Non-JSON response from /api/document-parse:', textResponse.substring(0, 200));
+                throw new Error('Error. Please try again later.');
             }
 
             if (!res.ok) {
@@ -142,7 +143,8 @@ const DataConnectModal = ({ onClose, onConnect, auth }) => {
             try {
                 data = JSON.parse(textResponse);
             } catch (err) {
-                throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 50)}...`);
+                console.error('Non-JSON response from /api/drive-fetch:', textResponse.substring(0, 200));
+                throw new Error('Error. Please try again later.');
             }
 
             if (!res.ok) {

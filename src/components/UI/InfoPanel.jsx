@@ -11,7 +11,8 @@ import styles from './InfoPanel.module.css';
 const parseInline = (text, accentColor) => {
     if (!text) return text;
     // Match: ***bold italic***, **bold**, *italic*, `code`
-    const regex = /(\*\*\*[^*\n]+\*\*\*|\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`)/g;
+    // Character classes are bounded to 200 chars to prevent ReDoS via catastrophic backtracking
+    const regex = /(\*\*\*[^*\n]{1,200}\*\*\*|\*\*[^*\n]{1,200}\*\*|\*[^*\n]{1,200}\*|`[^`\n]{1,200}`)/g;
     const parts = [];
     let lastIndex = 0;
     let match;

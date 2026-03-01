@@ -5,7 +5,7 @@ import path from 'path';
 // Read .env manually since dotenv might not be installed
 const envPath = path.resolve(process.cwd(), '.env');
 const envContent = fs.readFileSync(envPath, 'utf-8');
-const apiKeyMatch = envContent.match(/VITE_GEMINI_API_KEY=(.+)/);
+const apiKeyMatch = envContent.match(/^GEMINI_API_KEY=(.+)/m);
 const API_KEY = apiKeyMatch ? apiKeyMatch[1].trim() : null;
 
 if (!API_KEY) {
