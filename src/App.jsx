@@ -46,7 +46,7 @@ class ErrorBoundary extends React.Component {
 }
 
 
-const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
+const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
   const {
     scale, offset, handleWheel,
     handleMouseDown, handleMouseMove, handleMouseUp,
@@ -575,6 +575,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         isOpen={panelOpen}
         onClose={handlePanelClose}
         connections={connections}
+        nodes={nodes}
         onExpand={handleExpandWrapper}
         onCollapse={handleCollapseWrapper}
         onNavigate={handlePanelNavigate}
@@ -586,6 +587,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth }) => {
         onMessagesChange={handleMessagesChange}
         onClearChat={handleClearChat}
         parentChain={parentChain}
+        isPro={isPro}
       />
 
       <Canvas
@@ -685,6 +687,7 @@ const AppContent = () => {
       toggleTheme={toggleTheme}
       signOut={signOut}
       auth={auth}
+      isPro={auth.isPro}
     />
   );
 };

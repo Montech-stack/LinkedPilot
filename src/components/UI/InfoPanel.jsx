@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
 import {
     X, Sparkles, Loader2, Send, MessageSquare, Minimize2, Maximize2,
-    ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Copy, Check, Trash2
+    ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Copy, Check, Trash2,
+    BarChart2, Lock
 } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
-import { askNodeQuestion } from '../../services/api';
+import { askNodeQuestion, visualizeNode } from '../../services/api';
+import VisualizationModal from './VisualizationModal';
 import styles from './InfoPanel.module.css';
 
 // ─── Markdown Formatter ───────────────────────────────────────────────
@@ -154,10 +156,16 @@ const InfoPanel = ({
     onMessagesChange,   // Callback to update messages
     onClearChat,        // Callback to clear chat for current node
     parentChain,        // Array of parent node data from root→current
+    isPro,              // Pro user flag
+    nodes,              // All nodes (to find children)
 }) => {
     const [panelExpanded, setPanelExpanded] = useState(false);
     const [question, setQuestion] = useState('');
     const [asking, setAsking] = useState(false);
+    const [vizOpen, setVizOpen] = useState(false);
+    const [vizData, setVizData] = useState(null);
+    const [vizLoading, setVizLoading] = useState(false);
+    const [vizError, setVizError] = useState(null);
     const scrollRef = useRef(null);
     const prevNodeIdRef = useRef(null);
 
@@ -245,6 +253,41 @@ const InfoPanel = ({
         } finally {
             setAsking(false);
             // Don't auto-scroll at end
+        }
+    };
+
+    const handleVisualize = async () => {
+        if (!isPro || vizLoading) return;
+        setVizOpen(true);
+        setVizData(null);
+        setVizError(null);
+        setVizLoading(true);
+
+        // Collect child nodes of the current node
+        const childNodes = connections
+            ? connections
+                .filter(c => (typeof c.from === 'string' ? c.from : c.from?.id) === node.id)
+                .map(c => {
+                    const toId = typeof c.to === 'string' ? c.to : c.to?.id;
+                    return nodes?.find(n => n.id === toId);
+                })
+                .filter(Boolean)
+                .map(n => ({ title: n.data?.title || '', detail: n.data?.detail || '' }))
+            : [];
+
+        try {
+            const result = await visualizeNode(
+                node.data?.title || '',
+                node.data?.detail || '',
+                childNodes,
+                topic || node.data?.title || '',
+                mode || 'research'
+            );
+            setVizData(result);
+        } catch {
+            setVizError('Could not generate visualization. Please try again.');
+        } finally {
+            setVizLoading(false);
         }
     };
 
@@ -408,6 +451,29 @@ const InfoPanel = ({
                         </button>
                     )}
 
+                    {/* Visualize button (Pro) */}
+                    <button
+                        onClick={isPro ? handleVisualize : undefined}
+                        title={isPro ? 'Generate an infographic for this node' : 'Upgrade to Pro to unlock visualizations'}
+                        style={{
+                            width: '100%', padding: '10px 16px',
+                            background: isPro
+                                ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(0,212,255,0.06))'
+                                : 'var(--surface2)',
+                            border: `1px solid ${isPro ? 'rgba(124,58,237,0.35)' : 'var(--glass-border)'}`,
+                            borderRadius: '10px',
+                            color: isPro ? 'var(--accent-purple)' : 'var(--text-secondary)',
+                            cursor: isPro ? 'pointer' : 'not-allowed',
+                            fontFamily: 'var(--font-display)', fontSize: '12px', fontWeight: '700',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            transition: 'all 0.2s', margin: '4px 0',
+                            opacity: isPro ? 1 : 0.6,
+                        }}
+                    >
+                        {isPro ? <BarChart2 size={13} /> : <Lock size={13} />}
+                        {isPro ? 'Visualize with Neuro Pro' : 'Visualize — Pro Only'}
+                    </button>
+
                     {/* ── Chat History ── */}
                     {msgs.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -522,6 +588,16 @@ const InfoPanel = ({
                     </form>
                 </div>
             </div>
+
+            {vizOpen && (
+                <VisualizationModal
+                    data={vizData}
+                    loading={vizLoading}
+                    error={vizError}
+                    nodeTitle={node?.data?.title}
+                    onClose={() => { setVizOpen(false); setVizData(null); setVizError(null); }}
+                />
+            )}
         </>
     );
 };

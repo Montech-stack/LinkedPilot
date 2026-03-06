@@ -188,3 +188,23 @@ export const predictBranch = async (concept, branchTitles, mapTopic) => {
         return branchTitles[0] || null;
     }
 };
+
+export const visualizeNode = async (nodeTitle, nodeDetail, childNodes, mapTopic, mapMode) => {
+    if (useMock) {
+        return new Promise(resolve => setTimeout(() => resolve({
+            type: 'stats',
+            title: `${nodeTitle} at a Glance`,
+            subtitle: 'Mock data — configure API key for real insights',
+            items: [
+                { label: 'Concept A', value: 42, unit: 'units', description: 'A key metric.', color: '#00d4ff' },
+                { label: 'Concept B', value: 87, unit: '%', description: 'Another insight.', color: '#7c3aed' },
+                { label: 'Concept C', value: 3, unit: 'billion', description: 'Scale of impact.', color: '#f97316' },
+            ],
+        }), 600));
+    }
+
+    const { data } = await postJSON('/api/ai/visualize', {
+        nodeTitle, nodeDetail, childNodes, mapTopic, mapMode,
+    });
+    return data;
+};

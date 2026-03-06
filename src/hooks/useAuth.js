@@ -1,10 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
 
+const fetchIsPro = async (userId) => {
+    if (!supabase || !userId) return false;
+    const { data } = await supabase
+        .from('profiles')
+        .select('is_pro')
+        .eq('id', userId)
+        .single();
+    return data?.is_pro ?? false;
+};
+
 export const useAuth = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isPro, setIsPro] = useState(false);
 
     const [providerToken, setProviderToken] = useState(null);
 
@@ -16,17 +27,21 @@ export const useAuth = () => {
         }
 
         // Get current session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            const u = session?.user ?? null;
+            setUser(u);
             setProviderToken(session?.provider_token ?? null);
+            if (u) setIsPro(await fetchIsPro(u.id));
             setLoading(false);
         });
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
-                setUser(session?.user ?? null);
+            async (_event, session) => {
+                const u = session?.user ?? null;
+                setUser(u);
                 setProviderToken(session?.provider_token ?? null);
+                setIsPro(u ? await fetchIsPro(u.id) : false);
             }
         );
 
@@ -120,6 +135,7 @@ export const useAuth = () => {
         providerToken,
         loading,
         error,
+        isPro,
         signUp,
         signIn,
         signOut,
