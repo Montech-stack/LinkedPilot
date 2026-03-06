@@ -133,6 +133,29 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                         {isDark ? <Sun size={15} /> : <Moon size={15} />}
                     </button>
 
+                    {showInstall && (
+                        <button
+                            onClick={handleInstall}
+                            title="Install Neuro"
+                            style={{
+                                background: 'var(--surface2)',
+                                border: '1px solid var(--accent-purple)',
+                                color: 'var(--accent-purple)',
+                                borderRadius: '8px',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.2s',
+                                width: '34px', height: '34px',
+                                flexShrink: 0
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124, 58, 237, 0.15)'; e.currentTarget.style.boxShadow = 'var(--shadow-glow-purple)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        >
+                            <Download size={15} />
+                        </button>
+                    )}
+
                     <button
                         onClick={() => setAuthMode('login')}
                         style={{
@@ -156,35 +179,6 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                         }}
                     >Sign Up</button>
                 </div>
-
-                {showInstall && (
-                    <div style={{ marginTop: '24px', animation: 'fadeInUp 0.8s ease-out 0.45s backwards' }}>
-                        <button
-                            onClick={handleInstall}
-                            style={{
-                                background: 'var(--glass)',
-                                backdropFilter: 'blur(var(--glass-blur))',
-                                border: '1px solid var(--accent-purple)',
-                                color: 'var(--accent-purple)',
-                                padding: '12px 28px',
-                                borderRadius: '12px',
-                                cursor: 'pointer',
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: 'all 0.3s ease'
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124, 58, 237, 0.1)'; e.currentTarget.style.boxShadow = 'var(--shadow-glow-purple)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass)'; e.currentTarget.style.boxShadow = 'none'; }}
-                        >
-                            <Download size={15} />
-                            Install Neuro
-                        </button>
-                    </div>
-                )}
             </nav>
 
             {/* HERO SECTION */}
