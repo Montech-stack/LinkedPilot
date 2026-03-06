@@ -31,9 +31,14 @@ export const useAuth = () => {
             const u = session?.user ?? null;
             setUser(u);
             setProviderToken(session?.provider_token ?? null);
-            if (u) setIsPro(await fetchIsPro(u.id));
-            setLoading(false);
-        });
+            try {
+                if (u) setIsPro(await fetchIsPro(u.id));
+            } catch {
+                setIsPro(false);
+            } finally {
+                setLoading(false);
+            }
+        }).catch(() => setLoading(false));
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -41,7 +46,11 @@ export const useAuth = () => {
                 const u = session?.user ?? null;
                 setUser(u);
                 setProviderToken(session?.provider_token ?? null);
-                setIsPro(u ? await fetchIsPro(u.id) : false);
+                try {
+                    setIsPro(u ? await fetchIsPro(u.id) : false);
+                } catch {
+                    setIsPro(false);
+                }
             }
         );
 
