@@ -3,12 +3,15 @@ import { supabase } from '../services/supabase';
 
 const fetchIsPro = async (userId) => {
     if (!supabase || !userId) return false;
-    const { data } = await supabase
+    const timeout = new Promise(resolve => setTimeout(() => resolve(false), 4000));
+    const query = supabase
         .from('profiles')
         .select('is_pro')
         .eq('id', userId)
-        .single();
-    return data?.is_pro ?? false;
+        .single()
+        .then(({ data }) => data?.is_pro ?? false)
+        .catch(() => false);
+    return Promise.race([query, timeout]);
 };
 
 export const useAuth = () => {
