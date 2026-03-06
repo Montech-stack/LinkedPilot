@@ -90,25 +90,27 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
             {/* NAV BAR */}
             <nav style={{
                 position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
-                padding: '14px 24px',
+                padding: '12px 20px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: 'var(--glass)',
                 backdropFilter: 'blur(var(--glass-blur))',
                 WebkitBackdropFilter: 'blur(var(--glass-blur))',
-                borderBottom: '1px solid var(--glass-border)'
+                borderBottom: '1px solid var(--glass-border)',
+                minWidth: 0
             }}>
                 {/* Logo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <NeuroAvatar state="idle" size={30} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <NeuroAvatar state="idle" size={28} />
                     <span style={{
-                        fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: '800',
+                        fontFamily: 'var(--font-display)', fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: '800',
                         background: 'linear-gradient(135deg, var(--text), var(--accent-cyan))',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        whiteSpace: 'nowrap'
                     }}>Neuro</span>
                 </div>
 
                 {/* Nav actions */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                     {/* Theme toggle */}
                     <button
                         onClick={toggleTheme}
@@ -122,7 +124,8 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                             cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             transition: 'all 0.2s',
-                            width: '36px', height: '36px'
+                            width: '34px', height: '34px',
+                            flexShrink: 0
                         }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.color = 'var(--accent-cyan)'; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -136,9 +139,9 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                             background: 'transparent',
                             border: '1px solid var(--glass-border)',
                             color: 'var(--text-secondary)',
-                            padding: '8px 18px', borderRadius: '8px', cursor: 'pointer',
-                            fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: '500',
-                            transition: 'all 0.2s'
+                            padding: '8px clamp(10px, 3vw, 18px)', borderRadius: '8px', cursor: 'pointer',
+                            fontFamily: 'var(--font-body)', fontSize: 'clamp(12px, 3vw, 13px)', fontWeight: '500',
+                            transition: 'all 0.2s', whiteSpace: 'nowrap'
                         }}
                     >Log In</button>
                     <button
@@ -146,11 +149,12 @@ const LandingPage = ({ onAuth, theme, toggleTheme }) => {
                         style={{
                             background: 'var(--gradient-cyan)', border: 'none',
                             color: isDark ? '#050709' : '#fff',
-                            padding: '8px 18px', borderRadius: '8px', cursor: 'pointer',
-                            fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: '600',
-                            transition: 'all 0.2s', boxShadow: 'var(--shadow-glow-cyan)'
+                            padding: '8px clamp(10px, 3vw, 18px)', borderRadius: '8px', cursor: 'pointer',
+                            fontFamily: 'var(--font-body)', fontSize: 'clamp(12px, 3vw, 13px)', fontWeight: '600',
+                            transition: 'all 0.2s', boxShadow: 'var(--shadow-glow-cyan)',
+                            whiteSpace: 'nowrap'
                         }}
-                    >Get Started</button>
+                    >Sign Up</button>
                 </div>
 
                 {showInstall && (
