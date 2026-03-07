@@ -34,3 +34,35 @@ ALTER TABLE sync_events ALTER COLUMN created_at SET DEFAULT NOW();
 -- Enable realtime for sync_events table
 ALTER PUBLICATION supabase_realtime ADD TABLE sync_events;
 
+
+-- ── Shared Maps Table ────────────────────────────────────────────────────────
+-- Stores publicly shared map snapshots so anyone with the link can view them.
+
+CREATE TABLE IF NOT EXISTS maps (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL DEFAULT 'Untitled Map',
+    content JSONB NOT NULL,
+    is_public BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_maps_user_id ON maps(user_id);
+CREATE INDEX IF NOT EXISTS idx_maps_is_public ON maps(is_public);
+
+ALTER TABLE maps ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read public maps (needed for sharing links to work for non-users)
+CREATE POLICY "Public maps are viewable by anyone"
+    ON maps FOR SELECT
+    USING (is_public = true);
+
+-- Authenticated users can insert their own maps; allow null user_id for anonymous shares
+CREATE POLICY "Users can insert maps"
+    ON maps FOR INSERT
+    WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
+-- Users can delete their own maps
+CREATE POLICY "Users can delete their own maps"
+    ON maps FOR DELETE
+    USING (auth.uid() = user_id);

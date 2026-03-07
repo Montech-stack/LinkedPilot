@@ -576,7 +576,7 @@ export const useMapData = () => {
 
         try {
             const { data, error } = await supabase.from('maps').insert({
-                user_id: user?.id || 'anonymous',
+                user_id: user?.id || null,
                 title: state.topic || 'Untitled Map',
                 content: mapData,
                 is_public: true
