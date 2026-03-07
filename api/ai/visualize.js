@@ -1,71 +1,84 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { sanitizeString } from '../_lib/prompts.js';
 
-const VISUALIZATION_TYPES = ['stats', 'timeline', 'comparison', 'flow'];
+const SCENE_STYLES = ['intro', 'stat', 'fact', 'quote', 'outro'];
 
 function buildVisualizePrompt(nodeTitle, nodeDetail, childNodes, mapTopic, mapMode) {
     const childSummary = childNodes.length > 0
         ? childNodes.map(n => `- ${n.title}: ${n.detail || ''}`).join('\n')
-        : 'No child nodes yet.';
+        : 'No child nodes.';
 
-    return `You are an expert data visualization designer. Given a mind map node, generate a rich, insightful infographic in JSON format.
+    return `You are a creative director for animated explainer videos. Given a mind map node, generate a short animated explainer script as JSON.
 
-Mind map topic: "${mapTopic}"
-Mode: ${mapMode}
-Node title: "${nodeTitle}"
-Node detail: "${nodeDetail}"
-Child concepts:
+Topic: "${mapTopic}" | Mode: ${mapMode}
+Node: "${nodeTitle}"
+Detail: "${nodeDetail}"
+Related concepts:
 ${childSummary}
 
-Choose the MOST suitable visualization type from: stats, timeline, comparison, flow.
-- stats: for facts, figures, key metrics (use animated counters)
-- timeline: for historical events, steps, processes in sequence
-- comparison: for pros/cons, feature comparisons, contrasts
-- flow: for cause-effect, how something works, process chains
+Generate 5-7 scenes that tell the story of this concept like an animated explainer video.
+Each scene plays for a few seconds with animated text and visuals.
 
-Return ONLY valid JSON in this exact structure depending on type:
+Scene styles available:
+- "intro": Opening title card — big headline + icon + tagline
+- "stat": A single dramatic statistic with context — huge number + unit + supporting text
+- "fact": A key insight with 2-3 bullet points that animate in
+- "quote": A powerful quote or key principle, attributed
+- "outro": Closing takeaway — what to remember
 
-For "stats":
+Return ONLY valid JSON:
 {
-  "type": "stats",
-  "title": "string",
-  "subtitle": "string (optional)",
-  "items": [
-    { "label": "string", "value": number, "unit": "string", "description": "string (1 sentence)", "color": "#hexcode" }
+  "title": "string (overall explainer title)",
+  "scenes": [
+    {
+      "style": "intro",
+      "duration": 4,
+      "accent": "#00d4ff",
+      "icon": "emoji",
+      "headline": "string (short, punchy, max 8 words)",
+      "subtext": "string (1 sentence, max 15 words)"
+    },
+    {
+      "style": "stat",
+      "duration": 4,
+      "accent": "#7c3aed",
+      "icon": "emoji",
+      "headline": "string (context label, max 6 words)",
+      "stat": { "value": number, "unit": "string (e.g. billion, %, ms, x)" },
+      "subtext": "string (why this number matters, max 15 words)"
+    },
+    {
+      "style": "fact",
+      "duration": 5,
+      "accent": "#f97316",
+      "icon": "emoji",
+      "headline": "string (max 6 words)",
+      "bullets": ["string (max 10 words)", "string", "string"]
+    },
+    {
+      "style": "quote",
+      "duration": 4,
+      "accent": "#10b981",
+      "quote": "string (a real, famous, or highly relevant quote or key principle, max 20 words)",
+      "attribution": "string (source/author)"
+    },
+    {
+      "style": "outro",
+      "duration": 4,
+      "accent": "#00d4ff",
+      "icon": "emoji",
+      "headline": "string (takeaway, max 8 words)",
+      "subtext": "string (one memorable closing thought, max 15 words)"
+    }
   ]
 }
-Items: 3-5. Use real, accurate data. Colors: use #00d4ff, #7c3aed, #f97316, #10b981, #f59e0b.
 
-For "timeline":
-{
-  "type": "timeline",
-  "title": "string",
-  "items": [
-    { "year": "string", "event": "string", "detail": "string (1-2 sentences)", "color": "#hexcode" }
-  ]
-}
-Items: 4-7. Colors alternate between #00d4ff and #7c3aed.
-
-For "comparison":
-{
-  "type": "comparison",
-  "title": "string",
-  "sideA": { "label": "string", "color": "#00d4ff", "points": ["string"] },
-  "sideB": { "label": "string", "color": "#7c3aed", "points": ["string"] }
-}
-Points: 3-5 per side.
-
-For "flow":
-{
-  "type": "flow",
-  "title": "string",
-  "steps": [
-    { "label": "string", "detail": "string (1 sentence)", "color": "#hexcode" }
-  ]
-}
-Steps: 4-6. Colors: cycle through #00d4ff, #7c3aed, #f97316, #10b981.
-
-Be specific, accurate, and insightful. Do not invent false data — use real facts.`;
+Rules:
+- Use real, accurate facts and data
+- Make it feel like a premium animated video — punchy, visual, dramatic
+- Vary the accent colors across scenes
+- Icons must be single emoji characters
+- stat.value must be a plain number (e.g. 1760000 not "1.76T")`;
 }
 
 export default async function handler(req, res) {
@@ -115,8 +128,8 @@ export default async function handler(req, res) {
             return res.status(502).json({ error: 'Invalid AI response format.' });
         }
 
-        if (!VISUALIZATION_TYPES.includes(parsed.type)) {
-            return res.status(502).json({ error: 'Unexpected visualization type.' });
+        if (!Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
+            return res.status(502).json({ error: 'Invalid scene data from AI.' });
         }
 
         return res.status(200).json({ data: parsed });

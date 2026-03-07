@@ -1,455 +1,290 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
-
-// ── Animated radial ring (for stats) ──────────────────────────────────
-const RadialRing = ({ value, max, color, size = 100, strokeWidth = 8, children }) => {
-    const [progress, setProgress] = useState(0);
-    const r = (size - strokeWidth) / 2;
-    const circ = 2 * Math.PI * r;
-    const offset = circ - (progress / 100) * circ;
-
-    useEffect(() => {
-        const t = setTimeout(() => setProgress(Math.min(100, (value / max) * 100)), 120);
-        return () => clearTimeout(t);
-    }, [value, max]);
-
-    return (
-        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none"
-                stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none"
-                stroke={color} strokeWidth={strokeWidth}
-                strokeDasharray={circ}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 6px ${color})` }}
-            />
-            <foreignObject x={0} y={0} width={size} height={size} style={{ transform: 'rotate(90deg)', transformOrigin: `${size / 2}px ${size / 2}px` }}>
-                <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {children}
-                </div>
-            </foreignObject>
-        </svg>
-    );
-};
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 
 // ── Animated counter ───────────────────────────────────────────────────
-const useCountUp = (target, duration = 1200, delay = 0) => {
+const useCountUp = (target, active, duration = 1800) => {
     const [val, setVal] = useState(0);
     useEffect(() => {
-        const t = setTimeout(() => {
-            const start = performance.now();
-            const tick = (now) => {
-                const p = Math.min((now - start) / duration, 1);
-                const e = 1 - Math.pow(1 - p, 3);
-                setVal(target * e);
-                if (p < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-        }, delay);
-        return () => clearTimeout(t);
-    }, [target, duration, delay]);
+        if (!active) { setVal(0); return; }
+        const start = performance.now();
+        const tick = (now) => {
+            const p = Math.min((now - start) / duration, 1);
+            const e = 1 - Math.pow(1 - p, 4);
+            setVal(target * e);
+            if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }, [target, active, duration]);
     return val;
 };
 
-// ── Animated bar ───────────────────────────────────────────────────────
-const Bar = ({ pct, color, delay = 0 }) => {
-    const [width, setWidth] = useState(0);
-    useEffect(() => {
-        const t = setTimeout(() => setWidth(pct), 150 + delay);
-        return () => clearTimeout(t);
-    }, [pct, delay]);
-    return (
-        <div style={{ height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '6px', overflow: 'hidden', flex: 1 }}>
-            <div style={{
-                height: '100%', width: `${width}%`, borderRadius: '6px',
-                background: `linear-gradient(90deg, ${color}, ${color}cc)`,
-                boxShadow: `0 0 10px ${color}88`,
-                transition: `width 1.2s cubic-bezier(0.4,0,0.2,1) ${delay}ms`,
-            }} />
-        </div>
-    );
+// ── Format a stat value ────────────────────────────────────────────────
+const fmtStat = (val, unit) => {
+    const u = (unit || '').toLowerCase();
+    if (u.includes('billion') || u === 'b') return (val / 1e9).toFixed(2) + 'B';
+    if (u.includes('million') || u === 'm') return (val / 1e6).toFixed(1) + 'M';
+    if (u.includes('trillion') || u === 't') return (val / 1e12).toFixed(2) + 'T';
+    if (val >= 1e9) return (val / 1e9).toFixed(1) + 'B';
+    if (val >= 1e6) return (val / 1e6).toFixed(1) + 'M';
+    if (val >= 1000) return Math.round(val).toLocaleString();
+    return Number.isInteger(val) ? val : val.toFixed(1);
 };
 
-// ── SVG animated line (for flow/timeline) ─────────────────────────────
-const DrawLine = ({ x1, y1, x2, y2, color, delay = 0, strokeWidth = 2 }) => {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const [dash, setDash] = useState(len);
-    useEffect(() => {
-        const t = setTimeout(() => setDash(0), delay);
-        return () => clearTimeout(t);
-    }, [delay, len]);
-    return (
-        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={strokeWidth}
-            strokeDasharray={len} strokeDashoffset={dash} strokeLinecap="round"
-            style={{ transition: `stroke-dashoffset 0.7s ease ${delay}ms`, filter: `drop-shadow(0 0 4px ${color})` }}
-        />
-    );
-};
+// ══════════════════════════════════════════════════════════════════════
+// SCENE RENDERERS
+// ══════════════════════════════════════════════════════════════════════
 
-// ── Single stat card (hook-safe, one per component) ───────────────────
-const StatCard = ({ item, index, maxVal }) => {
-    const displayed = useCountUp(item.value, 1200, index * 120);
-    const fmt = item.value >= 1000
-        ? Math.round(displayed).toLocaleString()
-        : displayed.toFixed(item.value % 1 !== 0 ? 1 : 0);
-
-    return (
+const IntroScene = ({ scene, enter }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', textAlign: 'center', padding: '32px' }}>
         <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-            animation: `fadeInUp 0.5s ease-out ${index * 0.1}s backwards`,
-            flex: '1 1 120px', maxWidth: '160px',
-        }}>
-            <RadialRing value={item.value} max={maxVal} color={item.color} size={110} strokeWidth={9}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '800', color: item.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
-                        {fmt}
-                    </div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '2px' }}>{item.unit}</div>
-                </div>
-            </RadialRing>
-            <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{item.label}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.4, marginTop: '3px' }}>{item.description}</div>
+            fontSize: '72px', lineHeight: 1,
+            transform: enter ? 'scale(1)' : 'scale(0.3)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease',
+            filter: `drop-shadow(0 0 30px ${scene.accent})`,
+        }}>{scene.icon}</div>
+        <h1 style={{
+            fontFamily: 'var(--font-display)', fontWeight: '900',
+            fontSize: 'clamp(24px, 5vw, 42px)', lineHeight: 1.1,
+            color: '#fff', margin: 0,
+            transform: enter ? 'translateY(0)' : 'translateY(30px)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.6s ease 0.2s, opacity 0.6s ease 0.2s',
+            background: `linear-gradient(135deg, #fff 40%, ${scene.accent})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>{scene.headline}</h1>
+        <p style={{
+            fontSize: 'clamp(13px, 2.5vw, 17px)', color: 'rgba(255,255,255,0.65)',
+            maxWidth: '400px', lineHeight: 1.6, margin: 0,
+            transform: enter ? 'translateY(0)' : 'translateY(20px)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.6s ease 0.45s, opacity 0.6s ease 0.45s',
+        }}>{scene.subtext}</p>
+    </div>
+);
+
+const StatScene = ({ scene, enter }) => {
+    const raw = scene.stat?.value || 0;
+    const unit = scene.stat?.unit || '';
+    const val = useCountUp(raw, enter);
+    const displayed = fmtStat(val, unit);
+    const displayedUnit = unit.replace(/billion|million|trillion/gi, '').trim();
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', textAlign: 'center', padding: '32px' }}>
+            <div style={{
+                fontSize: '40px',
+                transform: enter ? 'scale(1)' : 'scale(0)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease',
+            }}>{scene.icon}</div>
+            <div style={{
+                fontFamily: 'var(--font-display)', fontWeight: '900',
+                fontSize: 'clamp(56px, 12vw, 96px)', lineHeight: 1,
+                color: scene.accent,
+                textShadow: `0 0 60px ${scene.accent}88`,
+                transform: enter ? 'scale(1)' : 'scale(0.5)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s, opacity 0.5s ease 0.1s',
+                letterSpacing: '-2px',
+            }}>
+                {displayed}
+                {displayedUnit && <span style={{ fontSize: '0.4em', opacity: 0.8, letterSpacing: 0 }}>{displayedUnit}</span>}
             </div>
+            <div style={{
+                fontSize: 'clamp(14px, 3vw, 20px)', fontWeight: '700',
+                color: '#fff', fontFamily: 'var(--font-display)',
+                transform: enter ? 'translateY(0)' : 'translateY(20px)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.5s ease 0.3s, opacity 0.5s ease 0.3s',
+            }}>{scene.headline}</div>
+            <p style={{
+                fontSize: 'clamp(12px, 2vw, 15px)', color: 'rgba(255,255,255,0.55)',
+                maxWidth: '340px', lineHeight: 1.6, margin: 0,
+                transform: enter ? 'translateY(0)' : 'translateY(15px)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.5s ease 0.5s, opacity 0.5s ease 0.5s',
+            }}>{scene.subtext}</p>
         </div>
     );
 };
 
-// ══════════════════════════════════════════════════════════════
-// RENDERER: Stats — radial rings + animated counters
-// ══════════════════════════════════════════════════════════════
-const StatsView = ({ data }) => {
-    const items = data.items || [];
-    const maxVal = Math.max(...items.map(i => i.value), 1);
-    return (
-        <div>
-            {data.subtitle && <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '20px' }}>{data.subtitle}</div>}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
-                {items.map((item, i) => <StatCard key={i} item={item} index={i} maxVal={maxVal} />)}
-            </div>
+const FactScene = ({ scene, enter }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '32px 40px', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <span style={{
+                fontSize: '36px',
+                transform: enter ? 'scale(1)' : 'scale(0)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease',
+            }}>{scene.icon}</span>
+            <h2 style={{
+                fontFamily: 'var(--font-display)', fontWeight: '800',
+                fontSize: 'clamp(18px, 4vw, 28px)', color: '#fff', margin: 0,
+                transform: enter ? 'translateX(0)' : 'translateX(-20px)',
+                opacity: enter ? 1 : 0,
+                transition: 'transform 0.5s ease 0.15s, opacity 0.5s ease 0.15s',
+            }}>{scene.headline}</h2>
         </div>
-    );
-};
-
-// ══════════════════════════════════════════════════════════════
-// RENDERER: Timeline — horizontal SVG line with animated nodes
-// ══════════════════════════════════════════════════════════════
-const TimelineView = ({ data }) => {
-    const items = data.items || [];
-    const [visible, setVisible] = useState(0);
-
-    useEffect(() => {
-        let i = 0;
-        const tick = () => {
-            if (i < items.length) { setVisible(++i); setTimeout(tick, 280); }
-        };
-        setTimeout(tick, 200);
-    }, [items.length]);
-
-    const W = 560;
-    const H = 60;
-    const pad = 40;
-    const step = items.length > 1 ? (W - pad * 2) / (items.length - 1) : 0;
-
-    return (
-        <div style={{ overflowX: 'auto' }}>
-            {/* SVG spine */}
-            <div style={{ minWidth: '500px' }}>
-                <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', marginBottom: '8px' }}>
-                    {items.map((item, i) => {
-                        if (i === 0) return null;
-                        const x1 = pad + (i - 1) * step;
-                        const x2 = pad + i * step;
-                        return <DrawLine key={i} x1={x1} y1={H / 2} x2={x2} y2={H / 2}
-                            color={item.color} delay={i * 280 + 100} strokeWidth={2} />;
-                    })}
-                    {items.map((item, i) => {
-                        const cx = pad + i * step;
-                        return (
-                            <g key={i}>
-                                <circle cx={cx} cy={H / 2} r={visible > i ? 10 : 0} fill={item.color}
-                                    style={{ transition: 'r 0.3s ease', filter: `drop-shadow(0 0 8px ${item.color})` }} />
-                                <circle cx={cx} cy={H / 2} r={visible > i ? 18 : 0} fill={`${item.color}22`}
-                                    style={{ transition: 'r 0.5s ease 0.1s' }} />
-                            </g>
-                        );
-                    })}
-                </svg>
-
-                {/* Labels below */}
-                <div style={{ display: 'flex', gap: '0' }}>
-                    {items.map((item, i) => (
-                        <div key={i} style={{
-                            flex: 1, textAlign: 'center', padding: '0 4px',
-                            opacity: visible > i ? 1 : 0,
-                            transform: visible > i ? 'translateY(0)' : 'translateY(8px)',
-                            transition: `opacity 0.4s ease ${i * 0.28 + 0.15}s, transform 0.4s ease ${i * 0.28 + 0.15}s`,
-                        }}>
-                            <div style={{ fontSize: '10px', fontWeight: '700', color: item.color, fontFamily: 'var(--font-mono)', marginBottom: '3px' }}>{item.year}</div>
-                            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: '3px' }}>{item.event}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{item.detail}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ══════════════════════════════════════════════════════════════
-// RENDERER: Comparison — animated bar chart face-off
-// ══════════════════════════════════════════════════════════════
-const ComparisonView = ({ data }) => {
-    const { sideA, sideB } = data;
-    const points = Math.max((sideA?.points || []).length, (sideB?.points || []).length);
-    const rows = Array.from({ length: points });
-
-    return (
-        <div>
-            {/* Header labels */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '800', color: sideA?.color, fontFamily: 'var(--font-display)' }}>{sideA?.label}</div>
-                <div style={{ fontSize: '14px', fontWeight: '800', color: sideB?.color, fontFamily: 'var(--font-display)', textAlign: 'right' }}>{sideB?.label}</div>
-            </div>
-
-            {/* Bar rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {rows.map((_, i) => {
-                    const ptA = sideA?.points?.[i];
-                    const ptB = sideB?.points?.[i];
-                    // Fake relative lengths based on text length as proxy
-                    const pctA = ptA ? Math.min(90, 40 + (ptA.length % 4) * 12) : 0;
-                    const pctB = ptB ? Math.min(90, 40 + (ptB.length % 4) * 12) : 0;
-
-                    return (
-                        <div key={i} style={{ animation: `fadeInUp 0.4s ease-out ${i * 0.1}s backwards` }}>
-                            {/* Labels */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', maxWidth: '45%' }}>{ptA}</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', maxWidth: '45%', textAlign: 'right' }}>{ptB}</div>
-                            </div>
-                            {/* Bars — facing each other from center */}
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                {/* Left bar (right-aligned) */}
-                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', height: '8px' }}>
-                                    <div style={{
-                                        height: '100%', borderRadius: '4px 0 0 4px',
-                                        background: `linear-gradient(270deg, ${sideA?.color}, ${sideA?.color}88)`,
-                                        boxShadow: `0 0 8px ${sideA?.color}66`,
-                                        width: '0%',
-                                        animation: `growRight ${pctA * 12}ms ease-out ${i * 100 + 200}ms forwards`,
-                                    }} style2={{ width: `${pctA}%` }} />
-                                </div>
-                                <div style={{ width: '2px', height: '18px', background: 'var(--glass-border)', flexShrink: 0 }} />
-                                {/* Right bar */}
-                                <div style={{ flex: 1, height: '8px' }}>
-                                    <Bar pct={pctB} color={sideB?.color} delay={i * 100 + 200} />
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            <style>{`
-                @keyframes growRight {
-                    from { width: 0%; }
-                    to { width: var(--target-width, 60%); }
-                }
-            `}</style>
-        </div>
-    );
-};
-
-// Better comparison with actual growing bars from center
-const ComparisonViewFixed = ({ data }) => {
-    const { sideA, sideB } = data;
-    const points = Math.max((sideA?.points || []).length, (sideB?.points || []).length);
-
-    return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: sideA?.color, boxShadow: `0 0 8px ${sideA?.color}` }} />
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: sideA?.color, fontFamily: 'var(--font-display)' }}>{sideA?.label}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: sideB?.color, fontFamily: 'var(--font-display)' }}>{sideB?.label}</span>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: sideB?.color, boxShadow: `0 0 8px ${sideB?.color}` }} />
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {Array.from({ length: points }).map((_, i) => {
-                    const ptA = sideA?.points?.[i];
-                    const ptB = sideB?.points?.[i];
-                    const pctA = ptA ? Math.min(95, 55 + ((ptA.charCodeAt(0) + i * 7) % 40)) : 0;
-                    const pctB = ptB ? Math.min(95, 55 + ((ptB.charCodeAt(0) + i * 11) % 40)) : 0;
-
-                    return (
-                        <div key={i} style={{ animation: `fadeInUp 0.45s ease-out ${i * 0.12}s backwards` }}>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
-                                {/* Side A */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, minHeight: '28px' }}>{ptA}</div>
-                                    <Bar pct={pctA} color={sideA?.color} delay={i * 120 + 150} />
-                                </div>
-                                {/* Divider */}
-                                <div style={{ width: '1px', background: 'var(--glass-border)', flexShrink: 0 }} />
-                                {/* Side B */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, textAlign: 'right', minHeight: '28px' }}>{ptB}</div>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Bar pct={pctB} color={sideB?.color} delay={i * 120 + 200} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-// ══════════════════════════════════════════════════════════════
-// RENDERER: Flow — SVG animated connected boxes
-// ══════════════════════════════════════════════════════════════
-const FlowView = ({ data }) => {
-    const steps = data.steps || [];
-    const [visible, setVisible] = useState(0);
-
-    useEffect(() => {
-        let i = 0;
-        const tick = () => {
-            if (i < steps.length) { setVisible(++i); setTimeout(tick, 320); }
-        };
-        setTimeout(tick, 150);
-    }, [steps.length]);
-
-    return (
-        <div style={{ position: 'relative' }}>
-            {steps.map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0', marginBottom: i < steps.length - 1 ? '0' : '0' }}>
-                    {/* Left: number bubble + connector line */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '44px', flexShrink: 0 }}>
-                        {/* Number circle */}
-                        <div style={{
-                            width: '36px', height: '36px', borderRadius: '50%',
-                            background: visible > i ? step.color : 'var(--surface2)',
-                            border: `2px solid ${step.color}`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '13px', fontWeight: '800', color: visible > i ? '#000' : step.color,
-                            fontFamily: 'var(--font-display)',
-                            transition: `all 0.4s ease ${i * 0.32}s`,
-                            boxShadow: visible > i ? `0 0 16px ${step.color}88` : 'none',
-                            flexShrink: 0,
-                            zIndex: 1, position: 'relative',
-                        }}>
-                            {visible > i ? i + 1 : ''}
-                        </div>
-                        {/* Connector line */}
-                        {i < steps.length - 1 && (
-                            <div style={{
-                                width: '2px',
-                                height: visible > i ? '100%' : '0px',
-                                minHeight: visible > i ? '40px' : '0px',
-                                background: `linear-gradient(to bottom, ${step.color}, ${steps[i + 1]?.color}44)`,
-                                transition: `min-height 0.5s ease ${i * 0.32 + 0.2}s`,
-                                margin: '4px 0',
-                            }} />
-                        )}
-                    </div>
-
-                    {/* Content card */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {(scene.bullets || []).map((b, i) => (
+                <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '14px',
+                    transform: enter ? 'translateX(0)' : 'translateX(-30px)',
+                    opacity: enter ? 1 : 0,
+                    transition: `transform 0.5s ease ${0.3 + i * 0.18}s, opacity 0.5s ease ${0.3 + i * 0.18}s`,
+                }}>
                     <div style={{
-                        flex: 1,
-                        background: 'var(--glass)',
-                        border: `1px solid ${step.color}${visible > i ? '55' : '11'}`,
-                        borderRadius: '12px',
-                        padding: '12px 14px',
-                        marginLeft: '10px',
-                        marginBottom: '8px',
-                        opacity: visible > i ? 1 : 0,
-                        transform: visible > i ? 'translateX(0)' : 'translateX(-12px)',
-                        transition: `opacity 0.4s ease ${i * 0.32}s, transform 0.4s ease ${i * 0.32}s, border-color 0.4s ease ${i * 0.32}s`,
-                    }}>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: step.color, fontFamily: 'var(--font-display)', marginBottom: '4px' }}>
-                            {step.label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                            {step.detail}
-                        </div>
-                    </div>
+                        width: '8px', height: '8px', borderRadius: '50%',
+                        background: scene.accent, flexShrink: 0, marginTop: '7px',
+                        boxShadow: `0 0 10px ${scene.accent}`,
+                    }} />
+                    <span style={{ fontSize: 'clamp(13px, 2.5vw, 17px)', color: 'rgba(255,255,255,0.8)', lineHeight: 1.6 }}>{b}</span>
                 </div>
             ))}
         </div>
-    );
-};
+    </div>
+);
 
-// ══════════════════════════════════════════════════════════════
-// MAIN MODAL
-// ══════════════════════════════════════════════════════════════
+const QuoteScene = ({ scene, enter }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px', gap: '20px', textAlign: 'center' }}>
+        <div style={{
+            fontSize: '64px', lineHeight: 1, color: scene.accent, opacity: 0.4,
+            fontFamily: 'Georgia, serif', marginBottom: '-10px',
+            transform: enter ? 'translateY(0)' : 'translateY(-20px)',
+            opacity: enter ? 0.4 : 0,
+            transition: 'transform 0.5s ease, opacity 0.5s ease',
+        }}>"</div>
+        <blockquote style={{
+            fontFamily: 'var(--font-display)', fontWeight: '700',
+            fontSize: 'clamp(16px, 3.5vw, 26px)', color: '#fff',
+            lineHeight: 1.5, margin: 0, fontStyle: 'italic',
+            transform: enter ? 'scale(1)' : 'scale(0.95)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.7s ease 0.15s, opacity 0.7s ease 0.15s',
+            textShadow: `0 0 40px ${scene.accent}44`,
+        }}>{scene.quote}</blockquote>
+        <div style={{
+            fontSize: 'clamp(11px, 2vw, 14px)', color: scene.accent,
+            fontFamily: 'var(--font-mono)', letterSpacing: '1px',
+            transform: enter ? 'translateY(0)' : 'translateY(15px)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.5s ease 0.5s, opacity 0.5s ease 0.5s',
+        }}>— {scene.attribution}</div>
+    </div>
+);
+
+const OutroScene = ({ scene, enter }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '18px', textAlign: 'center', padding: '32px' }}>
+        <div style={{
+            fontSize: '60px',
+            transform: enter ? 'rotate(0deg) scale(1)' : 'rotate(-180deg) scale(0)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease',
+            filter: `drop-shadow(0 0 25px ${scene.accent})`,
+        }}>{scene.icon}</div>
+        <h2 style={{
+            fontFamily: 'var(--font-display)', fontWeight: '900',
+            fontSize: 'clamp(20px, 4.5vw, 36px)', color: '#fff', margin: 0,
+            transform: enter ? 'translateY(0)' : 'translateY(25px)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.6s ease 0.25s, opacity 0.6s ease 0.25s',
+        }}>{scene.headline}</h2>
+        <p style={{
+            fontSize: 'clamp(13px, 2.5vw, 16px)', color: 'rgba(255,255,255,0.6)',
+            maxWidth: '380px', lineHeight: 1.7, margin: 0,
+            transform: enter ? 'translateY(0)' : 'translateY(15px)',
+            opacity: enter ? 1 : 0,
+            transition: 'transform 0.6s ease 0.45s, opacity 0.6s ease 0.45s',
+        }}>{scene.subtext}</p>
+        {/* Glow pulse */}
+        <div style={{
+            position: 'absolute', width: '200px', height: '200px', borderRadius: '50%',
+            background: `radial-gradient(circle, ${scene.accent}22 0%, transparent 70%)`,
+            animation: enter ? 'pulse 2s ease-in-out infinite' : 'none',
+            pointerEvents: 'none',
+        }} />
+    </div>
+);
+
+const RENDERERS = { intro: IntroScene, stat: StatScene, fact: FactScene, quote: QuoteScene, outro: OutroScene };
+
+// ══════════════════════════════════════════════════════════════════════
+// MAIN PLAYER
+// ══════════════════════════════════════════════════════════════════════
 const VisualizationModal = ({ data, loading, error, onClose, nodeTitle }) => {
+    const [sceneIdx, setSceneIdx] = useState(0);
+    const [enter, setEnter] = useState(false);
+    const [playing, setPlaying] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const intervalRef = useRef(null);
+    const progressRef = useRef(null);
     const overlayRef = useRef(null);
 
-    const handleOverlayClick = (e) => {
-        if (e.target === overlayRef.current) onClose();
+    const scenes = data?.scenes || [];
+    const scene = scenes[sceneIdx];
+    const FPS = 30;
+
+    const goToScene = useCallback((idx) => {
+        setEnter(false);
+        setTimeout(() => {
+            setSceneIdx(idx);
+            setProgress(0);
+            setEnter(true);
+        }, 250);
+    }, []);
+
+    // Auto-advance
+    useEffect(() => {
+        if (!scenes.length || !playing) return;
+        const dur = (scene?.duration || 5) * 1000;
+        const step = 100 / (dur / (1000 / FPS));
+
+        progressRef.current = setInterval(() => {
+            setProgress(p => {
+                if (p + step >= 100) {
+                    clearInterval(progressRef.current);
+                    if (sceneIdx < scenes.length - 1) {
+                        setTimeout(() => goToScene(sceneIdx + 1), 100);
+                    } else {
+                        setPlaying(false);
+                    }
+                    return 100;
+                }
+                return p + step;
+            });
+        }, 1000 / FPS);
+
+        return () => clearInterval(progressRef.current);
+    }, [sceneIdx, playing, scenes.length]);
+
+    // Trigger enter animation when scene changes
+    useEffect(() => {
+        if (!scenes.length) return;
+        const t = setTimeout(() => setEnter(true), 50);
+        return () => clearTimeout(t);
+    }, [sceneIdx, scenes.length]);
+
+    const togglePlay = () => {
+        if (!playing && progress >= 100 && sceneIdx === scenes.length - 1) {
+            goToScene(0);
+            setPlaying(true);
+        } else {
+            setPlaying(p => !p);
+        }
     };
 
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px 0' }}>
-                    <div style={{ position: 'relative', width: '60px', height: '60px' }}>
-                        <svg width="60" height="60" style={{ transform: 'rotate(-90deg)' }}>
-                            <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-                            <circle cx="30" cy="30" r="24" fill="none" stroke="var(--accent-cyan)" strokeWidth="4"
-                                strokeDasharray="150" strokeLinecap="round"
-                                style={{ animation: 'spinDash 1.4s ease-in-out infinite' }} />
-                        </svg>
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontFamily: 'var(--font-display)' }}>
-                        Generating infographic…
-                    </div>
-                    {/* Skeleton bars */}
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {[90, 70, 55, 80].map((w, i) => (
-                            <div key={i} style={{
-                                height: '10px', borderRadius: '6px',
-                                background: `linear-gradient(90deg, var(--glass) 25%, rgba(255,255,255,0.08) 50%, var(--glass) 75%)`,
-                                backgroundSize: '200% 100%',
-                                animation: `shimmer 1.5s ease-in-out infinite ${i * 0.15}s`,
-                                width: `${w}%`,
-                            }} />
-                        ))}
-                    </div>
-                </div>
-            );
-        }
+    const prev = () => { if (sceneIdx > 0) goToScene(sceneIdx - 1); };
+    const next = () => { if (sceneIdx < scenes.length - 1) goToScene(sceneIdx + 1); };
 
-        if (error) {
-            return (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚠️</div>
-                    <div style={{ fontSize: '13px' }}>{error}</div>
-                </div>
-            );
-        }
+    const handleOverlayClick = (e) => { if (e.target === overlayRef.current) onClose(); };
 
-        if (!data) return null;
+    // ── Background: per-scene gradient ──
+    const bg = scene?.accent
+        ? `radial-gradient(ellipse 80% 60% at 50% 40%, ${scene.accent}18 0%, transparent 70%)`
+        : 'none';
 
-        const renderers = {
-            stats:      <StatsView data={data} />,
-            timeline:   <TimelineView data={data} />,
-            comparison: <ComparisonViewFixed data={data} />,
-            flow:       <FlowView data={data} />,
-        };
-        return renderers[data.type] || null;
-    };
-
-    const typeLabel = { stats: 'Key Statistics', timeline: 'Timeline', comparison: 'Comparison', flow: 'Process Flow' };
+    const Renderer = scene ? (RENDERERS[scene.style] || IntroScene) : null;
 
     return (
         <div
@@ -457,94 +292,212 @@ const VisualizationModal = ({ data, loading, error, onClose, nodeTitle }) => {
             onClick={handleOverlayClick}
             style={{
                 position: 'fixed', inset: 0, zIndex: 2000,
-                background: 'rgba(0,0,0,0.65)',
-                backdropFilter: 'blur(8px)',
+                background: 'rgba(0,0,0,0.75)',
+                backdropFilter: 'blur(10px)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '20px',
-                animation: 'fadeBgIn 0.25s ease-out',
+                padding: '16px',
+                animation: 'fadeBgIn 0.3s ease-out',
             }}
         >
             <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '22px',
-                width: '100%',
-                maxWidth: '620px',
-                maxHeight: '88vh',
-                display: 'flex',
-                flexDirection: 'column',
+                width: '100%', maxWidth: '680px',
+                background: '#08080f',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px',
                 overflow: 'hidden',
-                boxShadow: '0 32px 100px rgba(0,0,0,0.6)',
-                animation: 'modalIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+                boxShadow: `0 40px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05)`,
+                animation: 'modalIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                display: 'flex', flexDirection: 'column',
             }}>
-                {/* Animated accent bar */}
+                {/* ── Header ── */}
                 <div style={{
-                    height: '3px',
-                    background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), #f97316, var(--accent-cyan))',
-                    backgroundSize: '300% 100%',
-                    animation: 'gradient-shift 3s linear infinite',
-                    flexShrink: 0,
-                }} />
-
-                {/* Header */}
-                <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                    padding: '16px 20px 14px', borderBottom: '1px solid var(--glass-border)', flexShrink: 0,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '14px 18px',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.02)',
                 }}>
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
                             fontSize: '10px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
-                            letterSpacing: '1.5px', color: 'var(--accent-purple)', marginBottom: '5px',
-                            background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)',
+                            letterSpacing: '1.5px', color: scene?.accent || 'var(--accent-cyan)',
+                            background: `${scene?.accent || '#00d4ff'}18`,
+                            border: `1px solid ${scene?.accent || '#00d4ff'}33`,
                             borderRadius: '6px', padding: '3px 8px',
-                        }}>
-                            ✦ Pro · {data ? typeLabel[data.type] || 'Infographic' : 'Infographic'}
-                        </div>
-                        <h2 style={{
-                            margin: 0, fontSize: '16px', fontWeight: '800',
-                            fontFamily: 'var(--font-display)', color: 'var(--text)',
-                        }}>
+                            transition: 'all 0.5s ease',
+                        }}>✦ Pro · Explainer</div>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-display)' }}>
                             {data?.title || nodeTitle}
-                        </h2>
-                        {data?.subtitle && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{data.subtitle}</div>
-                        )}
+                        </span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'var(--surface2)', border: '1px solid var(--glass-border)',
-                            color: 'var(--text-secondary)', borderRadius: '8px',
-                            width: '32px', height: '32px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.color = 'var(--accent-cyan)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                    >
-                        <X size={14} />
-                    </button>
+                    <button onClick={onClose} style={{
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'rgba(255,255,255,0.5)', borderRadius: '8px',
+                        width: '30px', height: '30px', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                    ><X size={14} /></button>
                 </div>
 
-                {/* Content */}
-                <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-                    {renderContent()}
+                {/* ── Scene Stage ── */}
+                <div style={{
+                    height: '340px', position: 'relative', overflow: 'hidden',
+                    background: `#08080f`,
+                    transition: 'background 0.8s ease',
+                }}>
+                    {/* Dynamic glow background */}
+                    <div style={{
+                        position: 'absolute', inset: 0, background: bg,
+                        transition: 'background 0.8s ease',
+                        pointerEvents: 'none',
+                    }} />
+
+                    {/* Loading state */}
+                    {loading && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px' }}>
+                            <svg width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="var(--accent-cyan)" strokeWidth="4"
+                                    strokeDasharray="138" strokeLinecap="round"
+                                    style={{ animation: 'spinDash 1.4s ease-in-out infinite' }} />
+                            </svg>
+                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontFamily: 'var(--font-display)' }}>
+                                Generating your explainer…
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Error state */}
+                    {error && !loading && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
+                            <div style={{ fontSize: '40px' }}>⚠️</div>
+                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>{error}</div>
+                        </div>
+                    )}
+
+                    {/* Scene content */}
+                    {!loading && !error && Renderer && (
+                        <Renderer scene={scene} enter={enter} />
+                    )}
+
+                    {/* Scene counter (top-right) */}
+                    {!loading && !error && scenes.length > 0 && (
+                        <div style={{
+                            position: 'absolute', top: '12px', right: '14px',
+                            fontSize: '11px', fontFamily: 'var(--font-mono)',
+                            color: 'rgba(255,255,255,0.3)',
+                            background: 'rgba(0,0,0,0.4)', borderRadius: '6px', padding: '3px 8px',
+                        }}>
+                            {sceneIdx + 1} / {scenes.length}
+                        </div>
+                    )}
                 </div>
+
+                {/* ── Controls ── */}
+                {!loading && !error && scenes.length > 0 && (
+                    <div style={{
+                        padding: '14px 18px 16px',
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        background: 'rgba(255,255,255,0.02)',
+                        display: 'flex', flexDirection: 'column', gap: '12px',
+                    }}>
+                        {/* Progress bar */}
+                        <div style={{ position: 'relative', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', cursor: 'pointer' }}
+                            onClick={e => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const pct = (e.clientX - rect.left) / rect.width;
+                                const totalScenes = scenes.length;
+                                const sceneForPct = Math.floor(pct * totalScenes);
+                                goToScene(Math.min(sceneForPct, totalScenes - 1));
+                            }}
+                        >
+                            {/* Segments */}
+                            {scenes.map((_, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute', top: 0, bottom: 0,
+                                    left: `${(i / scenes.length) * 100}%`,
+                                    width: `${(1 / scenes.length) * 100 - 0.3}%`,
+                                    borderRadius: '2px',
+                                    background: i < sceneIdx
+                                        ? (scenes[i]?.accent || '#00d4ff')
+                                        : i === sceneIdx
+                                            ? `linear-gradient(90deg, ${scene?.accent || '#00d4ff'} ${progress}%, rgba(255,255,255,0.15) ${progress}%)`
+                                            : 'rgba(255,255,255,0.08)',
+                                    transition: i < sceneIdx ? 'background 0.3s ease' : 'none',
+                                }} />
+                            ))}
+                        </div>
+
+                        {/* Buttons row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {/* Left: scene dots */}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                {scenes.map((s, i) => (
+                                    <button key={i} onClick={() => goToScene(i)} style={{
+                                        width: i === sceneIdx ? '20px' : '7px',
+                                        height: '7px', borderRadius: '4px',
+                                        background: i === sceneIdx ? (scene?.accent || '#00d4ff') : 'rgba(255,255,255,0.2)',
+                                        border: 'none', cursor: 'pointer', padding: 0,
+                                        transition: 'all 0.3s ease',
+                                        boxShadow: i === sceneIdx ? `0 0 8px ${scene?.accent || '#00d4ff'}` : 'none',
+                                    }} />
+                                ))}
+                            </div>
+
+                            {/* Center: playback controls */}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <button onClick={prev} disabled={sceneIdx === 0} style={{
+                                    background: 'transparent', border: 'none',
+                                    color: sceneIdx === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)',
+                                    cursor: sceneIdx === 0 ? 'default' : 'pointer',
+                                    display: 'flex', alignItems: 'center', padding: '4px',
+                                    transition: 'color 0.2s',
+                                }}><SkipBack size={16} /></button>
+
+                                <button onClick={togglePlay} style={{
+                                    width: '38px', height: '38px', borderRadius: '50%',
+                                    background: scene?.accent || '#00d4ff',
+                                    border: 'none', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: `0 0 20px ${scene?.accent || '#00d4ff'}66`,
+                                    transition: 'all 0.3s ease',
+                                    color: '#000',
+                                }}>
+                                    {playing ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+                                </button>
+
+                                <button onClick={next} disabled={sceneIdx === scenes.length - 1} style={{
+                                    background: 'transparent', border: 'none',
+                                    color: sceneIdx === scenes.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)',
+                                    cursor: sceneIdx === scenes.length - 1 ? 'default' : 'pointer',
+                                    display: 'flex', alignItems: 'center', padding: '4px',
+                                    transition: 'color 0.2s',
+                                }}><SkipForward size={16} /></button>
+                            </div>
+
+                            {/* Right: scene label */}
+                            <div style={{
+                                fontSize: '11px', fontFamily: 'var(--font-mono)',
+                                color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase',
+                                letterSpacing: '0.5px', minWidth: '60px', textAlign: 'right',
+                            }}>
+                                {scene?.style}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <style>{`
                 @keyframes fadeBgIn { from { opacity: 0 } to { opacity: 1 } }
-                @keyframes modalIn { from { transform: translateY(20px) scale(0.96); opacity: 0 } to { transform: none; opacity: 1 } }
+                @keyframes modalIn { from { transform: translateY(24px) scale(0.96); opacity: 0 } to { transform: none; opacity: 1 } }
                 @keyframes spinDash {
-                    0%   { stroke-dashoffset: 150; stroke-dasharray: 1 149; }
-                    50%  { stroke-dashoffset: 0;   stroke-dasharray: 120 30; }
-                    100% { stroke-dashoffset: -150; stroke-dasharray: 1 149; }
+                    0%   { stroke-dashoffset: 138; stroke-dasharray: 1 137; }
+                    50%  { stroke-dashoffset: 0;   stroke-dasharray: 110 28; }
+                    100% { stroke-dashoffset: -138; stroke-dasharray: 1 137; }
                 }
-                @keyframes shimmer {
-                    0%   { background-position: 200% 0 }
-                    100% { background-position: -200% 0 }
-                }
+                @keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.15); } }
             `}</style>
         </div>
     );
