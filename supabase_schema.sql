@@ -52,10 +52,10 @@ CREATE INDEX IF NOT EXISTS idx_maps_is_public ON maps(is_public);
 
 ALTER TABLE maps ENABLE ROW LEVEL SECURITY;
 
--- Anyone can read public maps (needed for sharing links to work for non-users)
-CREATE POLICY "Public maps are viewable by anyone"
+-- Only signed-in users can read public maps
+CREATE POLICY "Authenticated users can view public maps"
     ON maps FOR SELECT
-    USING (is_public = true);
+    USING (is_public = true AND auth.uid() IS NOT NULL);
 
 -- Authenticated users can insert their own maps; allow null user_id for anonymous shares
 CREATE POLICY "Users can insert maps"
