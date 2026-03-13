@@ -4,7 +4,8 @@
       "Bash(npm run build)",
       "Bash(git add src/components/Canvas/Canvas.module.css src/components/Node/Node.module.css)",
       "Bash(git commit:*)",
-      "Bash(git push origin main)"
+      "Bash(git push origin main)",
+      "Bash(npm run dev)"
     ]
   }
 }
