@@ -2,11 +2,12 @@ import React, { useRef, useState } from 'react';
 import {
     X, Sparkles, Loader2, Send, MessageSquare, Minimize2, Maximize2,
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Copy, Check, Trash2,
-    BarChart2, Lock
+    BarChart2, Lock, Mic, MicOff, Volume2, VolumeX
 } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 import { askNodeQuestion, visualizeNode } from '../../services/api';
 import VisualizationModal from './VisualizationModal';
+import useVoice from '../../hooks/useVoice';
 import styles from './InfoPanel.module.css';
 
 // ─── Markdown Formatter ───────────────────────────────────────────────
@@ -162,24 +163,31 @@ const InfoPanel = ({
     const [panelExpanded, setPanelExpanded] = useState(false);
     const [question, setQuestion] = useState('');
     const [asking, setAsking] = useState(false);
+    const [speakingIdx, setSpeakingIdx] = useState(null);
     const [vizOpen, setVizOpen] = useState(false);
+
+    const { isListening, isSpeaking, isSTTSupported, isTTSSupported,
+        startListening, stopListening, speak, stopSpeaking } = useVoice();
     const [vizData, setVizData] = useState(null);
     const [vizLoading, setVizLoading] = useState(false);
     const [vizError, setVizError] = useState(null);
     const scrollRef = useRef(null);
     const prevNodeIdRef = useRef(null);
 
-    // When node changes: reset input, scroll to top so the new node's info is visible
+    // When node changes: reset input, scroll to top, stop any active voice
     const nodeId = node?.id;
     React.useEffect(() => {
         if (nodeId && nodeId !== prevNodeIdRef.current) {
             setQuestion('');
             setAsking(false);
+            stopSpeaking();
+            stopListening();
+            setSpeakingIdx(null);
             prevNodeIdRef.current = nodeId;
             // Instant scroll to top — show new node's title/detail, not leftover chat scroll
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
         }
-    }, [nodeId]);
+    }, [nodeId, stopSpeaking, stopListening]);
 
     const visible = isOpen && !!node;
     const msgs = messages || [];
@@ -288,6 +296,24 @@ const InfoPanel = ({
             setVizError('Could not generate visualization. Please try again.');
         } finally {
             setVizLoading(false);
+        }
+    };
+
+    const handleSpeak = (content, idx) => {
+        if (isSpeaking) {
+            stopSpeaking();
+            setSpeakingIdx(null);
+        } else {
+            setSpeakingIdx(idx);
+            speak(content, () => setSpeakingIdx(null));
+        }
+    };
+
+    const handleMic = () => {
+        if (isListening) {
+            stopListening();
+        } else {
+            startListening((text) => setQuestion(q => q ? `${q} ${text}` : text));
         }
     };
 
@@ -481,7 +507,7 @@ const InfoPanel = ({
                             {/* Chat header */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <NeuroAvatar state={asking ? 'thinking' : 'happy'} size={22} />
+                                    <NeuroAvatar state={asking ? 'thinking' : isSpeaking ? 'talking' : 'happy'} size={22} />
                                     <span style={{
                                         fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)',
                                         fontFamily: 'var(--font-display)', letterSpacing: '0.3px'
@@ -522,6 +548,16 @@ const InfoPanel = ({
                                     </div>
                                     {msg.type === 'ai' && msg.content && !msg.streaming && (
                                         <div className={styles.messageActions}>
+                                            {isTTSSupported && (
+                                                <button
+                                                    className={`${styles.speakBtn} ${speakingIdx === idx ? styles.speakBtnActive : ''}`}
+                                                    onClick={() => handleSpeak(msg.content, idx)}
+                                                    title={speakingIdx === idx ? 'Stop speaking' : 'Read aloud'}
+                                                >
+                                                    {speakingIdx === idx ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                                                    {speakingIdx === idx ? 'Stop' : 'Listen'}
+                                                </button>
+                                            )}
                                             <CopyButton text={msg.content} />
                                         </div>
                                     )}
@@ -544,17 +580,29 @@ const InfoPanel = ({
                 {/* ── Input Area ── */}
                 <div className={styles.inputArea}>
                     <form onSubmit={handleAsk} style={{ position: 'relative' }}>
+                        {/* Mic button */}
+                        {isSTTSupported && (
+                            <button
+                                type="button"
+                                className={`${styles.micBtn} ${isListening ? styles.micListening : ''}`}
+                                onClick={handleMic}
+                                disabled={asking}
+                                title={isListening ? 'Stop recording' : 'Speak your question'}
+                            >
+                                {isListening ? <MicOff size={13} /> : <Mic size={13} />}
+                            </button>
+                        )}
                         <input
                             type="text"
-                            placeholder="Ask Neuro anything..."
+                            placeholder={isListening ? '🎙 Listening...' : 'Ask Neuro anything...'}
                             value={question}
                             onChange={e => setQuestion(e.target.value)}
                             disabled={asking}
                             style={{
                                 width: '100%',
-                                padding: '11px 42px 11px 14px',
+                                padding: isSTTSupported ? '11px 42px 11px 44px' : '11px 42px 11px 14px',
                                 background: 'var(--surface)',
-                                border: '1px solid var(--glass-border)',
+                                border: `1px solid ${isListening ? accentColor : 'var(--glass-border)'}`,
                                 borderRadius: '24px',
                                 color: 'var(--text)',
                                 fontSize: '13px',
@@ -564,7 +612,7 @@ const InfoPanel = ({
                                 transition: 'border-color 0.2s',
                             }}
                             onFocus={e => e.currentTarget.style.borderColor = accentColor}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--glass-border)'}
+                            onBlur={e => { if (!isListening) e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
                         />
                         <button
                             type="submit"
