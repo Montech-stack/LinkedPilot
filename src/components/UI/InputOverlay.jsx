@@ -229,12 +229,12 @@ const InputOverlay = ({ onSubmit, loading, initialTopic, initialMode, isEditing,
                     </button>
                 )}
 
-                {/* Cancel button (edit mode only) */}
-                {isEditing && (
+                {/* Cancel button — edit mode or while generating */}
+                {(isEditing || (loading && onCancel)) && (
                     <button
                         type="button"
                         onClick={onCancel}
-                        title="Cancel editing"
+                        title={loading ? 'Cancel generation' : 'Cancel editing'}
                         style={{
                             flexShrink: 0, background: 'transparent',
                             border: '1px solid var(--glass-border)', borderRadius: '10px',

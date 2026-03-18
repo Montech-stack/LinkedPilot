@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Trash2, ChevronLeft, ChevronRight, Sparkles, Sun, Moon, LogOut, Download, Upload, Pencil } from 'lucide-react';
+import { Trash2, ChevronLeft, ChevronRight, Sparkles, Sun, Moon, LogOut, Download, Upload, Pencil, Zap } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 
 const MODE_META = {
@@ -54,7 +54,7 @@ const iconBtn = {
 
 const Sidebar = ({
     savedMaps, currentMapId, onSelectMap, onNewMap, onDeleteMap, onRequestEdit,
-    theme, onToggleTheme, user, onSignOut, onUpdateMaps, syncEnabled
+    theme, onToggleTheme, user, onSignOut, onUpdateMaps, syncEnabled, isPro, onUpgrade
 }) => {
     const [collapsed, setCollapsed] = useState(false);
     const fileInputRef = useRef(null);
@@ -226,6 +226,32 @@ const Sidebar = ({
 
                 {/* Footer */}
                 <div style={{ paddingTop: '12px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                    {/* Upgrade to Pro CTA */}
+                    {!isPro && (
+                        <button
+                            onClick={onUpgrade}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                padding: '11px',
+                                background: 'linear-gradient(135deg, rgba(124,58,237,0.18), rgba(0,212,255,0.1))',
+                                border: '1px solid rgba(124,58,237,0.45)',
+                                borderRadius: '10px',
+                                color: 'var(--accent-purple)',
+                                cursor: 'pointer', fontWeight: '700',
+                                fontFamily: 'var(--font-display)', fontSize: '13px',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 0 16px rgba(124,58,237,0.15)',
+                                letterSpacing: '0.2px',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(124,58,237,0.28), rgba(0,212,255,0.15))'; e.currentTarget.style.boxShadow = '0 0 24px rgba(124,58,237,0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(124,58,237,0.18), rgba(0,212,255,0.1))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(124,58,237,0.15)'; }}
+                        >
+                            <Zap size={14} />
+                            Upgrade to Pro
+                        </button>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
                         <span style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
                             {theme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode'}

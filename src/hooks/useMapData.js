@@ -641,6 +641,11 @@ export const useMapData = () => {
         dispatch({ type: ACTIONS.CLEAR_ERROR });
     }, []);
 
+    // Cancel an in-progress map generation and reset to the empty state
+    const cancelGenerate = useCallback(() => {
+        dispatch({ type: ACTIONS.RESET });
+    }, []);
+
     // Update topic and/or mode for a saved map without reloading the page
     const updateMapMeta = useCallback((mapId, changes) => {
         if (!mapId || typeof changes !== 'object') return;
@@ -658,6 +663,7 @@ export const useMapData = () => {
     return {
         ...state,
         generateNewMap,
+        cancelGenerate,
         handleExpand,
         savedMaps,
         currentMapId,

@@ -57,7 +57,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
 
   const {
     nodes, connections, loading, error, expandingNodeId,
-    generateNewMap, handleExpand, savedMaps, currentMapId,
+    generateNewMap, cancelGenerate, handleExpand, savedMaps, currentMapId,
     createNewMap, deleteMap, loadMap, updateMapMeta, topic, mode, shareMap, loadSharedMap, collapseNode,
     clearError, syncEnabled
   } = useMapData();
@@ -464,6 +464,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         onSignOut={signOut}
         onUpdateMaps={handleUpdateMaps}
         syncEnabled={syncEnabled}
+        isPro={isPro}
+        onUpgrade={() => setShowUpgrade(true)}
       />
 
       {nodes.length > 0 && (
@@ -518,7 +520,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
       )}
 
       {nodes.length === 0 && loading && !editingMap && (
-        <InputOverlay onSubmit={() => { }} loading={true} />
+        <InputOverlay onSubmit={() => { }} loading={true} onCancel={cancelGenerate} />
       )}
 
       {/* Edit map overlay — shown over existing map */}
