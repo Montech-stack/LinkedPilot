@@ -118,6 +118,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [showDataConnect, setShowDataConnect] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [editingMap, setEditingMap] = useState(null); // { id, topic, mode }
 
   // Handle URL params for shared maps
   useEffect(() => {
@@ -456,12 +457,12 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         onSelectMap={loadMap}
         onNewMap={createNewMap}
         onDeleteMap={deleteMap}
+        onRequestEdit={(map) => setEditingMap(map)}
         theme={theme}
         onToggleTheme={toggleTheme}
         user={user}
         onSignOut={signOut}
         onUpdateMaps={handleUpdateMaps}
-        onEditMap={updateMapMeta}
         syncEnabled={syncEnabled}
       />
 
@@ -511,12 +512,28 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         />
       )}
 
-      {!nodes.length && !loading && !showDataConnect && (
+      {/* New map input */}
+      {!nodes.length && !loading && !showDataConnect && !editingMap && (
         <InputOverlay onSubmit={handleInputSubmit} loading={loading} />
       )}
 
-      {nodes.length === 0 && loading && (
+      {nodes.length === 0 && loading && !editingMap && (
         <InputOverlay onSubmit={() => { }} loading={true} />
+      )}
+
+      {/* Edit map overlay — shown over existing map */}
+      {editingMap && (
+        <InputOverlay
+          onSubmit={(newTopic, newMode) => {
+            updateMapMeta(editingMap.id, { topic: newTopic, mode: newMode });
+            setEditingMap(null);
+          }}
+          loading={false}
+          initialTopic={editingMap.topic}
+          initialMode={editingMap.mode}
+          isEditing
+          onCancel={() => setEditingMap(null)}
+        />
       )}
 
       {(error || shareState.error) && (
