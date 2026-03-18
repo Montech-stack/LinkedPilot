@@ -641,6 +641,20 @@ export const useMapData = () => {
         dispatch({ type: ACTIONS.CLEAR_ERROR });
     }, []);
 
+    // Update topic and/or mode for a saved map without reloading the page
+    const updateMapMeta = useCallback((mapId, changes) => {
+        if (!mapId || typeof changes !== 'object') return;
+        setSavedMaps(prev => {
+            if (!prev[mapId]) return prev;
+            const updated = {
+                ...prev,
+                [mapId]: { ...prev[mapId], ...changes, lastModified: Date.now() },
+            };
+            try { window.localStorage.setItem('neuronMaps', JSON.stringify(updated)); } catch {}
+            return updated;
+        });
+    }, []);
+
     return {
         ...state,
         generateNewMap,
@@ -650,6 +664,7 @@ export const useMapData = () => {
         createNewMap,
         deleteMap,
         loadMap,
+        updateMapMeta,
         shareMap,
         loadSharedMap,
         collapseNode,

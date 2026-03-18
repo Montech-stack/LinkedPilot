@@ -121,13 +121,8 @@
     display: flex;
     justify-content: flex-end;
     gap: 6px;
-    opacity: 0;
-    transition: opacity 0.15s;
-    padding: 2px 4px 0;
-}
-
-.message:hover .messageActions {
     opacity: 1;
+    padding: 2px 4px 0;
 }
 
 .copyBtn {

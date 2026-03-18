@@ -58,7 +58,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
   const {
     nodes, connections, loading, error, expandingNodeId,
     generateNewMap, handleExpand, savedMaps, currentMapId,
-    createNewMap, deleteMap, loadMap, topic, mode, shareMap, loadSharedMap, collapseNode,
+    createNewMap, deleteMap, loadMap, updateMapMeta, topic, mode, shareMap, loadSharedMap, collapseNode,
     clearError, syncEnabled
   } = useMapData();
 
@@ -461,6 +461,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         user={user}
         onSignOut={signOut}
         onUpdateMaps={handleUpdateMaps}
+        onEditMap={updateMapMeta}
         syncEnabled={syncEnabled}
       />
 
