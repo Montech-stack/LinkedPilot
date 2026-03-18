@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles } from "lucide-react";
+import { Wand2 } from "lucide-react";
 
 interface AutoIdeaButtonProps {
     onClick: () => void;
@@ -20,8 +20,8 @@ export default function AutoIdeaButton({ onClick, disabled }: AutoIdeaButtonProp
         disabled:opacity-50 disabled:cursor-not-allowed
       `}
         >
-            <Sparkles size={14} />
-            Suggest Ideas
+            <Wand2 size={14} />
+            Generate Posts
         </button>
     );
 }

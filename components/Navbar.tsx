@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, User, Sparkles } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { AuthModal } from "@/components/auth-modal"
@@ -18,7 +18,7 @@ export default function Navbar() {
   const { data: session } = useSession()
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
+    const handleScroll = () => setScrolled(window.scrollY > 24)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
@@ -27,128 +27,168 @@ export default function Navbar() {
     setAuthMode("login")
     setAuthOpen(true)
   }
-  const openTryMaxis = () => {
+
+  const openSignUp = () => {
     setAuthMode("signup")
     setAuthOpen(true)
   }
 
-  const navItems = [
-    { name: "Features", href: "#features" },
+  const navLinks = [
+    { name: "Features", href: "#how-it-works" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Testimonials", href: "#testimonials" },
   ]
 
   return (
     <motion.nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/80 backdrop-blur-md border-b border-border py-3" : "bg-transparent py-5"
-        }`}
-      initial={{ opacity: 0, y: -20 }}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
+        scrolled
+          ? "bg-background/95 backdrop-blur-sm border-b border-border/60 py-3"
+          : "bg-transparent py-5"
+      }`}
+      initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
     >
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between">
+
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border border-white/10 transition-all">
-              <img src="/maxis.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-7 h-7 overflow-hidden flex-shrink-0">
+              <img src="/maxis.png" alt="Maxis" className="w-full h-full object-contain" />
             </div>
-            <span className="font-bold text-lg text-foreground tracking-tight">Maxis</span>
+            <span className="font-display font-bold text-base text-foreground tracking-tight">
+              Maxis
+            </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
+          {/* Desktop nav links */}
+          <div className="hidden md:flex items-center gap-7">
+            {navLinks.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-150"
               >
                 {item.name}
               </a>
             ))}
           </div>
 
-          {/* CTA / User */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop actions */}
+          <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             {session ? (
-              <div className="flex items-center gap-4">
+              <>
                 <Link href="/dashboard">
-                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Go to Studio</Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground h-9 px-4"
+                  >
+                    Go to Studio
+                  </Button>
                 </Link>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center border border-white/10">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-              </div>
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
             ) : (
               <>
                 <button
                   onClick={openSignIn}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-150"
                 >
                   Log in
                 </button>
                 <Button
-                  onClick={openTryMaxis}
-                  className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-5 py-2 h-auto text-sm font-semibold shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all"
+                  onClick={openSignUp}
+                  size="sm"
+                  className="h-9 px-5 rounded-md bg-foreground text-background hover:bg-foreground/90 text-sm font-semibold transition-all duration-150"
                 >
-                  Start Free
+                  Start free
                 </Button>
               </>
             )}
           </div>
 
-          {/* Mobile Toggle */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-300 hover:text-white p-2"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
+          {/* Mobile toggle */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile menu */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="md:hidden absolute top-full left-0 right-0 bg-[#050505] border-b border-white/10 p-4 shadow-2xl"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
             >
-              <div className="flex flex-col gap-4">
-                {navItems.map((item) => (
+              <div className="flex flex-col p-5 gap-1">
+                {navLinks.map((item) => (
                   <a
                     key={item.name}
                     href={item.href}
-                    className="text-gray-300 hover:text-white py-2 block"
+                    className="py-3 px-3 text-sm font-medium text-muted-foreground hover:text-foreground rounded transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
                     {item.name}
                   </a>
                 ))}
 
-                <div className="h-px bg-white/10 my-2" />
+                <div className="h-px bg-border my-3" />
 
-                <div className="flex items-center justify-between px-2">
-                  <span className="text-sm text-gray-400">Theme</span>
+                <div className="flex items-center justify-between px-3 py-1">
+                  <span className="text-sm text-muted-foreground">Theme</span>
                   <ThemeToggle />
                 </div>
 
+                <div className="h-px bg-border my-1" />
+
                 {session ? (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2 pt-1">
                     <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                      <Button className="w-full">Dashboard</Button>
+                      <Button className="w-full rounded-md" size="sm">
+                        Go to Studio
+                      </Button>
                     </Link>
-                    <Button variant="ghost" onClick={() => signOut()}>Sign Out</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={() => { signOut(); setIsOpen(false); }}
+                    >
+                      Sign out
+                    </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
-                    <Button variant="ghost" onClick={() => { openSignIn(); setIsOpen(false); }}>Log in</Button>
-                    <Button onClick={() => { openTryMaxis(); setIsOpen(false); }}>Start Free</Button>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={() => { openSignIn(); setIsOpen(false); }}
+                    >
+                      Log in
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="w-full rounded-md bg-foreground text-background hover:bg-foreground/90"
+                      onClick={() => { openSignUp(); setIsOpen(false); }}
+                    >
+                      Start free
+                    </Button>
                   </div>
                 )}
               </div>

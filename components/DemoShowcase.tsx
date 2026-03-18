@@ -21,44 +21,44 @@ import {
 // Demo step configuration
 const demoSteps = [
     {
-        id: "voice-clone",
-        title: "Writing DNA Technology",
-        subtitle: "Your DNA, Perfected by AI",
-        description: "See the difference between generic AI and Maxis DNA-trained content",
+        id: "voice-match",
+        title: "Voice Matching",
+        subtitle: "Posts that sound like you",
+        description: "See the difference between generic output and content trained on your style",
         icon: Dna,
-        color: "from-violet-500 to-purple-600",
+        color: "from-brand/20 to-brand/10",
     },
     {
-        id: "presets",
-        title: "Smart Content Presets",
-        subtitle: "One Click, Perfect Format",
-        description: "Choose from proven viral formats to maximize engagement",
+        id: "templates",
+        title: "Content Templates",
+        subtitle: "Proven formats, one click",
+        description: "Choose from formats that consistently drive engagement",
         icon: Layers,
-        color: "from-blue-500 to-cyan-500",
+        color: "from-brand/20 to-brand/10",
     },
     {
-        id: "batch",
-        title: "Batch Content Creation",
-        subtitle: "One Month in 30 Minutes",
-        description: "Generate weeks of content in a single session",
+        id: "bulk",
+        title: "Bulk Create",
+        subtitle: "Two weeks of posts in 30 minutes",
+        description: "Write content for the whole month in a single focused session",
         icon: Zap,
-        color: "from-amber-500 to-orange-500",
+        color: "from-brand/20 to-brand/10",
     },
     {
         id: "schedule",
-        title: "Smart Scheduling",
-        subtitle: "Post Consistently, Automatically",
-        description: "AI picks the best times to maximize your reach",
+        title: "Scheduling",
+        subtitle: "Post consistently, automatically",
+        description: "A visual calendar and smart queue keep your rhythm intact",
         icon: Calendar,
-        color: "from-emerald-500 to-teal-500",
+        color: "from-brand/20 to-brand/10",
     },
     {
         id: "growth",
-        title: "Build Credibility & Leads",
-        subtitle: "Content That Converts",
-        description: "Turn consistent posting into inbound leads and trust",
+        title: "Track What Works",
+        subtitle: "Know your numbers",
+        description: "See which posts drive profile visits, engagement, and inbound interest",
         icon: TrendingUp,
-        color: "from-pink-500 to-rose-500",
+        color: "from-brand/20 to-brand/10",
     },
 ];
 
@@ -80,42 +80,41 @@ export default function DemoShowcase() {
     const step = demoSteps[currentStep];
 
     return (
-        <section className="py-16 md:py-24 overflow-hidden bg-gradient-to-b from-background via-secondary/10 to-background">
+        <section className="py-16 md:py-24 overflow-hidden border-y border-border/60 bg-secondary/30">
             <div className="container mx-auto px-4 sm:px-6">
                 {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     onViewportEnter={() => setIsInView(true)}
                     viewport={{ once: true, margin: "-100px" }}
-                    transition={{ duration: 0.6 }}
-                    className="text-center mb-12"
+                    transition={{ duration: 0.5 }}
+                    className="mb-10"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 border border-primary/20 mb-4">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium text-primary">See How It Works</span>
-                    </div>
-                    <h2 className="text-3xl md:text-4xl font-bold mb-3">
-                        From Idea to <span className="bg-gradient-to-r from-violet-500 to-blue-500 bg-clip-text text-transparent">Engaging Content</span> in Seconds
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+                        Inside Maxis
+                    </p>
+                    <h2 className="font-display text-3xl md:text-4xl font-bold mb-3">
+                        See it in action
                     </h2>
-                    <p className="text-muted-foreground max-w-2xl mx-auto">
-                        Watch how Maxis transforms your expertise into consistent, engaging content that builds trust and generates leads
+                    <p className="text-muted-foreground max-w-xl">
+                        Everything you need to post consistently and grow your professional profile — in one place.
                     </p>
                 </motion.div>
 
                 {/* Step Navigation Pills */}
-                <div className="flex flex-wrap justify-center gap-2 mb-10">
+                <div className="flex flex-wrap gap-2 mb-8">
                     {demoSteps.map((s, i) => (
                         <button
                             key={s.id}
                             onClick={() => setCurrentStep(i)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${currentStep === i
-                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 border ${currentStep === i
+                                ? "bg-foreground text-background border-foreground"
+                                : "bg-card text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
                                 }`}
                         >
-                            <s.icon className="w-4 h-4 inline-block mr-1.5" />
-                            {s.title.split(" ")[0]}
+                            <s.icon className="w-3.5 h-3.5 inline-block mr-1.5" />
+                            {s.title}
                         </button>
                     ))}
                 </div>
@@ -128,7 +127,7 @@ export default function DemoShowcase() {
                     transition={{ duration: 0.7, delay: 0.2 }}
                     className="max-w-5xl mx-auto"
                 >
-                    <div className="relative rounded-2xl border border-border/50 bg-card shadow-2xl shadow-violet-500/5 overflow-hidden">
+                    <div className="relative rounded-md border border-border bg-card shadow-sm overflow-hidden">
                         {/* Demo Header */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
                             <div className="flex items-center gap-3">
@@ -162,7 +161,7 @@ export default function DemoShowcase() {
                         </div>
 
                         {/* Step Footer */}
-                        <div className={`p-4 border-t border-border/50 bg-gradient-to-r ${step.color} bg-opacity-10`}>
+                        <div className="p-4 border-t border-border/60 bg-muted/30">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <step.icon className="w-5 h-5 text-foreground" />
@@ -217,9 +216,9 @@ function VoiceCloneStep() {
             <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-green-500">
                     <span className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center"><Dna className="w-3 h-3" /></span>
-                    Maxis + Your Writing DNA
+                    Maxis + your style
                 </div>
-                <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/5 to-blue-500/5 border border-violet-500/20 min-h-[180px]">
+                <div className="p-4 rounded-xl bg-brand/5 border border-brand/20 min-h-[180px]">
                     <p className="text-sm text-foreground leading-relaxed">
                         "Everyone told me newsletters don't work on LinkedIn.
                         <br /><br />
@@ -235,12 +234,12 @@ function VoiceCloneStep() {
             </div>
 
             {/* Differentiator */}
-            <div className="md:col-span-2 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-blue-500/10 border border-violet-500/20">
+            <div className="md:col-span-2 p-4 rounded-md bg-brand/5 border border-brand/20">
                 <div className="flex items-center gap-3">
-                    <Dna className="w-8 h-8 text-violet-500" />
+                    <Dna className="w-7 h-7 text-brand" />
                     <div>
-                        <p className="font-semibold text-foreground">AI trains on YOUR Writing DNA</p>
-                        <p className="text-sm text-muted-foreground">Feed it 3-5 of your best posts and watch AI write exactly like you</p>
+                        <p className="font-semibold text-foreground text-sm">Trained on your existing content</p>
+                        <p className="text-sm text-muted-foreground">Paste 3–5 of your best posts during setup. Maxis learns your style from day one.</p>
                     </div>
                 </div>
             </div>
@@ -399,8 +398,8 @@ function ScheduleStep() {
                 {/* Weekly Schedule Preview */}
                 <div className="space-y-3">
                     <h3 className="font-semibold text-foreground flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-emerald-500" />
-                        AI-Optimized Schedule
+                        <Calendar className="w-4 h-4 text-brand" />
+                        Your publishing schedule
                     </h3>
                     {schedule.map((slot, i) => (
                         <motion.div
@@ -448,7 +447,7 @@ function ScheduleStep() {
                 </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+            <div className="p-4 rounded-md bg-brand/5 border border-brand/20">
                 <p className="text-center text-sm text-foreground">
                     <span className="font-semibold">Result:</span> Post consistently without thinking about it
                 </p>
@@ -535,13 +534,13 @@ function GrowthStep() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="p-6 rounded-xl bg-gradient-to-r from-violet-600/20 to-blue-600/20 border border-violet-500/30 text-center"
+                className="p-6 rounded-md bg-brand/5 border border-brand/20 text-center"
             >
-                <p className="text-lg font-semibold text-foreground mb-2">
-                    Stop being the best-kept secret in your industry
+                <p className="text-base font-semibold text-foreground mb-2">
+                    Stop being the best-kept secret in your field
                 </p>
                 <p className="text-sm text-muted-foreground">
-                    Maxis helps you show up consistently, build credibility, and turn content into conversations
+                    Consistent posting builds visibility. Visibility builds trust. Trust brings clients.
                 </p>
             </motion.div>
         </motion.div>

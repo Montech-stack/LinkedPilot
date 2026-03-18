@@ -5,11 +5,15 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     './components/ui/**/*.tsx',
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}", // optional, if using pages/
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-bricolage)', 'var(--font-inter)', 'ui-sans-serif', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -44,6 +48,12 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* Brand terracotta — the single accent color used sparingly */
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        /* Gold — remapped to terracotta for sidebar/legacy compatibility */
         gold: {
           DEFAULT: "var(--primary-gold)",
           foreground: "hsl(var(--primary-foreground))",
@@ -54,7 +64,6 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      // Add safe spacing scale
       spacing: {
         0: "0px",
         1: "0.25rem",
@@ -69,7 +78,6 @@ module.exports = {
         10: "2.5rem",
         11: "2.75rem",
         12: "3rem",
-        // Add more if needed
       },
     },
   },

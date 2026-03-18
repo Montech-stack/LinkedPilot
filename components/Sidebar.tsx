@@ -3,7 +3,7 @@ import React from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Link2, Settings2Icon, HomeIcon, Sparkles, Target, Calendar, CreditCard, Settings, X, LogOut, User, Dna, BarChart3, MessageCircle, Lock } from "lucide-react"
+import { Link2, Settings2Icon, HomeIcon, Target, Calendar, CreditCard, X, Dna, BarChart3, MessageCircle, Lock, PenLine } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import { useSession } from "next-auth/react"
 import { useBillingStore, SUBSCRIPTION_PLANS } from "@/lib/billing-store"
 import { cn } from "@/lib/utils"
 
-// Feature access: 'free' = available to all, 'paid' = requires paid plan
 type FeatureAccess = 'free' | 'paid';
 
 interface NavItem {
@@ -31,26 +30,26 @@ const navigationGroups: NavGroup[] = [
   {
     title: "Create",
     items: [
-      { icon: Sparkles, label: "Studio", href: "/dashboard", access: 'free' },
-      { icon: Dna, label: "Writing DNA", href: "/writingdna", access: 'paid' },
-      { icon: Target, label: "Viral Labs", href: "/hooks", access: 'free' },
+      { icon: PenLine, label: "Studio", href: "/dashboard", access: 'free' },
+      { icon: Dna, label: "Voice Profile", href: "/writingdna", access: 'paid' },
+      { icon: Target, label: "Labs", href: "/hooks", access: 'free' },
     ]
   },
   {
     title: "Grow",
     items: [
-      { icon: Calendar, label: "Schedules", href: "/scheduled", access: 'paid' },
+      { icon: Calendar, label: "Schedule", href: "/scheduled", access: 'paid' },
       { icon: Settings2Icon, label: "Automations", href: "/automations", access: 'paid' },
       { icon: BarChart3, label: "Analytics", href: "/analytics", access: 'paid' },
-      { icon: MessageCircle, label: "Engagement Pilot", href: "/engagement", access: 'paid' },
+      { icon: MessageCircle, label: "Engagement", href: "/engagement", access: 'paid' },
     ]
   },
   {
-    title: "System",
+    title: "Account",
     items: [
-      { icon: Link2, label: "Links", href: "/dashboard/links", access: 'free' },
+      { icon: Link2, label: "Connected Accounts", href: "/dashboard/links", access: 'free' },
       { icon: CreditCard, label: "Billing", href: "/billing", access: 'free' },
-      { icon: HomeIcon, label: "Public Page", href: "/", access: 'free' },
+      { icon: HomeIcon, label: "Homepage", href: "/", access: 'free' },
     ]
   }
 ]
@@ -83,7 +82,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-md"
+            className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -96,23 +95,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {(isOpen || isDesktop) && (
           <motion.aside
             className={cn(
-              "fixed left-0 top-0 h-screen w-72 bg-card border-r border-border shadow-2xl z-[100] lg:sticky lg:z-auto flex flex-col",
+              "fixed left-0 top-0 h-screen w-64 bg-sidebar-background border-r border-sidebar-border shadow-sm z-[100] lg:sticky lg:z-auto flex flex-col",
             )}
-            initial={{ x: -300 }}
+            initial={{ x: -280 }}
             animate={{ x: 0 }}
-            exit={{ x: -300 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            exit={{ x: -280 }}
+            transition={{ type: "spring", damping: 28, stiffness: 220 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-2">
+            <div className="flex items-center justify-between px-5 py-5 pb-3">
               <Link href="/dashboard" className="flex items-center gap-3 group">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-all border border-gold/30 group-hover:border-gold/60 bg-gold/5">
-                  <img src="/maxis.png" alt="Maxis Logo" className="w-full h-full object-contain" />
+                <div className="w-8 h-8 overflow-hidden flex-shrink-0">
+                  <img src="/maxis.png" alt="Maxis" className="w-full h-full object-contain" />
                 </div>
-                <div>
-                  <h1 className="font-bold text-xl text-foreground tracking-tight group-hover:text-gold transition-colors">Maxis</h1>
-                  <p className="text-[10px] text-gold font-medium tracking-wider uppercase">AI Studio</p>
-                </div>
+                <span className="font-display font-bold text-base text-sidebar-foreground tracking-tight group-hover:text-brand transition-colors duration-150">
+                  Maxis
+                </span>
               </Link>
 
               <div className="flex items-center gap-1">
@@ -123,21 +121,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="lg:hidden text-muted-foreground hover:text-foreground"
+                  className="lg:hidden text-muted-foreground hover:text-foreground h-8 w-8"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-border">
+            <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
               {navigationGroups.map((group, groupIndex) => (
                 <div key={group.title || groupIndex}>
                   {group.title && (
-                    <p className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">{group.title}</p>
+                    <p className="px-3 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.14em] mb-1.5">
+                      {group.title}
+                    </p>
                   )}
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {group.items.map((item) => {
                       const isActive = pathname === item.href
                       const isPaidFeature = item.access === 'paid'
@@ -148,33 +148,37 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <Link key={item.href} href={targetHref} onClick={() => window.innerWidth < 1024 && onClose()}>
                           <motion.div
                             className={cn(
-                              "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 group relative overflow-hidden",
+                              "flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-all duration-150 group relative",
                               isActive && !isLocked
-                                ? "bg-gold/10 text-gold"
+                                ? "bg-brand/10 text-brand"
                                 : isLocked
-                                  ? "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  ? "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             )}
-                            whileHover={{ x: 4 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             {isActive && !isLocked && (
                               <motion.div
                                 layoutId="activeTab"
-                                className="absolute left-0 top-0 bottom-0 w-1 bg-gold rounded-r-full shadow-[0_0_10px_0_rgba(251,191,36,0.5)]"
+                                className="absolute left-0 top-1 bottom-1 w-0.5 bg-brand rounded-r-full"
                               />
                             )}
                             <item.icon
                               className={cn(
-                                "w-5 h-5 transition-colors",
-                                isActive && !isLocked ? "text-gold" : isLocked ? "text-muted-foreground/50" : "text-muted-foreground group-hover:text-gold/80"
+                                "w-4 h-4 flex-shrink-0 transition-colors",
+                                isActive && !isLocked
+                                  ? "text-brand"
+                                  : isLocked
+                                    ? "text-muted-foreground/40"
+                                    : "text-muted-foreground group-hover:text-foreground"
                               )}
+                              strokeWidth={1.75}
                             />
                             <span className="font-medium text-sm flex-1">
                               {item.label}
                             </span>
                             {isLocked && (
-                              <Lock className="w-3.5 h-3.5 text-muted-foreground/50" />
+                              <Lock className="w-3 h-3 text-muted-foreground/30" />
                             )}
                           </motion.div>
                         </Link>
@@ -186,37 +190,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </nav>
 
             {/* Plan Card */}
-            <div className="p-4 mx-4 mb-2 rounded-2xl bg-card border border-border/50 hover:border-gold/30 transition-colors relative overflow-hidden group shadow-sm">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity duration-500">
-                <Sparkles className="w-16 h-16 text-gold/20" />
+            {currentPlan === 'free' && (
+              <div className="px-3 mb-3">
+                <div className="p-4 rounded-md bg-brand/5 border border-brand/15">
+                  <h4 className="font-semibold text-foreground text-xs mb-1">Free plan</h4>
+                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                    Upgrade to publish to all platforms and unlock scheduling.
+                  </p>
+                  <Link href="/billing">
+                    <Button
+                      size="sm"
+                      className="w-full text-xs h-8 rounded-md bg-brand text-white hover:bg-brand/90 border-0 transition-colors"
+                    >
+                      Upgrade plan
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              <h4 className="font-semibold text-foreground text-sm mb-1">{planData?.name || "Free Plan"}</h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                {currentPlan === 'free' ? 'Upgrade to unlock infinite viral posts.' : 'You are strictly business.'}
-              </p>
-              <Link href="/billing">
-                <Button size="sm" variant="secondary" className="w-full text-xs h-8 bg-muted hover:bg-gold/10 hover:text-gold text-foreground border border-border hover:border-gold/30 transition-all">
-                  Manage Subscription
-                </Button>
-              </Link>
-            </div>
+            )}
 
             {/* User Footer */}
-            <div className="p-4 border-t border-border bg-card">
-              <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer group">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground font-medium border border-border overflow-hidden">
+            <div className="px-3 py-3 border-t border-sidebar-border">
+              <div className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer group">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-foreground font-medium border border-border overflow-hidden flex-shrink-0">
                   {user?.image ? (
-                    <img src={user.image} alt="User" />
+                    <img src={user.image} alt="User" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-sm">{user?.name?.[0] || "U"}</span>
+                    <span className="text-xs">{user?.name?.[0]?.toUpperCase() || "U"}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                    {user?.name || "User"}
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {user?.name || "Account"}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user?.email || "user@example.com"}
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {user?.email || ""}
                   </p>
                 </div>
                 <ProfileDropdown showIconOnly />

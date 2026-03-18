@@ -2,6 +2,7 @@ import mongoose, { Document, Schema, Model } from "mongoose";
 
 export interface IScheduledPost extends Document {
   linkedinId: string;
+  userId?: string;
   content: string;
   media?: string | null;
   mediaType?: "image" | "video" | null;
@@ -18,6 +19,7 @@ export interface IScheduledPost extends Document {
 const ScheduledPostSchema = new Schema<IScheduledPost>(
   {
     linkedinId: { type: String, required: true },
+    userId: { type: String, required: false },
     content: { type: String, required: true },
     media: { type: String, default: null },
     mediaType: { type: String, enum: ["image", "video", null], default: null },

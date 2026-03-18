@@ -1,782 +1,675 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-    Check,
-    ArrowRight,
-    Star,
-    Zap,
-    MessageCircle,
-    BarChart3,
-    ChevronRight,
-    ChevronDown,
-    Calendar,
-    Sparkles,
-    Clock,
-    Play,
-    Target,
-    TrendingUp,
-    Users,
-    Dna,
-    Brain,
-    Send,
-    Eye,
-} from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import Navbar from "@/components/Navbar";
-import { AuthModal } from "@/components/auth-modal";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import DemoShowcase from "@/components/DemoShowcase";
-
-// Typewriter animation component
-function TypewriterText({ text, speed = 50 }: { text: string; speed?: number }) {
-    const [displayedText, setDisplayedText] = useState("");
-    const [isInView, setIsInView] = useState(false);
-
-    useEffect(() => {
-        if (!isInView) return;
-
-        let index = 0;
-        const interval = setInterval(() => {
-            setDisplayedText(text.slice(0, index + 1));
-            index++;
-            if (index >= text.length) {
-                clearInterval(interval);
-            }
-        }, speed);
-
-        return () => clearInterval(interval);
-    }, [text, speed, isInView]);
-
-    return (
-        <motion.span
-            onViewportEnter={() => setIsInView(true)}
-            viewport={{ once: true }}
-        >
-            {displayedText}
-            {displayedText.length < text.length && (
-                <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5" />
-            )}
-        </motion.span>
-    );
-}
-
-/* ==========================================================================
-   MAXIS LANDING PAGE V3
-   Built on Market Research & Product-Market Fit Strategy
-   Target: Solo Professionals (Coaches, Consultants, Freelancers, Founders)
-   ========================================================================== */
+  Check,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+  Plus,
+} from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import Navbar from "@/components/Navbar"
+import { AuthModal } from "@/components/auth-modal"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 export default function LandingPage() {
-    const { data: session } = useSession();
-    const router = useRouter();
-    const [authOpen, setAuthOpen] = useState(false);
-    const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
-    const [openFaq, setOpenFaq] = useState<number | null>(null);
-    const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup")
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [activeTestimonial, setActiveTestimonial] = useState(0)
 
-    const openAuth = (mode: "login" | "signup" = "signup") => {
-        setAuthMode(mode);
-        setAuthOpen(true);
-    };
+  const openAuth = (mode: "login" | "signup" = "signup") => {
+    setAuthMode(mode)
+    setAuthOpen(true)
+  }
 
-    const handleCTA = () => {
-        if (session) {
-            router.push("/dashboard");
-        } else {
-            openAuth("signup");
-        }
-    };
+  const handleCTA = () => {
+    if (session) {
+      router.push("/dashboard")
+    } else {
+      openAuth("signup")
+    }
+  }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // DATA (Based on Market Research)
-    // ─────────────────────────────────────────────────────────────────────────
+  const platforms = ["LinkedIn", "X (Twitter)", "Instagram", "TikTok", "Threads", "Facebook"]
 
-    const platforms = [
-        { name: "LinkedIn", logo: "in", bg: "bg-[#0A66C2]" },
-        { name: "X", logo: "𝕏", bg: "bg-black dark:bg-white dark:text-black" },
-        { name: "Instagram", logo: "◷", bg: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" },
-        { name: "TikTok", logo: "♪", bg: "bg-black dark:bg-white dark:text-black" },
-        { name: "Threads", logo: "@", bg: "bg-black dark:bg-white dark:text-black" },
-    ];
+  const problems = [
+    {
+      label: "01",
+      title: "You're the best-kept secret in your field",
+      body: "Your clients rave about you. Your work is exceptional. But the coaches and consultants landing the clients you want are online every day — and you're not.",
+    },
+    {
+      label: "02",
+      title: "You've tried AI and it made things worse",
+      body: "Generic AI tools write the same post for everyone. Your audience can tell. It doesn't sound like you — and that erodes the very credibility you've spent years building.",
+    },
+    {
+      label: "03",
+      title: "You go quiet and lose the ground you've gained",
+      body: "Three posts one week, silence for two months. The algorithm forgets you. Your audience forgets you. You start over every single time.",
+    },
+  ]
 
-    // Pain points from research
-    const painPoints = [
-        { icon: Clock, text: "Spending hours on content that gets ignored" },
-        { icon: MessageCircle, text: "AI tools that sound robotic, not like you" },
-        { icon: TrendingUp, text: "Posting inconsistently, missing opportunities" },
-        { icon: Target, text: "No idea if your content is generating leads" },
-    ];
+  const features = [
+    {
+      number: "01",
+      title: "Every post sounds like you wrote it",
+      body: "During setup you paste a few of your existing posts. Maxis learns your vocabulary, how you structure ideas, and the opinions you hold. Every post it writes from then on sounds like you — not a template.",
+    },
+    {
+      number: "02",
+      title: "One idea reaches every platform",
+      body: "Share one thought. Maxis turns it into a LinkedIn post, an X thread, a short-form caption, a carousel script, and more. Your expertise goes everywhere your clients already are.",
+    },
+    {
+      number: "03",
+      title: "Consistent without the effort",
+      body: "A visual calendar, smart queue suggestions, and scheduling that posts at the right time — even during your busiest client weeks.",
+    },
+    {
+      number: "04",
+      title: "Know which posts bring clients",
+      body: "See which posts drive profile visits, track engagement over time, and know exactly which content is moving people from follower to paying client.",
+    },
+  ]
 
-    // Features mapped to value propositions from research
-    const features = [
-        {
-            icon: Dna,
-            title: "AI That Actually Sounds Like You",
-            description: "Train Maxis on your past content. Every post matches your Writing DNA — not generic AI slop that hurts your credibility.",
-            highlight: "The #1 reason pros switch to Maxis",
-            gradient: "from-violet-500 to-purple-600",
-        },
-        {
-            icon: Sparkles,
-            title: "From Idea to 7 Posts in 5 Minutes",
-            description: "One topic becomes a LinkedIn post, X thread, carousel script, and more. Stop staring at blank screens.",
-            highlight: "Save 10+ hours every week",
-            gradient: "from-blue-500 to-cyan-500",
-        },
-        {
-            icon: Calendar,
-            title: "Set It and Forget It Scheduling",
-            description: "Best-time posting. Visual calendar. Auto-queue. Stay consistent without living in your scheduling app.",
-            highlight: "Never miss a posting day",
-            gradient: "from-emerald-500 to-teal-500",
-        },
-        {
-            icon: Eye,
-            title: "See Who's Watching",
-            description: "Track profile views, engagement trends, and which posts drive the most DMs. Finally prove your content ROI.",
-            highlight: "Content → Leads visibility",
-            gradient: "from-orange-500 to-red-500",
-        },
-        {
-            icon: Send,
-            title: "Engagement on Autopilot",
-            description: "Auto-engage with your target audience. Comment thoughtfully. Build relationships while you sleep.",
-            highlight: "24/7 presence without the burnout",
-            gradient: "from-pink-500 to-rose-500",
-        },
-        {
-            icon: Brain,
-            title: "Learn What Works",
-            description: "AI analyzes your top-performing content and suggests what to create next. Data-driven growth, not guesswork.",
-            highlight: "Double down on winners",
-            gradient: "from-amber-500 to-yellow-500",
-        },
-    ];
+  const testimonials = [
+    {
+      quote: "Three months in, I signed 12 new clients who found me through LinkedIn. I never had to pitch a single one of them. They came in warm, already trusting me.",
+      name: "Rachel Torres",
+      role: "Brand Strategist",
+      company: "Torres Creative",
+      initials: "RT",
+      metric: "12 inbound clients in 3 months",
+    },
+    {
+      quote: "Every hour I spend on content is an hour I'm not billing. Maxis cut my content time from four hours a week to thirty minutes. That's real money back in my pocket.",
+      name: "David Park",
+      role: "Management Consultant",
+      company: "Independent",
+      initials: "DP",
+      metric: "10 billable hours reclaimed weekly",
+    },
+    {
+      quote: "I've tried every tool out there. Maxis is the only one where the output actually sounds like me. My clients tell me my LinkedIn posts are what made them reach out.",
+      name: "Sarah Mitchell",
+      role: "Leadership Coach",
+      company: "Mitchell Coaching Group",
+      initials: "SM",
+      metric: "3x engagement in 60 days",
+    },
+  ]
 
-    // Testimonials targeting our ICP
-    const testimonials = [
-        {
-            quote: "I've tried Hootsuite, Buffer, Taplio — Maxis is the first tool where the AI actually sounds like me. My audience can't tell the difference.",
-            name: "Sarah Mitchell",
-            role: "Leadership Coach",
-            avatar: "SM",
-            metric: "3x engagement in 60 days",
-        },
-        {
-            quote: "As a consultant, my time is billable. Maxis turned content from a 4-hour Sunday task into a 30-minute habit. Game changer.",
-            name: "David Park",
-            role: "Management Consultant",
-            avatar: "DP",
-            metric: "10 hrs/week saved",
-        },
-        {
-            quote: "I finally get inbound leads from LinkedIn. Maxis helped me post consistently and actually track what's working.",
-            name: "Rachel Torres",
-            role: "Freelance Brand Strategist",
-            avatar: "RT",
-            metric: "12 new clients in 3 months",
-        },
-    ];
+  const pricingPlans = [
+    {
+      name: "14-Day Trial",
+      price: "Free",
+      period: "",
+      description: "30 posts to see how it feels. No card required.",
+      features: [
+        "30 AI posts during trial",
+        "Basic voice profile",
+        "1 connected platform",
+        "7-day analytics",
+      ],
+      cta: "Start your trial",
+      popular: false,
+      trialNote: true,
+    },
+    {
+      name: "Strategy",
+      price: "$49",
+      period: "/month",
+      description: "For coaches and consultants who publish consistently.",
+      features: [
+        "1,000 posts per month",
+        "Deep voice profile — sounds exactly like you",
+        "One idea into 7 formats",
+        "Client ROI analytics",
+        "Smart scheduling",
+        "All platforms",
+      ],
+      cta: "Start Strategy",
+      popular: true,
+    },
+    {
+      name: "Enterprise",
+      price: "$199",
+      period: "/month",
+      description: "For agencies managing multiple client brands.",
+      features: [
+        "5,000 posts per month",
+        "5 client workspaces",
+        "White-label reports",
+        "API access",
+        "Priority support",
+      ],
+      cta: "Start Enterprise",
+      popular: false,
+    },
+  ]
 
-    // Pricing from research recommendations
-    const pricingPlans = [
-        {
-            name: "Free Trial",
-            price: "$0",
-            period: "forever",
-            description: "Experience the Maxis difference",
-            features: [
-                "10 AI posts per month",
-                "Basic Writing DNA",
-                "1 social account",
-                "7-day analytics",
-            ],
-            cta: "Get Started Free",
-            popular: false,
-        },
-        {
-            name: "Strategy",
-            price: "$49",
-            period: "/month",
-            description: "For serious professionals",
-            features: [
-                "1,000 AI posts / month",
-                "Deep Writing DNA",
-                "Repurpose Engine (1→7)",
-                "ROI Analytics",
-                "Smart Scheduling",
-                "All Platforms",
-            ],
-            cta: "Start 14-Day Free Trial",
-            popular: true,
-        },
-        {
-            name: "Enterprise",
-            price: "$199",
-            period: "/month",
-            description: "For scaling teams",
-            features: [
-                "5,000 AI posts / month",
-                "5 Client Workspaces",
-                "White-label Reports",
-                "Team API Access",
-                "Priority 24/7 Support",
-            ],
-            cta: "Get Started",
-            popular: false,
-        },
-        {
-            name: "Agency",
-            price: "Custom",
-            period: "",
-            description: "For large organizations",
-            features: [
-                "Unlimited AI Content",
-                "Unlimited Workspaces",
-                "Custom Contracts",
-                "Dedicated Success Manager",
-                "SSO & Security",
-            ],
-            cta: "Contact Sales",
-            popular: false,
-        },
-    ];
+  const faqs = [
+    {
+      question: "Will it actually sound like me, or will it sound like everyone else?",
+      answer: "During setup you paste a handful of your existing posts. Maxis learns your vocabulary, how you structure sentences, and the tone you default to. Most users say it nails their voice within the first session. You can always edit, and the more you use it, the sharper it gets.",
+    },
+    {
+      question: "What happens after my 14-day trial?",
+      answer: "Your account pauses — no charges, no surprise bills. You choose whether to upgrade. Your content and voice profile are saved for 30 days so nothing is lost.",
+    },
+    {
+      question: "Will people know I used a tool?",
+      answer: "Not unless you tell them. The whole point is that content sounds like you wrote it, not like a template. Generic tools hurt credibility. Content trained on your voice amplifies it.",
+    },
+    {
+      question: "How is this different from ChatGPT?",
+      answer: "ChatGPT produces generic output with no knowledge of your voice, no scheduling, and no analytics. Maxis is built end-to-end for personal brand publishing — voice training, multi-platform formatting, scheduling, and performance tracking in one place.",
+    },
+    {
+      question: "What if I want to cancel?",
+      answer: "Cancel anytime, one click, no friction. We email you before your trial ends so there are no surprises. Ever.",
+    },
+  ]
 
-    // FAQs addressing trust concerns from research
-    const faqs = [
-        {
-            question: "Will the AI really sound like me, not a robot?",
-            answer: "Yes. During onboarding, you'll paste 5-10 of your best posts. Maxis learns your vocabulary, sentence structure, and tone. Most users say it nails their voice within the first week. You can always edit and the AI learns from your changes.",
-        },
-        {
-            question: "I've tried other tools and they're too complicated. Is Maxis different?",
-            answer: "We built Maxis for busy professionals, not marketing agencies with dedicated teams. No 47-tab dashboards. No 2-hour onboarding. You'll create your first AI post in under 3 minutes.",
-        },
-        {
-            question: "Will using AI hurt my authenticity or credibility?",
-            answer: "Generic AI hurts credibility. Personalized AI that sounds like you amplifies your expertise. Think of Maxis as a writing assistant that knows your style — you're still the expert, we just help you express it faster.",
-        },
-        {
-            question: "How is this different from ChatGPT or Taplio?",
-            answer: "ChatGPT writes generic content with no scheduling or analytics. Taplio's AI often sounds templated and they've had issues with LinkedIn account warnings. Maxis is voice-first: every feature is built around making AI sound like YOU, safely.",
-        },
-        {
-            question: "What if I want to cancel?",
-            answer: "Cancel anytime with one click. No contracts, no hidden fees. We'll even email you before your trial ends so you're never surprised.",
-        },
-    ];
+  const prevTestimonial = () =>
+    setActiveTestimonial((p) => (p - 1 + testimonials.length) % testimonials.length)
+  const nextTestimonial = () =>
+    setActiveTestimonial((p) => (p + 1) % testimonials.length)
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans overflow-x-hidden">
+      <Navbar />
 
-    return (
-        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30 overflow-x-hidden">
-            <Navbar />
+      {/* HERO */}
+      <section className="pt-28 pb-20 md:pt-40 md:pb-28 relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="max-w-3xl">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-6"
+            >
+              For coaches and consultants
+            </motion.p>
 
-            {/* ════════════════════════════════════════════════════════════════════
-          HERO SECTION - Pain Point Focused
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="relative pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden">
-                {/* Animated Background */}
-                <div className="absolute inset-0 -z-10 overflow-hidden">
-                    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-violet-500/15 to-blue-500/15 rounded-full blur-[100px] animate-pulse" />
-                    <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px]" />
-                </div>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.08 }}
+              className="font-display text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.08] tracking-tight mb-7"
+            >
+              Attract clients.
+              <br />
+              Stop chasing
+              <br />
+              <span className="text-brand">them.</span>
+            </motion.h1>
 
-                <div className="container mx-auto px-4 sm:px-6 relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                        className="max-w-4xl mx-auto text-center"
-                    >
-                        {/* Target Audience Badge */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.15 }}
-                            className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-primary/5 border border-primary/20"
-                        >
-                            <Users className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-muted-foreground">
-                                Built for Coaches, Consultants & Founders
-                            </span>
-                        </motion.div>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.18 }}
+              className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mb-10"
+            >
+              Maxis turns your ideas into daily content that sounds exactly like you wrote it — so your audience finds you, trusts you, and hires you. Without you living on social media.
+            </motion.p>
 
-                        {/* Value Proposition Headline */}
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] mb-6">
-                            <span className="block bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                                Write Like You.
-                            </span>
-                            <span className="block bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                                Post Like a Pro.
-                            </span>
-                            <span className="block mt-1 bg-gradient-to-r from-violet-500 via-blue-500 via-cyan-500 to-amber-400 bg-clip-text text-transparent">
-                                Maximize Growth.
-                            </span>
-                        </h1>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.28 }}
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10"
+            >
+              <Button
+                onClick={handleCTA}
+                className="h-12 px-7 rounded-md bg-foreground text-background hover:bg-foreground/90 text-sm font-semibold transition-all duration-150"
+              >
+                Start your 14-day trial
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+              <button
+                onClick={() =>
+                  document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/30 hover:decoration-foreground/50"
+              >
+                See how it works
+              </button>
+            </motion.div>
 
-                        {/* Subheadline - Address Core Pain */}
-                        <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-                            You're an expert at what you do — not at content marketing.{" "}
-                            <span className="text-foreground font-medium">
-                                Maxis creates posts that sound like you
-                            </span>{" "}
-                            so you can build credibility, get leads, and grow your business.
-                        </p>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.42 }}
+              className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"
+            >
+              <span className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                14 days free
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                No credit card required
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                Sounds like you, not a template
+              </span>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
-                        {/* CTA Buttons */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-                            <Button
-                                onClick={handleCTA}
-                                size="lg"
-                                className="w-full sm:w-auto h-14 px-8 text-base sm:text-lg font-semibold rounded-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all hover:scale-[1.02] text-white border-0"
-                            >
-                                Create Your First Post Free
-                                <ArrowRight className="ml-2 w-5 h-5" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="lg"
-                                className="w-full sm:w-auto h-14 px-8 text-base font-medium rounded-full hover:bg-secondary/50"
-                                onClick={() => document.getElementById("demo-showcase")?.scrollIntoView({ behavior: "smooth" })}
-                            >
-                                <Play className="mr-2 w-4 h-4" />
-                                See How It Works
-                            </Button>
-                        </div>
+      {/* PLATFORMS */}
+      <section className="py-10 border-y border-border/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap flex-shrink-0">
+              Publishes to
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {platforms.map((p) => (
+                <span
+                  key={p}
+                  className="px-3 py-1.5 rounded border border-border bg-card text-xs font-medium text-foreground"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-                        {/* Trust Signals */}
-                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5">
-                                <Check className="w-4 h-4 text-green-500" />
-                                Free forever plan
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <Check className="w-4 h-4 text-green-500" />
-                                No credit card required
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <Check className="w-4 h-4 text-green-500" />
-                                Your voice, not robot voice
-                            </span>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
+      {/* PROBLEMS */}
+      <section className="py-24 md:py-32">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-16">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+              Why experts stay invisible
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight max-w-2xl">
+              Your next client is looking
+              <br />
+              for someone like you right now.
+            </h2>
+          </div>
 
-            {/* ════════════════════════════════════════════════════════════════════
-          PAIN POINTS SECTION
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-12 md:py-16 border-y border-border/30 bg-secondary/20">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <p className="text-center text-sm font-medium text-muted-foreground mb-8">
-                        Sound familiar?
+          <div className="grid md:grid-cols-3 gap-px bg-border">
+            {problems.map((p) => (
+              <motion.div
+                key={p.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="bg-background p-8 md:p-10"
+              >
+                <p className="font-display text-5xl font-bold text-border mb-6 leading-none select-none">
+                  {p.label}
+                </p>
+                <h3 className="font-semibold text-base mb-3 leading-snug">{p.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{p.body}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="py-24 md:py-32 bg-secondary/40 border-y border-border/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-16">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+              How it works
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight max-w-xl">
+              Everything in one place.
+              <br />
+              Nothing in the way.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {features.map((f, i) => (
+              <motion.div
+                key={f.number}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.07 }}
+                className={`bg-card border border-border p-8 md:p-10 relative overflow-hidden group hover:border-brand/40 transition-colors duration-200 ${
+                  i === 0 ? "md:col-span-2" : ""
+                }`}
+              >
+                <div className="flex items-start gap-8">
+                  <div className="flex-shrink-0">
+                    <p className="font-display text-6xl font-bold text-border/60 leading-none select-none group-hover:text-brand/20 transition-colors duration-300">
+                      {f.number}
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {painPoints.map((pain, i) => (
-                            <motion.div
-                                key={pain.text}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
-                                className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border/50"
-                            >
-                                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                                    <pain.icon className="w-5 h-5 text-red-500" />
-                                </div>
-                                <span className="text-sm text-muted-foreground">{pain.text}</span>
-                            </motion.div>
-                        ))}
-                    </div>
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <h3 className="font-semibold text-lg mb-3">{f.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed max-w-xl">{f.body}</p>
+                  </div>
                 </div>
-            </section>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* ════════════════════════════════════════════════════════════════════
-          PLATFORM LOGOS - Infinite Scroll
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-12 overflow-hidden">
-                <div className="container mx-auto px-4 sm:px-6 mb-6">
-                    <p className="text-center text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                        One Dashboard. All Your Platforms.
-                    </p>
-                </div>
-
-                <div className="relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-24 md:w-40 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-                    <div className="absolute right-0 top-0 bottom-0 w-24 md:w-40 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-
-                    <div className="flex animate-scroll-left">
-                        {[...platforms, ...platforms, ...platforms, ...platforms].map((platform, i) => (
-                            <div key={`${platform.name}-${i}`} className="flex-shrink-0 mx-3 md:mx-5">
-                                <div className={`flex items-center gap-2.5 px-5 py-3 rounded-full ${platform.bg} text-white shadow-lg`}>
-                                    <span className="text-lg font-bold">{platform.logo}</span>
-                                    <span className="font-semibold text-sm whitespace-nowrap">{platform.name}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <style jsx>{`
-          @keyframes scroll-left {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(calc(-100% / 4)); }
-          }
-          .animate-scroll-left {
-            animation: scroll-left 20s linear infinite;
-          }
-          .animate-scroll-left:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          ANIMATED DEMO SECTION - Comprehensive Feature Showcase
-      ════════════════════════════════════════════════════════════════════ */}
-            <div id="demo-showcase">
-                <DemoShowcase />
+      {/* VOICE COMPARISON */}
+      <section className="py-24 md:py-32">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-14">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+                The difference
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4">
+                Your clients trust your voice.
+                <br />
+                Not a template.
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-xl">
+                Most tools produce the same output for everyone. Maxis is trained on your past content, so every post sounds like you — not like every other consultant on LinkedIn.
+              </p>
             </div>
 
-            {/* ════════════════════════════════════════════════════════════════════
-          HOW IT WORKS / FEATURES
-      ════════════════════════════════════════════════════════════════════ */}
-            <section id="how-it-works" className="py-20 md:py-28">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="mb-14 md:mb-20 text-center max-w-3xl mx-auto">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                        >
-                            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">
-                                Finally, a tool that works the way you do
-                            </p>
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                                Build Your Personal Brand
-                                <br />
-                                <span className="text-muted-foreground">Without Becoming a Full-Time Creator</span>
-                            </h2>
-                        </motion.div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                        {features.map((feature, i) => (
-                            <motion.div
-                                key={feature.title}
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.08 }}
-                                className="group relative bg-card rounded-2xl p-6 md:p-8 border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-xl"
-                            >
-                                {/* Highlight Badge */}
-                                <div className="absolute -top-3 left-6 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                                    {feature.highlight}
-                                </div>
-
-                                {/* Icon */}
-                                <div
-                                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg`}
-                                >
-                                    <feature.icon className="w-7 h-7 text-white" />
-                                </div>
-
-                                {/* Content */}
-                                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-                            </motion.div>
-                        ))}
-                    </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="border border-border bg-card p-7">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Generic output
+                  </span>
                 </div>
-            </section>
+                <p className="text-muted-foreground/80 italic leading-relaxed text-sm">
+                  "In today's fast-paced business environment, it's crucial to leverage synergies and drive value-added outcomes through strategic initiatives that maximize stakeholder engagement..."
+                </p>
+                <p className="mt-4 text-xs text-muted-foreground/50">
+                  Sounds like a template. Your audience scrolls past.
+                </p>
+              </div>
 
-            {/* ════════════════════════════════════════════════════════════════════
-          VOICE CLONING HIGHLIGHT
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-20 md:py-28 bg-gradient-to-b from-secondary/30 to-background border-y border-border/30">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="max-w-4xl mx-auto">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            className="text-center mb-12"
-                        >
-                            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20">
-                                <Dna className="w-4 h-4 text-violet-500" />
-                                <span className="text-sm font-medium text-violet-500">The Maxis Difference</span>
-                            </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                                AI That Learns <span className="text-primary">Your Writing DNA</span>
-                            </h2>
-                            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                                Most AI sounds like everyone else. Maxis sounds like <em>you</em>.
-                            </p>
-                        </motion.div>
-
-                        {/* Before/After Comparison */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                className="bg-card rounded-2xl p-6 border border-red-500/20"
-                            >
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                                    <span className="text-sm font-medium text-red-500">Generic AI</span>
-                                </div>
-                                <p className="text-muted-foreground italic leading-relaxed">
-                                    "In today's fast-paced business environment, it's crucial to leverage synergies and drive value-added outcomes through strategic initiatives that maximize stakeholder engagement..."
-                                </p>
-                                <p className="text-xs text-red-500/70 mt-3">Sounds like everyone else. Hurts credibility.</p>
-                            </motion.div>
-
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                viewport={{ once: true }}
-                                className="bg-card rounded-2xl p-6 border border-green-500/20"
-                            >
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                                    <span className="text-sm font-medium text-green-500">Maxis (Your Voice)</span>
-                                </div>
-                                <p className="text-foreground leading-relaxed">
-                                    "Here's what I learned after 10 years of coaching executives: The best leaders don't have all the answers. They ask better questions. Here are 3 that changed everything for my clients..."
-                                </p>
-                                <p className="text-xs text-green-500/70 mt-3">Sounds like you wrote it. Builds trust.</p>
-                            </motion.div>
-                        </div>
-                    </div>
+              <div className="border border-brand/30 bg-card p-7">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <div className="w-2 h-2 rounded-full bg-brand" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-brand">
+                    Trained on your voice
+                  </span>
                 </div>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          TESTIMONIALS
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-20 md:py-28">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="mb-12 text-center">
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                            Trusted by Professionals Like You
-                        </h2>
-                        <p className="text-lg text-muted-foreground">Real results from real users.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                        {testimonials.map((testimonial, i) => (
-                            <motion.div
-                                key={testimonial.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
-                                className="bg-card rounded-2xl p-6 md:p-8 border border-border/50"
-                            >
-                                <div className="flex gap-1 mb-4">
-                                    {[...Array(5)].map((_, j) => (
-                                        <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                    ))}
-                                </div>
-                                <p className="text-foreground mb-6 leading-relaxed">"{testimonial.quote}"</p>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
-                                            {testimonial.avatar}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-sm">{testimonial.name}</p>
-                                            <p className="text-xs text-muted-foreground">{testimonial.role}</p>
-                                        </div>
-                                    </div>
-                                    <div className="px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium">
-                                        {testimonial.metric}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          PRICING
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-20 md:py-28 bg-secondary/20 border-y border-border/30">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="mb-14 text-center max-w-2xl mx-auto">
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">Simple, Honest Pricing</h2>
-                        <p className="text-lg text-muted-foreground">
-                            Start free. Upgrade when you're ready. Cancel anytime.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto">
-                        {pricingPlans.map((plan, i) => (
-                            <motion.div
-                                key={plan.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
-                                className={`relative bg-card rounded-2xl p-6 md:p-8 border-2 ${plan.popular ? "border-primary shadow-xl shadow-primary/10" : "border-border/50"
-                                    }`}
-                            >
-                                {plan.popular && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-lg">
-                                        MOST POPULAR
-                                    </div>
-                                )}
-                                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                                <div className="flex items-baseline gap-1 mb-1">
-                                    <span className="text-4xl md:text-5xl font-black">{plan.price}</span>
-                                    {plan.period !== "forever" && (
-                                        <span className="text-muted-foreground text-sm">{plan.period}</span>
-                                    )}
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-6">{plan.description}</p>
-                                <ul className="space-y-3 mb-8">
-                                    {plan.features.map((feature) => (
-                                        <li key={feature} className="flex items-start gap-3 text-sm">
-                                            <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <Button
-                                    onClick={handleCTA}
-                                    className={`w-full h-12 rounded-xl font-semibold ${plan.popular ? "bg-primary hover:bg-primary/90" : ""}`}
-                                    variant={plan.popular ? "default" : "outline"}
-                                >
-                                    {plan.cta}
-                                </Button>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    <p className="text-center text-sm text-muted-foreground mt-8">
-                        All plans include a 14-day money-back guarantee. No questions asked.
-                    </p>
-                </div>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          FAQ
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-20 md:py-28">
-                <div className="container mx-auto px-4 sm:px-6 max-w-3xl">
-                    <div className="mb-12 text-center">
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">Common Questions</h2>
-                    </div>
-
-                    <div className="space-y-3">
-                        {faqs.map((faq, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 10 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.05 }}
-                                className="bg-card border border-border/50 rounded-xl overflow-hidden"
-                            >
-                                <button
-                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                                    className="w-full flex items-center justify-between p-5 text-left hover:bg-secondary/30 transition-colors"
-                                >
-                                    <span className="font-semibold text-sm md:text-base pr-4">{faq.question}</span>
-                                    <ChevronDown
-                                        className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""
-                                            }`}
-                                    />
-                                </button>
-                                <AnimatePresence>
-                                    {openFaq === i && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="px-5 pb-5 text-sm md:text-base text-muted-foreground leading-relaxed">
-                                                {faq.answer}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          FINAL CTA
-      ════════════════════════════════════════════════════════════════════ */}
-            <section className="py-24 md:py-36 relative overflow-hidden">
-                <div className="absolute inset-0 -z-10">
-                    <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-violet-500/15 to-blue-500/15 rounded-full blur-3xl" />
-                </div>
-
-                <div className="container mx-auto px-4 sm:px-6 relative z-10 text-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                    >
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
-                            Your expertise deserves
-                            <br />
-                            <span className="bg-gradient-to-r from-violet-500 via-blue-500 to-amber-400 bg-clip-text text-transparent">
-                                to be seen.
-                            </span>
-                        </h2>
-                        <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto">
-                            Stop letting content hold you back. Start building the personal brand your expertise deserves.
-                        </p>
-                        <Button
-                            onClick={handleCTA}
-                            size="lg"
-                            className="h-14 md:h-16 px-10 md:px-14 text-lg md:text-xl font-bold rounded-full bg-gradient-to-r from-violet-600 via-blue-600 to-amber-500 hover:from-violet-700 hover:via-blue-700 hover:to-amber-600 shadow-2xl shadow-violet-500/30 hover:shadow-amber-500/40 transition-all hover:scale-105 text-white border-0"
-                        >
-                            Get Started Free
-                            <ArrowRight className="ml-3 w-5 h-5 md:w-6 md:h-6" />
-                        </Button>
-                        <p className="mt-6 text-sm text-muted-foreground">
-                            Free forever plan. No credit card required.
-                        </p>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* ════════════════════════════════════════════════════════════════════
-          FOOTER
-      ════════════════════════════════════════════════════════════════════ */}
-            <footer className="py-10 border-t border-border/30">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <p className="text-sm text-muted-foreground">© 2025 Maxis. All rights reserved.</p>
-                        <div className="flex gap-6 text-sm text-muted-foreground">
-                            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-                            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-                            <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
-                        </div>
-                    </div>
-                </div>
-            </footer>
-
-            <AuthModal open={authOpen} onOpenChange={setAuthOpen} mode={authMode} />
+                <p className="text-foreground leading-relaxed text-sm">
+                  "Here's what I learned after 10 years coaching executives: the best leaders don't have all the answers. They ask better questions. Here are three that changed everything for the teams I work with..."
+                </p>
+                <p className="mt-4 text-xs text-brand/70">
+                  Sounds like you. Builds trust before the first conversation.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-24 md:py-32 bg-foreground text-background">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-background/40 mb-10">
+              Coaches and consultants who stopped chasing
+            </p>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTestimonial}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                <blockquote className="font-display text-2xl sm:text-3xl md:text-4xl font-medium leading-[1.3] text-background mb-10">
+                  "{testimonials[activeTestimonial].quote}"
+                </blockquote>
+
+                <div className="flex items-center justify-between gap-6 flex-wrap">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-full bg-background/10 border border-background/20 flex items-center justify-center text-background font-bold text-sm flex-shrink-0">
+                      {testimonials[activeTestimonial].initials}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-background text-sm">
+                        {testimonials[activeTestimonial].name}
+                      </p>
+                      <p className="text-xs text-background/50">
+                        {testimonials[activeTestimonial].role} · {testimonials[activeTestimonial].company}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-4 py-2 border border-background/20 text-xs font-semibold text-background/80 tracking-wide">
+                    {testimonials[activeTestimonial].metric}
+                  </span>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="flex items-center gap-4 mt-12 pt-8 border-t border-background/10">
+              <button
+                onClick={prevTestimonial}
+                className="w-9 h-9 border border-background/20 flex items-center justify-center text-background/60 hover:text-background hover:border-background/40 transition-colors"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex gap-2">
+                {testimonials.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTestimonial(i)}
+                    className={`w-6 h-px transition-colors ${
+                      i === activeTestimonial ? "bg-background" : "bg-background/20"
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={nextTestimonial}
+                className="w-9 h-9 border border-background/20 flex items-center justify-center text-background/60 hover:text-background hover:border-background/40 transition-colors"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="py-24 md:py-32">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-16">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+              Pricing
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
+              Try it free. Upgrade when
+              <br />
+              clients start coming in.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-px bg-border">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`bg-background p-8 md:p-10 relative ${plan.popular ? "bg-card" : ""}`}
+              >
+                {plan.popular && (
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand mb-4">
+                    Most popular
+                  </p>
+                )}
+                <h3 className="font-display font-bold text-xl mb-1">{plan.name}</h3>
+                <p className="text-xs text-muted-foreground mb-6">{plan.description}</p>
+
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="font-display text-4xl font-bold">{plan.price}</span>
+                  {plan.period && (
+                    <span className="text-sm text-muted-foreground">{plan.period}</span>
+                  )}
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-3 text-sm">
+                      <Check className="w-4 h-4 text-brand flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                      <span className="text-foreground">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  onClick={handleCTA}
+                  className={`w-full h-11 rounded-md text-sm font-semibold ${
+                    plan.popular
+                      ? "bg-foreground text-background hover:bg-foreground/90"
+                      : "bg-transparent border border-border text-foreground hover:bg-secondary"
+                  }`}
+                  variant="ghost"
+                >
+                  {plan.cta}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-6 text-center">
+            All paid plans include a 14-day money-back guarantee. No contracts, no hidden fees.
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-24 md:py-32 border-t border-border/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid md:grid-cols-[1fr_2fr] gap-16">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-4">
+                FAQ
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold leading-tight">
+                Common
+                <br />
+                questions.
+              </h2>
+            </div>
+
+            <div className="divide-y divide-border/60">
+              {faqs.map((faq, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-start justify-between py-6 text-left gap-6 group"
+                  >
+                    <span className="font-medium text-sm md:text-base pr-4 group-hover:text-brand transition-colors">
+                      {faq.question}
+                    </span>
+                    <span className="flex-shrink-0 mt-0.5">
+                      {openFaq === i ? (
+                        <Minus className="w-4 h-4 text-brand" />
+                      ) : (
+                        <Plus className="w-4 h-4 text-muted-foreground group-hover:text-brand transition-colors" />
+                      )}
+                    </span>
+                  </button>
+                  <AnimatePresence>
+                    {openFaq === i && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="pb-6 text-sm md:text-base text-muted-foreground leading-relaxed">
+                          {faq.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="py-24 md:py-32 bg-secondary/40 border-t border-border/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.08] mb-6">
+              Your next client
+              <br />
+              is looking for you
+              <br />
+              <span className="text-brand">right now.</span>
+            </h2>
+            <p className="text-lg text-muted-foreground mb-10 max-w-lg leading-relaxed">
+              Start showing up consistently. Start getting found. Your 14-day trial is free — no card, no commitment.
+            </p>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <Button
+                onClick={handleCTA}
+                className="h-12 px-8 rounded-md bg-foreground text-background hover:bg-foreground/90 text-sm font-semibold"
+              >
+                Start attracting clients
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+              <p className="text-xs text-muted-foreground self-center">
+                14 days free · No card required
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-12 border-t border-border/60">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 overflow-hidden">
+                <img src="/maxis.png" alt="Maxis" className="w-full h-full object-contain" />
+              </div>
+              <span className="font-display font-bold text-base">Maxis</span>
+            </div>
+            <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+              <Link href="/support" className="hover:text-foreground transition-colors">Support</Link>
+            </div>
+            <p className="text-xs text-muted-foreground">© 2025 Maxis. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} mode={authMode} />
+    </div>
+  )
 }

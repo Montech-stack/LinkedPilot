@@ -1,177 +1,216 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateContent } from "@/lib/gemini";
 import ScheduledPost from "@/models/ScheduledPost";
+import SocialAccount from "@/models/SocialAccount";
 import { connectToDatabase } from "@/lib/mongodb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
-// Import presets for prompt enhancement
-const PRESET_PROMPTS: Record<string, string> = {
-    "thought-leadership": "Write as an industry authority sharing a unique perspective. Open with a bold statement that challenges conventional wisdom. Support with evidence from experience. Use confident language without arrogance. End with a forward-looking insight.",
-    "quick-tips": "Create a numbered list of 5-7 actionable tips. Each tip should be specific enough to implement today. Start each point with an action verb. Keep explanations to one sentence.",
-    "personal-story": "Share a vulnerable personal moment - a failure, challenge, or turning point. Be specific about the situation and emotions. Extract 2-3 clear lessons. Write in first person with raw honesty.",
-    "controversial-take": "Take a strong stance on a topic most people disagree with. Open with the controversial opinion directly. Support with logical reasoning and specific examples. Invite respectful debate.",
-    "case-study": "Structure as a mini case study with three clear parts: the Challenge (specific problem), the Strategy (what was done differently), and the Result (measurable outcome with numbers if possible).",
-    "question-hook": "Open with a provocative question that challenges assumptions or creates curiosity. Make it specific enough to resonate deeply. Follow with valuable insight that answers the question.",
-    "list-post": "Format as a clean numbered list for easy scanning. Each point should deliver standalone value. Use parallel structure across all points. Start with the most compelling point.",
-    "behind-scenes": "Pull back the curtain on a process, decision, or journey that usually stays hidden. Be specific about the messy reality, including mistakes and pivots. Make readers feel like insiders."
+const PRESET_STYLES: Record<string, string> = {
+  "thought-leadership": "Open with a bold contrarian statement that challenges the status quo. Back it with sharp logic and lived analogy. End with a forward-looking insight that makes people want to save and share.",
+  "quick-tips": "Create a punchy numbered list of 5-7 instantly actionable tips. Start each with a strong action verb. One sentence of explanation per tip. Make each tip feel like it was hard-won knowledge.",
+  "personal-story": "Use a fictional analogy character (e.g. 'Take Marcus, a founder who…'). Show a real struggle, a turning point, and a clear lesson. Make the reader feel like they lived it.",
+  "controversial-take": "Open directly with the controversial opinion — no warm-up. Support with 2-3 sharp logical points. Invite respectful debate at the end.",
+  "case-study": "Structure: Problem → What They Did Differently → Measurable Result. Use a fictional character to tell it. Include a real-feeling number.",
+  "question-hook": "Open with a question that stops people mid-scroll. Make it specific and a little uncomfortable. Answer it with depth and a twist they didn't expect.",
+  "list-post": "Format as a scannable numbered list. Each point delivers standalone value. Start with the most powerful point. Use parallel sentence structure throughout.",
+  "behind-scenes": "Pull back the curtain on something that usually stays hidden. Be specific about the messy reality. Use short, punchy sentences. Make the reader feel like an insider.",
 };
 
 export async function POST(req: NextRequest) {
-    try {
-        await connectToDatabase();
-        const session = await getServerSession(authOptions);
+  try {
+    await connectToDatabase();
+    const session = await getServerSession(authOptions);
 
-        const {
-            topics,
-            frequency,
-            tone = "Professional",
-            platform,
-            startDate,
-            accountId,
-            // New fields - default if missing
-            preset,
-            length = "medium",
-            generateImage = false
-        } = await req.json();
+    const {
+      topics,
+      frequency,
+      tone = "Professional",
+      platform = "LinkedIn",
+      startDate,
+      accountId,
+      preset,
+      length = "medium",
+      generateImage = false,
+    } = await req.json();
 
-        // Build length instruction
-        const lengthInstruction = length === 'short'
-            ? 'Keep posts brief - under 100 words, punchy and impactful'
-            : length === 'long'
-                ? 'Write longer posts of 200-400 words with detailed insights and examples'
-                : 'Write medium-length posts of 100-200 words with balanced depth';
+    // --- Resolve real LinkedIn member ID ---
+    let resolvedLinkedinId = "unknown";
+    if (accountId) {
+      const account = await SocialAccount.findById(accountId);
+      if (account?.linkedinId) {
+        resolvedLinkedinId = account.linkedinId;
+      }
+    }
+    if (resolvedLinkedinId === "unknown" && session?.user?.id) {
+      const account = await SocialAccount.findOne({
+        userId: session.user.id,
+        platform: { $regex: /linkedin/i },
+        connected: true,
+      });
+      if (account?.linkedinId) resolvedLinkedinId = account.linkedinId;
+    }
 
-        // Build preset instruction
-        const presetInstruction = preset && PRESET_PROMPTS[preset]
-            ? `\nCONTENT STYLE: ${PRESET_PROMPTS[preset]}`
-            : '';
+    // --- Post count from frequency ---
+    let postCount = 12;
+    let freqText = frequency;
+    if (frequency === "daily") { postCount = 28; freqText = "every day (7x/week)"; }
+    else if (frequency === "weekdays") { postCount = 20; freqText = "weekdays only (Mon-Fri)"; }
+    else if (frequency === "3_times_week") { postCount = 12; freqText = "3 times per week"; }
+    else if (frequency === "weekly") { postCount = 4; freqText = "once per week"; }
+    else if (!isNaN(Number(frequency))) {
+      postCount = Number(frequency) * 4;
+      freqText = `${frequency} times per week`;
+    }
 
-        // Platform-specific guidance
-        const platformGuide: Record<string, string> = {
-            'LinkedIn': `
-        - Open with a pattern-interrupting first line that stops the scroll
-        - Use short paragraphs of 1-2 sentences max with blank lines between
-        - Include a personal angle or story element when possible
-        - End with a clear call-to-action or thought-provoking question
-        - Writing style: Confident, conversational, valuable`,
-            'Twitter': `
-        - For longer content, create thread format with numbered tweets
-        - Start with an irresistible hook that creates curiosity
-        - Keep each point sharp and memorable
-        - Writing style: Punchy, contrarian, high-signal`,
-            'Instagram': `
-        - Lead with an emotional hook that connects to the visual experience
-        - Use strategic line breaks for mobile readability
-        - Include 3-5 relevant hashtags at the end
-        - End with engagement prompt or call-to-action`,
-            'Facebook': `
-        - Conversational and community-focused tone
-        - Storytelling approach that invites discussion
-        - Ask questions that encourage comments
-        - Relatable, warm, and inclusive language`
-        };
+    // --- Length instruction ---
+    const lengthMap = {
+      short: "50-120 words — punchy, direct, zero fluff. Every word earns its place.",
+      medium: "150-250 words — balanced depth. Clear structure, strong hook, one big idea per post.",
+      long: "280-400 words — rich storytelling. Build tension, deliver insight, end with a strong CTA.",
+    };
+    const lengthInstruction = lengthMap[length as keyof typeof lengthMap] || lengthMap.medium;
 
-        const prompt = `
-You are an elite social media ghostwriter who creates viral, engaging content.
+    // --- Preset style ---
+    const presetInstruction = preset && PRESET_STYLES[preset]
+      ? `\nCONTENT STYLE TO USE: ${PRESET_STYLES[preset]}`
+      : "";
 
-Create a content calendar for the next 4 weeks (28 days) based on:
+    // --- Platform-specific rules ---
+    const platformRules: Record<string, string> = {
+      LinkedIn: `- Open with a single bold line that stops the scroll (no "I", no clichés)
+- Short paragraphs — max 2 sentences, blank line between each
+- Build to one clear insight or lesson
+- Close with a comment-provoking question or CTA
+- Tone: confident, human, valuable`,
+      Twitter: `- Thread format if over 280 chars — number each tweet
+- Hook must create instant curiosity in the first tweet
+- Each tweet must stand alone AND pull into the next
+- Punchy, contrarian, high-signal`,
+      Instagram: `- Emotional hook in the first line
+- Strategic line breaks for mobile
+- 3-5 hashtags at the end
+- End with an engagement question`,
+      Facebook: `- Warm, conversational, community-focused
+- Storytelling that invites comments
+- Ask a question that sparks discussion`,
+    };
+
+    const platformKey = platform.charAt(0).toUpperCase() + platform.slice(1).toLowerCase();
+    const platformGuide = platformRules[platformKey] || platformRules.LinkedIn;
+
+    const now = new Date();
+    const dateRef = now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+    const prompt = `You are a world-class social media ghostwriter. Your posts go viral consistently because they combine sharp hooks, emotional storytelling, and real insight.
+
+Generate EXACTLY ${postCount} complete, ready-to-publish ${platformKey} posts for a 4-week content calendar.
+
+STRATEGY:
 - Topic(s): ${topics}
-- Frequency: ${frequency} posts per week
 - Tone: ${tone}
-- Platform: ${platform}
-- Start Date: ${startDate}
-
-CRITICAL RULES:
-- Do NOT use asterisks or any markdown formatting in post content
-- Write in plain text only with natural line breaks
-- Use emojis sparingly and only where they add value
+- Frequency: ${freqText}
+- Start date: ${startDate}
+- Post length: ${lengthInstruction}
 ${presetInstruction}
 
-${lengthInstruction}
+PLATFORM RULES for ${platformKey}:
+${platformGuide}
 
-PLATFORM GUIDANCE for ${platform}:
-${platformGuide[platform] || platformGuide['LinkedIn']}
+HOOK FORMULAS (rotate through these):
+1. Contrarian opener: "Most people get [X] completely wrong."
+2. Story drop: "Take [Name], a [role] who [situation]…"
+3. Bold claim: "[Surprising claim]. Here's why."
+4. Question bomb: "What separates [A] from [B]? One decision."
+5. Number hook: "[#] things [outcome] never do."
+6. Pattern interrupt: "Stop [common thing]. Start [better thing]."
 
-QUALITY STANDARDS:
-1. HOOK: First line must create urgency or curiosity
-2. VALUE: Every sentence must earn its place - cut fluff ruthlessly
-3. AUTHENTICITY: Write like a real human, not corporate copy
-4. SPECIFICITY: Use concrete examples and numbers over vague claims
-5. EMOTION: Tap into desires, fears, frustrations, or aspirations
+STORYTELLING RULES:
+- Use ONLY fictional analogy characters — never "I" or "a friend of mine"
+- Character names should feel real: "Take Mia, a product manager…" / "Meet Kofi, who ran a 7-figure brand…"
+- Show: struggle → insight → shift → lesson
+- Include emotional tension and a satisfying payoff
 
-For each post, provide:
-1. The post content (engaging, viral hooks, NO asterisks or markdown)
-2. The scheduled date (YYYY-MM-DD format)
-3. A suggested time (HH:MM format)
+QUALITY BAR — Every post must have:
+✓ A scroll-stopping first line
+✓ One clear, specific idea (not a listicle of vague advice)
+✓ Concrete detail (name, number, or situation)
+✓ Natural line breaks for readability
+✓ A strong close (question, takeaway, or CTA)
 
-Output ONLY a valid JSON array of objects with keys: "content", "date", "time".
-Do not include markdown ticks, asterisks, or additional text.
+HARD RULES:
+- NO asterisks, NO markdown bold/italic, NO hashtag spam
+- NO corporate buzzwords (synergy, leverage, disrupt)
+- NO starting with "I" or "We"
+- NO ending with "Let me know your thoughts"
+- Emojis: 0-3 max, only where they genuinely add tone
+- Vary the structure across all ${postCount} posts
 
-Example format:
+SCHEDULE LOGIC:
+- Spread posts evenly across 4 weeks starting ${startDate}
+- Use optimal posting times: 7:30, 8:00, 12:00, 12:30, 17:00, 17:30 (rotate)
+- Date format: YYYY-MM-DD, Time format: HH:MM
+
+Today's date for freshness reference: ${dateRef}
+
+OUTPUT: Return ONLY a valid JSON array — no markdown, no explanation, nothing else.
 [
-  {"content": "Your compelling post here...", "date": "2024-01-15", "time": "09:00"},
-  {"content": "Another engaging post...", "date": "2024-01-17", "time": "12:00"}
-]
-    `;
+  {"content": "full post text here", "date": "YYYY-MM-DD", "time": "HH:MM"},
+  ...
+]`;
 
-        // Use our robust helper instead of direct SDK usage
-        // Note: generateContent returns a string directly
-        const generatedText = await generateContent(prompt, { maxTokens: 8192 });
+    const generatedText = await generateContent(prompt, { maxTokens: 8192 });
 
-        // Robust JSON parsing (handles markdown blocks if present)
-        let text = generatedText.replace(/```json\n|\n```/g, '').replace(/```/g, '').trim();
+    let text = generatedText
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
 
-        let plan = [];
-        try {
-            plan = JSON.parse(text);
-        } catch (e) {
-            console.error("Failed to parse AI response", text);
-            // Try to extract JSON array
-            const match = text.match(/\[[\s\S]*\]/);
-            if (match) {
-                try {
-                    plan = JSON.parse(match[0]);
-                } catch {
-                    // Last ditch: try to fix common JSON errors if needed, but for now just fail gracefully
-                    return NextResponse.json({ error: "Failed to generate valid plan format" }, { status: 500 });
-                }
-            } else {
-                return NextResponse.json({ error: "Failed to generate valid plan structure" }, { status: 500 });
-            }
-        }
-
-        // Save to DB
-        const createdPosts = [];
-        for (const item of plan) {
-            if (!item.date || !item.content) continue;
-
-            // Clean asterisks from content
-            let cleanContent = item.content
-                .replace(/\*\*/g, '')  // Remove bold markdown
-                .replace(/\*/g, '')    // Remove remaining asterisks
-                .replace(/_{2,}/g, '') // Remove underscores used for emphasis
-                .trim();
-
-            // Construct date object
-            const dateTimeString = `${item.date}T${item.time || "12:00"}:00`;
-            const scheduledAt = new Date(dateTimeString);
-
-            const newPost = await ScheduledPost.create({
-                linkedinId: accountId || session?.user?.id || "default_user_account",
-                content: cleanContent,
-                scheduledAt: scheduledAt,
-                posted: false,
-                platform: platform.toLowerCase(),
-                generateImage: generateImage, // Store flag for image generation
-            });
-            createdPosts.push(newPost);
-        }
-
-        return NextResponse.json({ success: true, count: createdPosts.length, posts: createdPosts });
-
-    } catch (error) {
-        console.error("Calendar Generation Error:", error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal Error" }, { status: 500 });
+    let plan: any[] = [];
+    try {
+      plan = JSON.parse(text);
+    } catch {
+      const match = text.match(/\[[\s\S]*\]/);
+      if (match) {
+        try { plan = JSON.parse(match[0]); }
+        catch { return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 }); }
+      } else {
+        return NextResponse.json({ error: "AI returned invalid format" }, { status: 500 });
+      }
     }
+
+    const createdPosts = [];
+    for (const item of plan) {
+      if (!item.date || !item.content) continue;
+
+      const cleanContent = item.content
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
+        .replace(/_{2,}/g, "")
+        .trim();
+
+      const dateTimeString = `${item.date}T${item.time || "09:00"}:00`;
+      const scheduledAt = new Date(dateTimeString);
+
+      const newPost = await ScheduledPost.create({
+        linkedinId: resolvedLinkedinId,
+        userId: session?.user?.id,
+        content: cleanContent,
+        scheduledAt,
+        posted: false,
+        isDraft: false,
+        platform: platform.toLowerCase(),
+        generateImage,
+      });
+      createdPosts.push(newPost);
+    }
+
+    return NextResponse.json({ success: true, count: createdPosts.length, posts: createdPosts });
+  } catch (error) {
+    console.error("Schedule generate error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal Error" },
+      { status: 500 }
+    );
+  }
 }

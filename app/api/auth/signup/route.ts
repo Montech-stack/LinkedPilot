@@ -1,7 +1,9 @@
+// app/api/auth/signup/route.ts
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { connectToDatabase } from "@/lib/mongodb"
 import { User } from "@/models/User"
+import { PLAN_IDS } from "@/lib/billing-store"
 
 export async function POST(req: Request) {
   try {
@@ -9,58 +11,61 @@ export async function POST(req: Request) {
 
     if (!email || !password || !name) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Name, email and password are required" },
+        { status: 400 }
+      )
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       )
     }
 
     await connectToDatabase()
 
-    const existing = await User.findOne({ email })
-
+    const existing = await User.findOne({ email: email.toLowerCase().trim() })
     if (existing) {
       return NextResponse.json(
-        { error: "Email already in use" },
+        { error: "An account with this email already exists" },
         { status: 400 }
       )
     }
 
-    const hashed = await bcrypt.hash(password, 10)
+    const hashed = await bcrypt.hash(password, 12)
+
+    // New users start on a 14-day trial with 30 posts
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
 
     const newUser = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       password: hashed,
-      provider: "credentials",
       role: "user",
-      plan: "free",
-      tokensRemaining: 0,
-      billingEnabled: false,
+      plan: PLAN_IDS.TRIAL,
+      tokensRemaining: 30,
+      trialEndsAt,
       onboardingCompleted: false,
       onboardingStep: 0,
     })
 
-    const sanitizedUser = {
-      id: newUser._id.toString(),
-      email: newUser.email,
-      name: newUser.name,
-      tokensRemaining: 0,
-      billingEnabled: false,
-    }
-
-    // Always redirect to dashboard - onboarding will show there
-    const redirectUrl = "/dashboard"
-
     return NextResponse.json({
       success: true,
-      user: sanitizedUser,
-      redirectUrl,
+      user: {
+        id: newUser._id.toString(),
+        email: newUser.email,
+        name: newUser.name,
+        plan: PLAN_IDS.TRIAL,
+        tokensRemaining: 30,
+        trialEndsAt,
+      },
+      redirectUrl: "/dashboard",
     })
-
   } catch (err) {
-    console.error("Signup error:", err)
+    console.error("[SIGNUP ERROR]", err)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Something went wrong. Please try again." },
       { status: 500 }
     )
   }
