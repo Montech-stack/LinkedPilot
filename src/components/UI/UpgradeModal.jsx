@@ -8,9 +8,9 @@ const PRO_PRICE_LABEL = '₦5,000';
 
 const FREE_FEATURES = [
     'AI Mind Map generation',
-    'All 8 learning modes',
-    'Chat with Neuro (unlimited)',
-    'Voice input & narration',
+    '5 core modes (Research, Learning, Brainstorm, Study, Revision)',
+    'Chat with Neuro',
+    'Voice input (mic)',
     'Quiz generation',
     'Map sharing',
     'Offline access (PWA)',
@@ -18,7 +18,9 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
     'Everything in Free',
+    'Connect, Career Path & Data Explorer modes',
     'AI Visualizations — infographics per node',
+    'Voice narration (Listen to any response)',
     'Priority AI responses',
     'More Pro features coming soon',
 ];

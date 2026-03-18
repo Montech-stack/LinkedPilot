@@ -550,14 +550,24 @@ const InfoPanel = ({
                                     {msg.type === 'ai' && msg.content && !msg.streaming && (
                                         <div className={styles.messageActions}>
                                             {isTTSSupported && (
-                                                <button
-                                                    className={`${styles.speakBtn} ${speakingIdx === idx ? styles.speakBtnActive : ''}`}
-                                                    onClick={() => handleSpeak(msg.content, idx)}
-                                                    title={speakingIdx === idx ? 'Stop speaking' : 'Read aloud'}
-                                                >
-                                                    {speakingIdx === idx ? <VolumeX size={10} /> : <Volume2 size={10} />}
-                                                    {speakingIdx === idx ? 'Stop' : 'Listen'}
-                                                </button>
+                                                isPro ? (
+                                                    <button
+                                                        className={`${styles.speakBtn} ${speakingIdx === idx ? styles.speakBtnActive : ''}`}
+                                                        onClick={() => handleSpeak(msg.content, idx)}
+                                                        title={speakingIdx === idx ? 'Stop speaking' : 'Read aloud'}
+                                                    >
+                                                        {speakingIdx === idx ? <VolumeX size={10} /> : <Volume2 size={10} />}
+                                                        {speakingIdx === idx ? 'Stop' : 'Listen'}
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className={styles.speakBtn}
+                                                        onClick={onUpgrade}
+                                                        title="Upgrade to Pro to unlock voice narration"
+                                                    >
+                                                        <Lock size={10} /> Listen
+                                                    </button>
+                                                )
                                             )}
                                             <CopyButton text={msg.content} />
                                         </div>
