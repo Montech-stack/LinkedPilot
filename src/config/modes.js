@@ -43,6 +43,7 @@ export const MODES = {
     },
     connect: {
         id: 'connect',
+        pro: true,
         label: 'Connect',
         icon: 'Link2',
         emoji: '🔗',
@@ -61,6 +62,7 @@ export const MODES = {
     },
     career: {
         id: 'career',
+        pro: true,
         label: 'Career Path',
         icon: 'Rocket',
         emoji: '🚀',
@@ -70,6 +72,7 @@ export const MODES = {
     },
     dataIntegration: {
         id: 'data-integration',
+        pro: true,
         label: 'Data Explorer',
         icon: 'Database',
         emoji: '🗄️',

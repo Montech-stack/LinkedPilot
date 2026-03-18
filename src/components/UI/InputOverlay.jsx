@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Sparkles, Pencil, X, Mic, MicOff } from 'lucide-react';
+import { Search, Loader2, Sparkles, Pencil, X, Mic, MicOff, Lock } from 'lucide-react';
 import NeuroAvatar from './NeuroAvatar';
 import { MODE_LIST, DEFAULT_MODE, getModeIcon } from '../../config/modes';
 import useVoice from '../../hooks/useVoice';
@@ -15,7 +15,7 @@ const SUGGESTIONS = [
     "Genetic Engineering"
 ];
 
-const InputOverlay = ({ onSubmit, loading, initialTopic, initialMode, isEditing, onCancel }) => {
+const InputOverlay = ({ onSubmit, loading, initialTopic, initialMode, isEditing, onCancel, isPro, onUpgrade }) => {
     const [value, setValue] = useState(initialTopic || '');
     const [selectedMode, setSelectedMode] = useState(initialMode || DEFAULT_MODE);
     const [placeholderIdx, setPlaceholderIdx] = useState(0);
@@ -114,34 +114,43 @@ const InputOverlay = ({ onSubmit, loading, initialTopic, initialMode, isEditing,
                 animation: 'fadeInUp 0.8s ease-out 0.1s backwards'
             }}>
                 {MODE_LIST.map(mode => {
-                    const Icon = getModeIcon(mode.id);
                     const isActive = selectedMode === mode.id;
+                    const locked = mode.pro && !isPro;
                     return (
                         <button
                             key={mode.id}
-                            onClick={() => setSelectedMode(mode.id)}
+                            onClick={() => {
+                                if (locked) { onUpgrade?.(); return; }
+                                setSelectedMode(mode.id);
+                            }}
+                            title={locked ? `${mode.label} — Pro only` : mode.description}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
                                 padding: '8px 14px', borderRadius: '10px',
-                                border: `1px solid ${isActive ? mode.color : 'var(--glass-border)'}`,
-                                background: isActive
-                                    ? `linear-gradient(135deg, ${mode.color}18, ${mode.color}08)`
-                                    : 'var(--glass)',
+                                border: `1px solid ${locked ? 'var(--glass-border)' : isActive ? mode.color : 'var(--glass-border)'}`,
+                                background: locked
+                                    ? 'var(--glass)'
+                                    : isActive
+                                        ? `linear-gradient(135deg, ${mode.color}18, ${mode.color}08)`
+                                        : 'var(--glass)',
                                 backdropFilter: 'blur(var(--glass-blur))',
                                 WebkitBackdropFilter: 'blur(var(--glass-blur))',
-                                color: isActive ? mode.color : 'var(--text-secondary)',
+                                color: locked ? 'var(--muted)' : isActive ? mode.color : 'var(--text-secondary)',
                                 cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-body)',
                                 fontWeight: isActive ? '600' : '400',
                                 transition: 'all 0.2s var(--ease-smooth)',
-                                boxShadow: isActive ? `0 0 15px ${mode.color}20` : 'none'
+                                opacity: locked ? 0.55 : 1,
+                                boxShadow: isActive && !locked ? `0 0 15px ${mode.color}20` : 'none'
                             }}
-                            title={mode.description}
                         >
                             <span style={{ fontSize: '14px' }}>{mode.emoji}</span>
                             {mode.label}
-                            {mode.beta && (
-                                <span style={{ fontSize: '7px', fontWeight: '800', background: 'linear-gradient(135deg, #F97316, #EC4899)', color: '#fff', padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.8px', textTransform: 'uppercase', lineHeight: 1 }}>BETA</span>
-                            )}
+                            {locked
+                                ? <Lock size={9} style={{ marginLeft: '2px', opacity: 0.7 }} />
+                                : mode.beta
+                                    ? <span style={{ fontSize: '7px', fontWeight: '800', background: 'linear-gradient(135deg, #F97316, #EC4899)', color: '#fff', padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.8px', textTransform: 'uppercase', lineHeight: 1 }}>BETA</span>
+                                    : null
+                            }
                         </button>
                     );
                 })}

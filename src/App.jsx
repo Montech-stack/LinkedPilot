@@ -516,7 +516,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
 
       {/* New map input */}
       {!nodes.length && !loading && !showDataConnect && !editingMap && (
-        <InputOverlay onSubmit={handleInputSubmit} loading={loading} />
+        <InputOverlay onSubmit={handleInputSubmit} loading={loading} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} />
       )}
 
       {nodes.length === 0 && loading && !editingMap && (
@@ -535,6 +535,8 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
           initialMode={editingMap.mode}
           isEditing
           onCancel={() => setEditingMap(null)}
+          isPro={isPro}
+          onUpgrade={() => setShowUpgrade(true)}
         />
       )}
 
