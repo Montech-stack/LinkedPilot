@@ -158,6 +158,7 @@ const InfoPanel = ({
     onClearChat,        // Callback to clear chat for current node
     parentChain,        // Array of parent node data from root→current
     isPro,              // Pro user flag
+    onUpgrade,          // Opens the upgrade modal
     nodes,              // All nodes (to find children)
 }) => {
     const [panelExpanded, setPanelExpanded] = useState(false);
@@ -479,7 +480,7 @@ const InfoPanel = ({
 
                     {/* Visualize button (Pro) */}
                     <button
-                        onClick={isPro ? handleVisualize : undefined}
+                        onClick={isPro ? handleVisualize : onUpgrade}
                         title={isPro ? 'Generate an infographic for this node' : 'Upgrade to Pro to unlock visualizations'}
                         style={{
                             width: '100%', padding: '10px 16px',
@@ -489,7 +490,7 @@ const InfoPanel = ({
                             border: `1px solid ${isPro ? 'rgba(124,58,237,0.35)' : 'var(--glass-border)'}`,
                             borderRadius: '10px',
                             color: isPro ? 'var(--accent-purple)' : 'var(--text-secondary)',
-                            cursor: isPro ? 'pointer' : 'not-allowed',
+                            cursor: 'pointer',
                             fontFamily: 'var(--font-display)', fontSize: '12px', fontWeight: '700',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                             transition: 'all 0.2s', margin: '4px 0',

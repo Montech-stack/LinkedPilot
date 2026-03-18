@@ -14,6 +14,7 @@ const fetchIsPro = async (userId) => {
     return Promise.race([query, timeout]);
 };
 
+
 export const useAuth = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -142,6 +143,13 @@ export const useAuth = () => {
         if (authError) setError(authError.message);
     }, []);
 
+    // Re-fetch isPro after a successful payment so the UI updates immediately
+    const refreshPro = useCallback(async () => {
+        if (!user) return;
+        const result = await fetchIsPro(user.id);
+        setIsPro(result);
+    }, [user]);
+
     return {
         user,
         providerToken,
@@ -153,6 +161,7 @@ export const useAuth = () => {
         signOut,
         signInWithGoogle,
         connectGoogleDrive,
+        refreshPro,
         isAuthenticated: !!user,
         clearError: () => setError(null)
     };

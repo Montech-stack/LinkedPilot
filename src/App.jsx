@@ -13,6 +13,7 @@ import InfoPanel from './components/UI/InfoPanel';
 import Sidebar from './components/UI/Sidebar';
 import DPad from './components/UI/DPad';
 import QuizModal from './components/UI/QuizModal';
+import UpgradeModal from './components/UI/UpgradeModal';
 import LandingPage from './components/Auth/LandingPage';
 import DataConnectModal from './components/UI/DataConnectModal';
 import InstallPrompt from './components/UI/InstallPrompt';
@@ -116,6 +117,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
   // ── Other modals ──────────────────────────────────────────────────────
   const [showQuiz, setShowQuiz] = useState(false);
   const [showDataConnect, setShowDataConnect] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   // Handle URL params for shared maps
   useEffect(() => {
@@ -497,6 +499,17 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         />
       )}
 
+      {showUpgrade && (
+        <UpgradeModal
+          user={user}
+          onClose={() => setShowUpgrade(false)}
+          onSuccess={() => {
+            setShowUpgrade(false);
+            auth.refreshPro();
+          }}
+        />
+      )}
+
       {!nodes.length && !loading && !showDataConnect && (
         <InputOverlay onSubmit={handleInputSubmit} loading={loading} />
       )}
@@ -588,6 +601,7 @@ const MapWorkspace = ({ user, theme, toggleTheme, signOut, auth, isPro }) => {
         onClearChat={handleClearChat}
         parentChain={parentChain}
         isPro={isPro}
+        onUpgrade={() => setShowUpgrade(true)}
       />
 
       <Canvas
