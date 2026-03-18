@@ -97,10 +97,8 @@
     "typescript": "^5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "bcrypt",
-      "canvas",
-      "sharp"
-    ]
+    "overrides": {
+      "chokidar@^3.6.0": "npm:chokidar@^3.5.3"
+    }
   }
 }

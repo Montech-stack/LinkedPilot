@@ -1,0 +1,152 @@
+import pg from 'pg';
+const { Client } = pg;
+import mysql from 'mysql2/promise';
+
+const ALLOWED_TYPES = ['postgres', 'mysql'];
+
+// Validate connection string format to prevent injection / SSRF
+function validateConnectionString(str, type) {
+    if (typeof str !== 'string' || str.length > 512) return false;
+
+    // Must start with the expected protocol
+    const allowedPrefixes = type === 'mysql'
+        ? ['mysql://', 'mysql2://']
+        : ['postgres://', 'postgresql://'];
+
+    if (!allowedPrefixes.some(p => str.startsWith(p))) return false;
+
+    // Reject any shell metacharacters or path traversal
+    if (/[`$|;&<>{}\\]/.test(str)) return false;
+
+    try {
+        const url = new URL(str);
+        // Must have a hostname — reject localhost/internal IPs to prevent SSRF
+        const host = url.hostname.toLowerCase();
+        if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1') return false;
+        if (/^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\./.test(host)) return false;
+    } catch {
+        return false;
+    }
+
+    return true;
+}
+
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { connectionString, type } = req.body;
+
+    // Allowlist type
+    if (!type || !ALLOWED_TYPES.includes(type)) {
+        return res.status(400).json({ error: 'Invalid database type. Allowed: postgres, mysql.' });
+    }
+
+    if (!connectionString) {
+        return res.status(400).json({ error: 'Connection string is required.' });
+    }
+
+    if (!validateConnectionString(connectionString, type)) {
+        return res.status(400).json({ error: 'Invalid connection string format.' });
+    }
+
+    try {
+        let schemaData = null;
+
+        if (type === 'postgres') {
+            schemaData = await extractPostgresSchema(connectionString);
+        } else if (type === 'mysql') {
+            schemaData = await extractMysqlSchema(connectionString);
+        }
+
+        return res.status(200).json({ success: true, schema: schemaData });
+
+    } catch (error) {
+        // Log detail server-side only; never expose to client
+        console.error('Database connection error:', error);
+        return res.status(500).json({
+            error: 'Failed to connect to the database. Please verify your credentials and network access.'
+        });
+    }
+}
+
+async function extractPostgresSchema(connectionString) {
+    const client = new Client({
+        connectionString,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 8000,
+        query_timeout: 10000,
+    });
+
+    await client.connect();
+
+    try {
+        const query = `
+            SELECT
+                tables.table_name,
+                columns.column_name,
+                columns.data_type
+            FROM
+                information_schema.tables
+            JOIN
+                information_schema.columns
+            ON
+                tables.table_schema = columns.table_schema
+                AND tables.table_name = columns.table_name
+            WHERE
+                tables.table_schema = 'public'
+                AND tables.table_type = 'BASE TABLE'
+            ORDER BY
+                tables.table_name, columns.ordinal_position;
+        `;
+
+        const { rows } = await client.query(query);
+        return processSchemaRows(rows);
+    } finally {
+        await client.end();
+    }
+}
+
+async function extractMysqlSchema(uri) {
+    const connection = await mysql.createConnection(uri);
+
+    try {
+        const [rows] = await connection.execute(`
+            SELECT
+                TABLE_NAME as table_name,
+                COLUMN_NAME as column_name,
+                DATA_TYPE as data_type
+            FROM
+                INFORMATION_SCHEMA.COLUMNS
+            WHERE
+                TABLE_SCHEMA = DATABASE()
+            ORDER BY
+                TABLE_NAME, ORDINAL_POSITION;
+        `);
+
+        return processSchemaRows(rows);
+    } finally {
+        await connection.end();
+    }
+}
+
+function processSchemaRows(rows) {
+    const schema = {};
+
+    rows.forEach(row => {
+        const tableName = row.table_name;
+        if (!schema[tableName]) {
+            schema[tableName] = [];
+        }
+        schema[tableName].push({
+            column: row.column_name,
+            type: row.data_type
+        });
+    });
+
+    return Object.entries(schema).map(([table, columns]) => {
+        const colDefs = columns.map(c => `${c.column} (${c.type})`).join(', ');
+        return `Table: ${table}\nColumns: ${colDefs}`;
+    }).join('\n\n');
+}

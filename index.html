@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+
+  <!-- Viewport — no user scaling for native app feel -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+  <!-- Theme colour (matches app background) -->
+  <meta name="theme-color" content="#050709" />
+  <meta name="msapplication-TileColor" content="#050709" />
+
+  <!-- PWA standalone meta (cross-browser + iOS) -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Neuro" />
+
+  <!-- SEO / share -->
+  <meta name="description" content="AI-powered mind maps for research, learning, and brainstorming — beautifully." />
+  <meta property="og:title" content="Neuro — AI Mind Maps" />
+  <meta property="og:description" content="Map any idea into visual knowledge with AI." />
+  <meta property="og:type" content="website" />
+
+  <title>Neuro</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>
