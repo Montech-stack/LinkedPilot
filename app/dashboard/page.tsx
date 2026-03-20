@@ -246,7 +246,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem("maxis_state", JSON.stringify({ input, platforms, postCount, postLength, generatedPosts }));
+    // Strip base64 media before persisting — images can be several MB and blow the 5MB localStorage quota
+    const postsToSave = generatedPosts.map((p: any) => ({
+      ...p,
+      media: p.media?.startsWith("data:") ? null : p.media,
+    }));
+    try {
+      localStorage.setItem("maxis_state", JSON.stringify({ input, platforms, postCount, postLength, generatedPosts: postsToSave }));
+    } catch {
+      // If still too large, save everything except posts
+      try {
+        localStorage.setItem("maxis_state", JSON.stringify({ input, platforms, postCount, postLength, generatedPosts: [] }));
+      } catch {}
+    }
   }, [input, platforms, postCount, postLength, generatedPosts, isLoaded]);
 
   const handleGenerate = useCallback(async () => {
