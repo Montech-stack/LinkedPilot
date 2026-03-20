@@ -33,14 +33,13 @@ import MobileHeader from "@/components/MobileHeader";
 import Sidebar from "@/components/Sidebar";
 import PostCard from "@/components/PostCard";
 import RepurposeWizard from "@/components/RepurposeWizard";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import { usePostGeneration } from "@/hooks/usePostGeneration";
 import { useRouter } from "next/navigation";
 import {
   GeneratedPost,
-  UserPlan,
   PostPlatform,
   PostLength,
-  PlanLimit,
   LengthOption,
 } from "@/types";
 import {
@@ -49,15 +48,17 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useSession } from "next-auth/react";
+import { PLAN_IDS, isPaidPlan } from "@/lib/billing-store";
 
-
-const PLAN_LIMITS: Record<UserPlan, PlanLimit> = {
-  free: { maxPosts: 5, name: "Free Plan" },
-  pro: { maxPosts: 50, name: "Pro Plan" },
-  enterprise: { maxPosts: 500, name: "Enterprise Plan" },
+const MAX_POSTS_FOR_PLAN: Record<string, number> = {
+  [PLAN_IDS.TRIAL]: 10,
+  [PLAN_IDS.STRATEGY]: 50,
+  [PLAN_IDS.ENTERPRISE]: 100,
+  [PLAN_IDS.AGENCY]: 100,
 };
 
-const isEnterprisePlan = (plan: string) => plan.toLowerCase() === "enterprise";
+const isUnlimitedPlan = (plan: string) =>
+  plan === PLAN_IDS.ENTERPRISE || plan === PLAN_IDS.AGENCY;
 
 const PLATFORM_OPTIONS: { value: PostPlatform; label: string; color: string }[] = [
   { value: "LinkedIn", label: "LinkedIn", color: "text-blue-500" },
@@ -84,8 +85,12 @@ export default function Dashboard() {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([]);
   const [expandedPost, setExpandedPost] = useState<number | null>(null);
   const [isLinkedInConnected, setIsLinkedInConnected] = useState(false);
-  const [userPlan, setUserPlan] = useState<UserPlan>("free");
-  const [tokensRemaining, setTokensRemaining] = useState(0);
+  const [userPlan, setUserPlan] = useState<string>(PLAN_IDS.TRIAL);
+  const [tokensRemaining, setTokensRemaining] = useState(30);
+
+  // Upgrade modal
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<"tokens" | "trial">("tokens");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -143,31 +148,46 @@ export default function Dashboard() {
 
   const { isGenerating, generatePosts, setIsGenerating } = usePostGeneration();
   const { selectedPresets, customPresets } = useContentPresetStore();
-  const { syncFromDB } = useBillingStore();
-  const currentPlanLimit = PLAN_LIMITS[userPlan];
+  const { syncFromDB, isTrialExpired, daysLeftInTrial, currentPlan } = useBillingStore();
+  const maxPostsForPlan = MAX_POSTS_FOR_PLAN[userPlan] ?? 10;
   const userEmail = session?.user?.email || "guest@example.com";
 
   // Fetch User Stats
   useEffect(() => {
     async function fetchUserStats() {
       try {
-        const res = await fetch(`/api/user/stats?email=${encodeURIComponent(userEmail)}`);
+        const res = await fetch("/api/user/stats");
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
 
-        const plan = data.plan || "free";
-        const isEnterprise = isEnterprisePlan(plan);
-        const tokens = isEnterprise ? -1 : (data.tokensRemaining || 0);
+        const plan = data.plan || PLAN_IDS.TRIAL;
+        const unlimited = isUnlimitedPlan(plan);
+        const tokens = unlimited ? -1 : (data.tokensRemaining ?? 30);
 
         setUserPlan(plan);
         setTokensRemaining(tokens);
-        syncFromDB({ plan: plan, tokens: tokens });
+        syncFromDB({
+          plan,
+          tokens,
+          trialEndsAt: data.trialEndsAt,
+          endDate: data.subscriptionEndDate,
+        });
       } catch (err) {
         console.error(err);
       }
     }
-    if (userEmail) fetchUserStats();
-  }, [userEmail]);
+    if (session?.user?.email) fetchUserStats();
+  }, [session?.user?.email]);
+
+  // Trial expiry check
+  useEffect(() => {
+    if (currentPlan === PLAN_IDS.TRIAL && isTrialExpired()) {
+      setUpgradeReason("trial");
+      setUpgradeModalOpen(true);
+    } else if (currentPlan === PLAN_IDS.TRIAL && daysLeftInTrial() <= 2) {
+      // Non-blocking: sidebar shows countdown banner
+    }
+  }, [currentPlan]);
 
   // Check social connections
   useEffect(() => {
@@ -233,11 +253,12 @@ export default function Dashboard() {
     if (!input.trim()) return toast.error("Enter a post idea first!");
     if (platforms.length === 0) return toast.error("Select at least one platform!");
 
-    const costPerPost = postLength === "short" ? 100 : postLength === "medium" ? 200 : 300;
+    const costPerPost = postLength === "short" ? 1 : postLength === "medium" ? 2 : 3;
     const totalCost = postCount * costPerPost;
 
-    if (!isEnterprisePlan(userPlan) && tokensRemaining < totalCost) {
-      toast.error(`Not enough tokens. Cost: ${totalCost}, Bal: ${tokensRemaining}`);
+    if (!isUnlimitedPlan(userPlan) && tokensRemaining !== -1 && tokensRemaining < totalCost) {
+      setUpgradeReason("tokens");
+      setUpgradeModalOpen(true);
       return;
     }
 
@@ -274,13 +295,13 @@ export default function Dashboard() {
       setGeneratedPosts(prev => [...prev, ...withIds]);
       toast.success(`Generated ${withIds.length} posts!`);
 
-      if (!isEnterprisePlan(userPlan)) {
+      if (!isUnlimitedPlan(userPlan) && tokensRemaining !== -1) {
         await fetch("/api/deduct-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usedTokens: totalCost, email: userEmail }),
         });
-        setTokensRemaining(prev => prev - totalCost);
+        setTokensRemaining(prev => Math.max(0, prev - totalCost));
       }
       setTimeout(() => setShowGeneratedPostsModal(true), 100);
     } catch (err: any) {
@@ -439,7 +460,7 @@ export default function Dashboard() {
         </button>
         <span className="text-sm font-bold text-foreground">{postCount}</span>
         <button
-          onClick={() => setPostCount(Math.min(currentPlanLimit.maxPosts, postCount + 1))}
+          onClick={() => setPostCount(Math.min(maxPostsForPlan, postCount + 1))}
           className="p-1 hover:bg-muted rounded-md"
         >
           <Plus className="w-4 h-4 text-muted-foreground" />
@@ -459,21 +480,17 @@ export default function Dashboard() {
 
             <Tabs defaultValue="quick" className="w-full">
               {/* Page Header */}
-              <motion.div className="text-center mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-primary/20 text-primary text-xs font-medium">
-                  <Zap className="w-3 h-3" />
-                  <span>AI Content Studio</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                  Content Studio
+              <motion.div className="mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">
+                  Studio
                 </h1>
-                <p className="text-muted-foreground text-sm max-w-lg mx-auto mb-4">
-                  Turn one idea into scroll-stopping content that sounds like you — in seconds, not hours.
+                <p className="text-muted-foreground text-sm max-w-lg mb-4">
+                  Write one idea. Publish everywhere.
                 </p>
 
-                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-muted/50 p-1 rounded-xl">
-                  <TabsTrigger value="quick" className="rounded-lg">Quick Post</TabsTrigger>
-                  <TabsTrigger value="repurpose" className="rounded-lg">Repurpose Engine</TabsTrigger>
+                <TabsList className="grid w-full max-w-xs grid-cols-2 bg-muted/50 p-1 rounded-lg">
+                  <TabsTrigger value="quick" className="rounded-md text-xs">Quick Post</TabsTrigger>
+                  <TabsTrigger value="repurpose" className="rounded-md text-xs">Repurpose</TabsTrigger>
                 </TabsList>
               </motion.div>
 
@@ -488,10 +505,10 @@ export default function Dashboard() {
                   >
                     <Button
                       onClick={() => setShowGeneratedPostsModal(true)}
-                      className="rounded-full h-12 px-6 shadow-2xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-bold gap-2"
+                      className="rounded-md h-11 px-5 shadow-lg bg-foreground text-background hover:bg-foreground/90 font-semibold gap-2 text-sm"
                     >
-                      <Eye className="w-5 h-5" />
-                      View Generated ({generatedPosts.length})
+                      <Eye className="w-4 h-4" />
+                      View posts ({generatedPosts.length})
                     </Button>
                   </motion.div>
                 )}
@@ -591,7 +608,7 @@ export default function Dashboard() {
                               <button
                                 onClick={() => {
                                   if (!hasVoiceProfile) {
-                                    toast.error("Set up your voice profile in Settings first");
+                                    toast.error("Set up your voice profile first");
                                     return;
                                   }
                                   setUseClonedVoice(!useClonedVoice);
@@ -599,18 +616,18 @@ export default function Dashboard() {
                                 className={cn(
                                   "flex items-center gap-2 px-3 py-2 rounded-xl transition-all",
                                   useClonedVoice
-                                    ? "bg-violet-500/20 border border-violet-500/50 text-violet-400"
+                                    ? "bg-brand/15 border border-brand/40 text-brand"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                 )}
                               >
-                                <Dna className={cn("w-5 h-5", useClonedVoice && "text-violet-400")} />
+                                <Dna className={cn("w-5 h-5", useClonedVoice && "text-brand")} />
                                 <span className="text-xs font-medium hidden sm:inline">
-                                  {useClonedVoice ? "DNA Active" : "Writing DNA"}
+                                  {useClonedVoice ? "Voice on" : "Voice profile"}
                                 </span>
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{hasVoiceProfile ? (useClonedVoice ? "Voice cloning active" : "Enable voice cloning") : "Set up voice profile first"}</p>
+                              <p>{hasVoiceProfile ? (useClonedVoice ? "Using your voice profile" : "Enable voice profile") : "Set up your voice profile first"}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -651,10 +668,10 @@ export default function Dashboard() {
                     <Button
                       onClick={handleGenerate}
                       disabled={!input.trim() || isGenerating}
-                      className="flex-1 h-14 text-base font-bold rounded-2xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] border-t border-white/10"
+                      className="flex-1 h-14 text-base font-bold rounded-xl bg-foreground text-background hover:bg-foreground/90 disabled:opacity-40 flex items-center justify-center gap-3 transition-all duration-150 shadow-sm"
                     >
-                      {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-white" />}
-                      Generate Content
+                      {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                      Generate posts
                     </Button>
 
                     <div className="flex gap-2">
@@ -703,12 +720,9 @@ export default function Dashboard() {
                   <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50 px-4 sm:px-6 py-4">
                     <div className="max-w-4xl mx-auto flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
-                          <Sparkles className="w-5 h-5 text-white" />
-                        </div>
                         <div>
-                          <h2 className="text-xl font-bold text-foreground">Generated Content</h2>
-                          <p className="text-xs text-muted-foreground">{generatedPosts.length} post{generatedPosts.length !== 1 ? 's' : ''} ready</p>
+                          <h2 className="font-display text-xl font-bold text-foreground">Generated posts</h2>
+                          <p className="text-xs text-muted-foreground">{generatedPosts.length} post{generatedPosts.length !== 1 ? 's' : ''} ready to edit & publish</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -857,6 +871,13 @@ export default function Dashboard() {
         onComplete={() => setShowOnboarding(false)}
         onVoiceProfileCreated={() => setHasVoiceProfile(true)}
         initialStep={onboardingStep}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        reason={upgradeReason}
       />
     </div>
   );

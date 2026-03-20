@@ -3,13 +3,13 @@ import React from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Link2, Settings2Icon, HomeIcon, Target, Calendar, CreditCard, X, Dna, BarChart3, MessageCircle, Lock, PenLine } from "lucide-react"
+import { Link2, Settings2Icon, HomeIcon, Target, Calendar, CreditCard, X, Dna, BarChart3, MessageCircle, Lock, PenLine, Clock } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/ProfileDropdown"
 import { useSession } from "next-auth/react"
-import { useBillingStore, SUBSCRIPTION_PLANS } from "@/lib/billing-store"
+import { useBillingStore, SUBSCRIPTION_PLANS, PLAN_IDS } from "@/lib/billing-store"
 import { cn } from "@/lib/utils"
 
 type FeatureAccess = 'free' | 'paid';
@@ -65,7 +65,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { data: session } = useSession()
   const user = session?.user
 
-  const { currentPlan } = useBillingStore()
+  const { currentPlan, daysLeftInTrial } = useBillingStore()
+  const daysLeft = daysLeftInTrial()
   const planData = SUBSCRIPTION_PLANS.find(p => p.id === currentPlan)
 
   const [isDesktop, setIsDesktop] = React.useState(false)
@@ -190,6 +191,31 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </nav>
 
             {/* Plan Card */}
+            {currentPlan === PLAN_IDS.TRIAL && (
+              <div className="px-3 mb-3">
+                <div className={`p-4 rounded-md border ${daysLeft <= 3 ? "bg-destructive/5 border-destructive/20" : "bg-brand/5 border-brand/15"}`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Clock className={`w-3 h-3 ${daysLeft <= 3 ? "text-destructive" : "text-brand"}`} />
+                    <h4 className={`font-semibold text-xs ${daysLeft <= 3 ? "text-destructive" : "text-foreground"}`}>
+                      {daysLeft === 0 ? "Trial ended" : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                    {daysLeft <= 3
+                      ? "Your trial is ending soon. Upgrade to keep publishing."
+                      : "Upgrade to publish to all platforms and unlock scheduling."}
+                  </p>
+                  <Link href="/billing">
+                    <Button
+                      size="sm"
+                      className={`w-full text-xs h-8 rounded-md border-0 transition-colors ${daysLeft <= 3 ? "bg-destructive text-white hover:bg-destructive/90" : "bg-brand text-white hover:bg-brand/90"}`}
+                    >
+                      {daysLeft === 0 ? "Reactivate" : "Upgrade plan"}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
             {currentPlan === 'free' && (
               <div className="px-3 mb-3">
                 <div className="p-4 rounded-md bg-brand/5 border border-brand/15">
