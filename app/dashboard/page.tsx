@@ -582,7 +582,7 @@ export default function Dashboard() {
                                   if (!input.trim()) return toast.error("Enter a topic first");
                                   toast.loading("Generating Image...");
                                   try {
-                                    const res = await fetch('/api/generateImages', { method: 'POST', body: JSON.stringify({ prompt: input }) });
+                                    const res = await fetch('/api/generateImages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: input }) });
                                     const data = await res.json();
                                     if (data.success && data.imageUrl) {
                                       setUploadedMedia(data.imageUrl);

@@ -336,11 +336,13 @@ export default function PostCard({
                 </button>
                 <button
                   onClick={async () => {
-                    const prompt = editedContent.slice(0, 100); // Use first 100 chars as prompt
+                    const prompt = editedContent.trim().slice(0, 200);
+                    if (!prompt) return toast.error("Post content is empty");
                     toast.loading("Generating AI Image...");
                     try {
                       const res = await fetch('/api/generateImages', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt })
                       });
                       const data = await res.json();
