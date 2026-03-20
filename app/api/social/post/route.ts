@@ -67,8 +67,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("🔴 Error posting to social:", error);
-    return NextResponse.json({ error: "Failed to post", details: error.message }, { status: 500 });
+  } catch (error: any) {
+    const message = error?.message || String(error);
+    console.error("🔴 Error posting to social:", message);
+    return NextResponse.json({ error: "Failed to post", details: message }, { status: 500 });
   }
 }

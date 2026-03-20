@@ -142,8 +142,8 @@ export default function PostCard({
         setPostConfirmOpen(false);
         return;
       }
-      const postPromises = connected.map((acc: any) =>
-        fetch("/api/social/post", {
+      const postPromises = connected.map(async (acc: any) => {
+        const r = await fetch("/api/social/post", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -153,18 +153,19 @@ export default function PostCard({
             media: media || null,
             mediaType: mediaType || null,
           }),
-        })
-      );
+        });
+        return { ok: r.ok, platform: acc.platform, data: await r.json().catch(() => ({})) };
+      });
       const results = await Promise.all(postPromises);
       const okCount = results.filter(r => r.ok).length;
-      const message = `Posted to ${okCount} of ${connected.length} accounts`;
 
       if (okCount > 0) {
         onPostSuccess(post.id);
-        toast.success(message);
+        toast.success(`Posted to ${okCount} of ${connected.length} accounts`);
       } else {
-        onPostError("Failed to post");
-        toast.error(message);
+        const firstError = results[0]?.data?.details || results[0]?.data?.error || "Failed to post";
+        onPostError(firstError);
+        toast.error(firstError);
       }
     } catch (err) {
       onPostError("Error posting");
