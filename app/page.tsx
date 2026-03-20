@@ -285,7 +285,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.35 }}
-              className="hidden lg:block"
+              className="block"
             >
               <div className="relative">
                 {/* Offset shadow */}
@@ -367,7 +367,7 @@ export default function LandingPage() {
       <section className="py-10 border-y border-border/60 overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 mb-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Publishes to
+            Generates for
           </p>
         </div>
         <div className="relative overflow-hidden">
