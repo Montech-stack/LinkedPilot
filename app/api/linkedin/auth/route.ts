@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   linkedInAuthUrl.searchParams.append("client_id", process.env.LINKEDIN_CLIENT_ID!)
   linkedInAuthUrl.searchParams.append(
     "redirect_uri",
-    process.env.LINKEDIN_REDIRECT_URI!
+    process.env.LINKEDIN_REDIRECT_URI!.trim()
   )
   linkedInAuthUrl.searchParams.append("scope", "openid profile email w_member_social")
 
