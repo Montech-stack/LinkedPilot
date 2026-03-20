@@ -165,7 +165,8 @@ export default function PostCard({
       } else {
         const firstError = results[0]?.data?.details || results[0]?.data?.error || "Failed to post";
         onPostError(firstError);
-        toast.error(firstError);
+        const isExpired = firstError.toLowerCase().includes("expired") || firstError.toLowerCase().includes("reconnect");
+        toast.error(isExpired ? "LinkedIn session expired — reconnect in Connected Accounts" : firstError, { duration: 6000 });
       }
     } catch (err) {
       onPostError("Error posting");

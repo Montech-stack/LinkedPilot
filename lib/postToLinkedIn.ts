@@ -1,5 +1,6 @@
 // lib/postToLinkedIn.ts
 import LinkedInUser from "@/models/LinkedInUser";
+import SocialAccount from "@/models/SocialAccount";
 import { refreshLinkedInToken } from "@/lib/linkedinRefresh";
 
 export async function postToLinkedIn({
@@ -24,7 +25,9 @@ export async function postToLinkedIn({
     if (refreshed) {
       accessToken = refreshed;
     } else {
-      throw new Error("Token refresh failed");
+      // Mark account as disconnected so UI reflects this
+      await SocialAccount.updateOne({ linkedinId: memberId }, { $set: { connected: false } });
+      throw new Error("Your LinkedIn session has expired. Please reconnect your account in Settings → Connected Accounts.");
     }
   }
   // Text-only post
