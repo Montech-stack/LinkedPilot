@@ -16,6 +16,8 @@ import Navbar from "@/components/Navbar"
 import { AuthModal } from "@/components/auth-modal"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { FaLinkedinIn, FaInstagram, FaFacebookF } from "react-icons/fa"
+import { FaXTwitter, FaTiktok, FaThreads } from "react-icons/fa6"
 
 export default function LandingPage() {
   const { data: session } = useSession()
@@ -38,7 +40,14 @@ export default function LandingPage() {
     }
   }
 
-  const platforms = ["LinkedIn", "X (Twitter)", "Instagram", "TikTok", "Threads", "Facebook"]
+  const platforms = [
+    { name: "LinkedIn",    Icon: FaLinkedinIn, className: "text-[#0A66C2]" },
+    { name: "X (Twitter)", Icon: FaXTwitter,   className: "text-foreground" },
+    { name: "Instagram",   Icon: FaInstagram,  className: "text-[#E1306C]" },
+    { name: "TikTok",      Icon: FaTiktok,     className: "text-foreground" },
+    { name: "Threads",     Icon: FaThreads,    className: "text-foreground" },
+    { name: "Facebook",    Icon: FaFacebookF,  className: "text-[#1877F2]" },
+  ]
 
   const problems = [
     {
@@ -192,102 +201,194 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="pt-28 pb-20 md:pt-40 md:pb-28 relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="max-w-3xl">
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-6"
-            >
-              For coaches and consultants
-            </motion.p>
+          <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.08 }}
-              className="font-display text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.08] tracking-tight mb-7"
-            >
-              Attract clients.
-              <br />
-              Stop chasing
-              <br />
-              <span className="text-brand">them.</span>
-            </motion.h1>
+            {/* Left: text */}
+            <div>
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-xs font-semibold uppercase tracking-[0.18em] text-brand mb-6"
+              >
+                For coaches and consultants
+              </motion.p>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.18 }}
-              className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mb-10"
-            >
-              Maxis turns your ideas into daily content that sounds exactly like you wrote it — so your audience finds you, trusts you, and hires you. Without you living on social media.
-            </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.08 }}
+                className="font-display text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.08] tracking-tight mb-7"
+              >
+                Attract clients.
+                <br />
+                Stop chasing
+                <br />
+                <span className="text-brand">them.</span>
+              </motion.h1>
 
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.18 }}
+                className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mb-10"
+              >
+                Maxis turns your ideas into daily content that sounds exactly like you wrote it — so your audience finds you, trusts you, and hires you. Without you living on social media.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.28 }}
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10"
+              >
+                <Button
+                  onClick={handleCTA}
+                  className="h-12 px-7 rounded-md bg-foreground text-background hover:bg-foreground/90 text-sm font-semibold transition-all duration-150"
+                >
+                  Start your 14-day trial
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+                <button
+                  onClick={() =>
+                    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/30 hover:decoration-foreground/50"
+                >
+                  See how it works
+                </button>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.42 }}
+                className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                  14 days free
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                  No credit card required
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
+                  Sounds like you, not a template
+                </span>
+              </motion.div>
+            </div>
+
+            {/* Right: product mockup */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.28 }}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10"
+              transition={{ duration: 0.7, delay: 0.35 }}
+              className="hidden lg:block"
             >
-              <Button
-                onClick={handleCTA}
-                className="h-12 px-7 rounded-md bg-foreground text-background hover:bg-foreground/90 text-sm font-semibold transition-all duration-150"
-              >
-                Start your 14-day trial
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-              <button
-                onClick={() =>
-                  document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/30 hover:decoration-foreground/50"
-              >
-                See how it works
-              </button>
+              <div className="relative">
+                {/* Offset shadow */}
+                <div className="absolute inset-0 translate-x-2 translate-y-2 bg-border rounded-xl" />
+                {/* Card */}
+                <div className="relative bg-card border border-border rounded-xl overflow-hidden shadow-lg">
+                  {/* Window chrome */}
+                  <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-background">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
+                    <span className="ml-3 text-xs text-muted-foreground font-medium">Maxis Studio</span>
+                  </div>
+
+                  {/* Input area */}
+                  <div className="p-5 border-b border-border/60 bg-background">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">What insight will you share today?</p>
+                    <div className="text-sm text-foreground/80 leading-relaxed bg-secondary/40 border border-border rounded-md px-3 py-2.5 min-h-[56px]">
+                      The best leaders I've coached don't have all the answers — they know how to ask better questions...
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex gap-1.5">
+                        {[
+                          { Icon: FaLinkedinIn, cls: "text-[#0A66C2]" },
+                          { Icon: FaXTwitter,   cls: "text-foreground" },
+                          { Icon: FaInstagram,  cls: "text-[#E1306C]" },
+                        ].map(({ Icon, cls }, i) => (
+                          <div key={i} className="w-7 h-7 flex items-center justify-center border border-border rounded bg-background">
+                            <Icon className={`w-3 h-3 ${cls}`} />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-[11px] px-3 py-1 bg-foreground text-background rounded font-semibold cursor-default">
+                        Generate →
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Generated posts */}
+                  <div className="divide-y divide-border/50">
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaLinkedinIn className="w-3 h-3 text-[#0A66C2]" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">LinkedIn Post</span>
+                        <span className="ml-auto text-[10px] text-brand font-medium">✓ Voice matched</span>
+                      </div>
+                      <p className="text-xs text-foreground leading-relaxed line-clamp-3">
+                        Here's what I learned after 10 years coaching executives: the best leaders don't have all the answers. They ask better questions. Here are three that changed everything for the teams I work with...
+                      </p>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaXTwitter className="w-3 h-3 text-foreground" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">X Thread</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        10 years. 300+ coaching sessions. One pattern: the leaders everyone respects ask more than they tell. 🧵
+                      </p>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaInstagram className="w-3 h-3 text-[#E1306C]" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Instagram Caption</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        Great leaders listen more than they speak. Here's the framework I teach every exec I work with...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.42 }}
-              className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"
-            >
-              <span className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
-                14 days free
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
-                No credit card required
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-brand" strokeWidth={2.5} />
-                Sounds like you, not a template
-              </span>
-            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* PLATFORMS */}
-      <section className="py-10 border-y border-border/60">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground whitespace-nowrap flex-shrink-0">
-              Publishes to
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {platforms.map((p) => (
-                <span
-                  key={p}
-                  className="px-3 py-1.5 rounded border border-border bg-card text-xs font-medium text-foreground"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* PLATFORMS - Infinite marquee */}
+      <section className="py-10 border-y border-border/60 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6 mb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Publishes to
+          </p>
+        </div>
+        <div className="relative overflow-hidden">
+          {/* Fade edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+          <motion.div
+            className="flex gap-4 w-max"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: 22, repeat: Infinity, ease: "linear", repeatType: "loop" }}
+          >
+            {[...platforms, ...platforms].map((p, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2.5 px-5 py-3 border border-border bg-card rounded text-sm font-medium text-foreground flex-shrink-0"
+              >
+                <p.Icon className={`w-4 h-4 ${p.className}`} />
+                {p.name}
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
